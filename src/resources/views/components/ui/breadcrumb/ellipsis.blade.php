@@ -1,0 +1,13 @@
+<span
+    data-slot="breadcrumb-ellipsis"
+    role="presentation"
+    aria-hidden="true"
+    {{ $attributes->class([
+        "flex size-5 items-center justify-center [&>svg]:size-4"
+    ]) }}
+>
+    <svg class="size-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>
+    </svg>
+    <span class="sr-only">More</span>
+</span>

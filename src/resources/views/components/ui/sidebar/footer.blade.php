@@ -1,0 +1,6 @@
+<div
+    data-slot="sidebar-footer"
+    {{ $attributes->class(["flex flex-col gap-2 p-2 mt-auto"]) }}
+>
+    {{ $slot }}
+</div>
