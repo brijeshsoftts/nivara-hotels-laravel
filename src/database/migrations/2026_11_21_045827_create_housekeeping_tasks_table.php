@@ -16,7 +16,7 @@ return new class extends Migration
         Schema::create('housekeeping_tasks', function (Blueprint $table) {
             $table->text('id')->primary();
             $table->text('room_id');
-            $table->text('assigned_to');
+            $table->text('assigned_to')->nullable();
             $table->enum('task_type', array_column(TaskType::cases(), 'value'));
             $table->enum('status', array_column(TaskStatus::cases(), 'value'))->default(TaskStatus::PENDING->value);
             $table->timestamp('scheduled_date');

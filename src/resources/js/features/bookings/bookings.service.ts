@@ -1,0 +1,46 @@
+import type { DashboardStat } from "@/components/common/Stat";
+import { apiClient } from "@/lib/apiClient";
+import type { ApiListResponse, ListParams } from "@/types/api.types";
+
+import { toDashboardStats } from "../shared/stat-response";
+
+import type {
+  AvailableBookingRoom,
+  BookingAvailabilityParams,
+  BookingDetails,
+  BookingListItem,
+  CreateBookingInput,
+  CreateBookingResult,
+  CreatePublicBookingInput,
+  CreatePublicBookingResult,
+  UpdateBookingStatusInput,
+} from "./bookings.types";
+
+export const bookingsService = {
+  findOne: (id: string): Promise<BookingDetails> =>
+    apiClient.get(`/bookings/${id}`).then((response) => response.data?.data),
+  findAll: (params: ListParams): Promise<ApiListResponse<BookingListItem>> =>
+    apiClient.get("/bookings", { params }).then((response) => response.data),
+  updateStatus: ({ id, status }: UpdateBookingStatusInput) =>
+    apiClient
+      .patch(`/bookings/${id}/status`, { status })
+      .then((response) => response.data?.data),
+  findAvailableRooms: (
+    params: BookingAvailabilityParams
+  ): Promise<AvailableBookingRoom[]> =>
+    apiClient
+      .get("/bookings/available-rooms", { params })
+      .then((response) => response.data?.data),
+  create: (data: CreateBookingInput): Promise<CreateBookingResult> =>
+    apiClient.post("/bookings", data).then((response) => response.data?.data),
+  createPublic: (
+    data: CreatePublicBookingInput
+  ): Promise<CreatePublicBookingResult> =>
+    apiClient
+      .post("/bookings/public", data)
+      .then((response) => response.data?.data),
+  getStats: (): Promise<DashboardStat[]> =>
+    apiClient
+      .get("/bookings/stats")
+      .then((response) => toDashboardStats(response.data?.data, "bookings")),
+};

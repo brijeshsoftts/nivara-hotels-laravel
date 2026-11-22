@@ -1,12 +1,10 @@
-import { Button } from "@/components/ui/button";
-import { Home } from "lucide-react";
+import LandingPage from "@/pages/public/Landing";
+import { PublicLayout } from "@/layouts/PublicLayout";
 
 export default function Welcome() {
-    return (
-        <div>
-            <Home />
-            Welcome to React
-            <Button>Hello</Button>
-        </div>
-    );
+  return (
+    <PublicLayout>
+      <LandingPage />
+    </PublicLayout>
+  );
 }

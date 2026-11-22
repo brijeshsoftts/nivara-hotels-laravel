@@ -9,7 +9,9 @@ Route::middleware('auth')->group(function () {
     require __DIR__ . '/protect.php';
 });
 
+// API endpoints for frontend hooks (TanStack Query / Axios)
+require __DIR__ . '/api.php';
+
 Route::get('/', function () {
-    // return view('pages.public.index');
     return Inertia::render('welcome');
 })->name('home');

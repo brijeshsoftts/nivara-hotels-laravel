@@ -1,0 +1,105 @@
+import type {
+  BookingStatus,
+  InvoiceStatus,
+  PaymentMethod,
+  PaymentStatus,
+} from "@/types/enum.types";
+
+export type PaymentItem = {
+  id: string;
+  bookingId: string;
+  paymentReference: string;
+  transactionId: string | null;
+  invoiceNumber: string;
+  bookingReference: string;
+  customerName: string;
+  amount: number;
+  currency?: string;
+  paymentMethod: PaymentMethod;
+  paymentStatus: PaymentStatus;
+  paidAt: string | null;
+  recordedByName: string | null;
+  createdAt: string;
+};
+
+export type CreatePaymentOrderInput = {
+  bookingId: string;
+  paymentId?: string;
+};
+
+export type CreatePaymentOrderResponse = {
+  paymentId: string;
+  orderId: string;
+  amount: number;
+  currency: "INR";
+  keyId: string;
+};
+
+export type VerifyPaymentInput = {
+  paymentId: string;
+  razorpayPaymentId: string;
+  razorpayOrderId: string;
+  razorpaySignature: string;
+};
+
+export type PublicPaymentAccessInput = {
+  bookingId: string;
+  checkoutToken: string;
+};
+
+export type PublicVerifyPaymentInput = VerifyPaymentInput & {
+  checkoutToken: string;
+};
+
+export type PublicPaymentStatus = {
+  paymentId: string;
+  paymentStatus: PaymentStatus;
+  invoiceStatus: InvoiceStatus;
+  bookingId: string;
+  bookingReference: string;
+  bookingStatus: BookingStatus;
+  totalAmount: number;
+  paidAmount: number;
+};
+
+export type CreateCashPaymentInput = {
+  invoiceId: string;
+  amount?: number;
+};
+
+export type CreateCashPaymentResponse = {
+  payment: {
+    id: string;
+    paymentReference: string;
+    invoiceId: string;
+    amount: number;
+    paymentMethod: PaymentMethod;
+    paymentStatus: PaymentStatus;
+    paidAt: string | null;
+  };
+  booking: {
+    id: string;
+    totalAmount: number;
+    paidAmount: number;
+    balance: number;
+  };
+};
+
+export type RecordQrPaymentResponse = CreateCashPaymentResponse;
+
+export interface CustomerPayment {
+  id: string;
+  bookingId: string;
+  paymentReference: string;
+  bookingReference: string;
+  customerName: string;
+  date: string;
+  invoiceNumber: string;
+  transactionId: string | null;
+  amount: number;
+  paymentMethod: PaymentMethod;
+  status: PaymentStatus;
+  paidAt: string | null;
+  recordedByName: string | null;
+  createdAt: string;
+}

@@ -3,15 +3,18 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Database\Factories\UserFactory;
+use App\Enums\UserRole;
 use App\Models\Concerns\HasCuid;
+use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'full_name', 'email', 'phone', 'password', 'password_hash', 'role', 'is_active'])]
+#[Fillable(['name', 'full_name', 'email', 'phone', 'password', 'password_hash', 'profile_id', 'role', 'is_active', 'last_login_at', 'soft_deleted_at'])]
 #[Hidden(['password', 'password_hash', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -33,5 +36,60 @@ class User extends Authenticatable
             'last_login_at' => 'datetime',
             'soft_deleted_at' => 'datetime',
         ];
+    }
+
+    public function customer(): HasOne
+    {
+        return $this->hasOne(Customer::class, 'user_id');
+    }
+
+    public function staff(): HasOne
+    {
+        return $this->hasOne(Staff::class, 'user_id');
+    }
+
+    public function bookings(): HasMany
+    {
+        return $this->hasMany(Booking::class, 'customer_id');
+    }
+
+    public function assignedHousekeepingTasks(): HasMany
+    {
+        return $this->hasMany(HousekeepingTask::class, 'assigned_to_id');
+    }
+
+    public function createdHousekeepingTasks(): HasMany
+    {
+        return $this->hasMany(HousekeepingTask::class, 'created_by');
+    }
+
+    public function assignedIssues(): HasMany
+    {
+        return $this->hasMany(Issue::class, 'assigned_to_id');
+    }
+
+    public function reportedIssues(): HasMany
+    {
+        return $this->hasMany(Issue::class, 'reported_by_id');
+    }
+
+    public function notifications(): HasMany
+    {
+        return $this->hasMany(Notification::class, 'user_id');
+    }
+
+    public function auditLogs(): HasMany
+    {
+        return $this->hasMany(AuditLog::class, 'user_id');
+    }
+
+    public function refreshTokens(): HasMany
+    {
+        return $this->hasMany(RefreshToken::class, 'user_id');
+    }
+
+    public function passwordResetTokens(): HasMany
+    {
+        return $this->hasMany(PasswordResetToken::class, 'user_id');
     }
 }

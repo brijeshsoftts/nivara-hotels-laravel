@@ -30,6 +30,8 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::createUsersUsing(CreateNewUser::class);
         Fortify::loginView(fn() => view('Pages.auth.login'));
         Fortify::registerView(fn() => view('Pages.auth.register'));
+        Fortify::requestPasswordResetLinkView(fn() => view('Pages.auth.forgot-password'));
+        Fortify::resetPasswordView(fn($request) => view('Pages.auth.reset-password', ['request' => $request]));
         Fortify::authenticateUsing(function (Request $request): ?User {
             $user = User::query()
                 ->where('email', Str::lower((string) $request->input('email')))

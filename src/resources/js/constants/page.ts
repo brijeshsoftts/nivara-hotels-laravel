@@ -1,0 +1,248 @@
+import {
+  BedDouble,
+  CalendarCheck,
+  CalendarPlus,
+  CircleDollarSign,
+  ClipboardCheck,
+  ClipboardList,
+  FileText,
+  LayoutDashboard,
+  Mail,
+  UserCheck,
+  UserRound,
+  UserRoundCog,
+  Users,
+  Wrench,
+} from "lucide-react";
+
+import type { NavItem } from "@/components/sidebar/NavMain";
+
+export const ADMIN_PAGES: NavItem[] = [
+  {
+    title: "Dashboard",
+    icon: LayoutDashboard,
+    href: "/dashboard",
+  },
+  {
+    title: "Users",
+    icon: Users,
+    href: "/dashboard/users",
+  },
+  {
+    title: "Staff",
+    icon: UserRoundCog,
+    href: "/dashboard/staff",
+  },
+  {
+    title: "Customers",
+    icon: UserCheck,
+    href: "/dashboard/customers",
+  },
+  {
+    title: "Rooms",
+    icon: BedDouble,
+    href: "/dashboard/rooms",
+  },
+  {
+    title: "New Booking",
+    icon: CalendarPlus,
+    href: "/dashboard/bookings/new",
+  },
+  {
+    title: "Bookings",
+    icon: CalendarCheck,
+    href: "/dashboard/bookings",
+  },
+  {
+    title: "Issues",
+    icon: Wrench,
+    href: "/dashboard/issues",
+  },
+  {
+    title: "Tasks",
+    icon: ClipboardCheck,
+    href: "/dashboard/tasks",
+  },
+  {
+    title: "Payments",
+    icon: CircleDollarSign,
+    href: "/dashboard/payments",
+  },
+  {
+    title: "Invoices",
+    icon: FileText,
+    href: "/dashboard/invoices",
+  },
+  {
+    title: "Inquiries",
+    icon: Mail,
+    href: "/dashboard/inquiries",
+  },
+  {
+    title: "Audit Logs",
+    icon: ClipboardList,
+    href: "/dashboard/audit-logs",
+  },
+  {
+    title: "Profile",
+    icon: UserRound,
+    href: "/dashboard/profile",
+  },
+];
+
+export const MANAGER_PAGES: NavItem[] = [
+  {
+    title: "Dashboard",
+    icon: LayoutDashboard,
+    href: "/dashboard",
+  },
+  {
+    title: "Staff",
+    icon: UserRoundCog,
+    href: "/dashboard/staff",
+  },
+  {
+    title: "Customers",
+    icon: UserCheck,
+    href: "/dashboard/customers",
+  },
+  {
+    title: "Rooms",
+    icon: BedDouble,
+    href: "/dashboard/rooms",
+  },
+  {
+    title: "New Booking",
+    icon: CalendarPlus,
+    href: "/dashboard/bookings/new",
+  },
+  {
+    title: "Bookings",
+    icon: CalendarCheck,
+    href: "/dashboard/bookings",
+  },
+  {
+    title: "Issues",
+    icon: Wrench,
+    href: "/dashboard/issues",
+  },
+  {
+    title: "Tasks",
+    icon: ClipboardCheck,
+    href: "/dashboard/tasks",
+  },
+  {
+    title: "Payments",
+    icon: CircleDollarSign,
+    href: "/dashboard/payments",
+  },
+  {
+    title: "Invoices",
+    icon: FileText,
+    href: "/dashboard/invoices",
+  },
+  {
+    title: "Inquiries",
+    icon: Mail,
+    href: "/dashboard/inquiries",
+  },
+  {
+    title: "Profile",
+    icon: UserRound,
+    href: "/dashboard/profile",
+  },
+];
+
+export const RECEPTIONIST_PAGES: NavItem[] = [
+  {
+    title: "Dashboard",
+    icon: LayoutDashboard,
+    href: "/dashboard",
+  },
+  {
+    title: "Customers",
+    icon: UserCheck,
+    href: "/dashboard/customers",
+  },
+  {
+    title: "New Booking",
+    icon: CalendarPlus,
+    href: "/dashboard/bookings/new",
+  },
+  {
+    title: "Bookings",
+    icon: CalendarCheck,
+    href: "/dashboard/bookings",
+  },
+  {
+    title: "Payments",
+    icon: CircleDollarSign,
+    href: "/dashboard/payments",
+  },
+  {
+    title: "Invoices",
+    icon: FileText,
+    href: "/dashboard/invoices",
+  },
+  {
+    title: "Profile",
+    icon: UserRound,
+    href: "/dashboard/profile",
+  },
+];
+
+export const HOUSEKEEPER_PAGES: NavItem[] = [
+  {
+    title: "Dashboard",
+    icon: LayoutDashboard,
+    href: "/dashboard",
+  },
+  {
+    title: "My Tasks",
+    icon: ClipboardCheck,
+    href: "/dashboard/tasks",
+  },
+  {
+    title: "Rooms",
+    icon: BedDouble,
+    href: "/dashboard/rooms",
+  },
+  {
+    title: "Profile",
+    icon: UserRound,
+    href: "/dashboard/profile",
+  },
+];
+
+export const CUSTOMER_PAGES: NavItem[] = [
+  {
+    title: "Dashboard",
+    icon: LayoutDashboard,
+    href: "/dashboard",
+  },
+  {
+    title: "My Bookings",
+    icon: CalendarCheck,
+    href: "/dashboard/bookings",
+  },
+  {
+    title: "Payments",
+    icon: CircleDollarSign,
+    href: "/dashboard/payments",
+  },
+  {
+    title: "Invoices",
+    icon: FileText,
+    href: "/dashboard/invoices",
+  },
+  {
+    title: "Issues",
+    icon: Wrench,
+    href: "/dashboard/issues",
+  },
+  {
+    title: "Profile",
+    icon: UserRound,
+    href: "/dashboard/profile",
+  },
+];
