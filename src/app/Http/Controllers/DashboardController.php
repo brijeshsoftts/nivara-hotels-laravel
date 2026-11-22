@@ -94,11 +94,11 @@ class DashboardController extends Controller
         }
 
         $bookingStatus = [
-            'confirmed' => max(Booking::where('status', BookingStatus::CONFIRMED->value)->count(), 14),
-            'checkedIn' => max(Booking::where('status', BookingStatus::CHECKED_IN->value)->count(), 4),
-            'checkedOut' => max(Booking::where('status', BookingStatus::CHECKED_OUT->value)->count(), 8),
-            'cancelled' => Booking::where('status', BookingStatus::CANCELLED->value)->count(),
-            'pending' => Booking::where('status', BookingStatus::PENDING->value)->count(),
+            ['status' => 'CONFIRMED', 'count' => max(Booking::where('status', BookingStatus::CONFIRMED->value)->count(), 14)],
+            ['status' => 'CHECKED_IN', 'count' => max(Booking::where('status', BookingStatus::CHECKED_IN->value)->count(), 4)],
+            ['status' => 'CHECKED_OUT', 'count' => max(Booking::where('status', BookingStatus::CHECKED_OUT->value)->count(), 8)],
+            ['status' => 'CANCELLED', 'count' => Booking::where('status', BookingStatus::CANCELLED->value)->count()],
+            ['status' => 'PENDING', 'count' => Booking::where('status', BookingStatus::PENDING->value)->count()],
         ];
 
         $todayStr = Carbon::today()->format('Y-m-d');

@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useLogout } from "@/features/auth/hooks/useLogout";
+import { useLogout } from "@/hooks/useLogout";
 import { useAuth } from "@/hooks/useAuth";
 import { getInitials } from "@/lib/format";
 

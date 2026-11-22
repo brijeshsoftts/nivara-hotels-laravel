@@ -16,7 +16,7 @@ export type StatusBarChart = {
 };
 
 interface StatusBarChartProps {
-  data: StatusBarChart[];
+  data?: StatusBarChart[] | Record<string, any> | any;
   config?: ChartConfig;
   title?: string;
   description?: string;
@@ -28,7 +28,7 @@ interface StatusBarChartProps {
 }
 
 export function StatusBarChart({
-  data,
+  data: rawData = [],
   config = {},
   title,
   description,
@@ -37,7 +37,18 @@ export function StatusBarChart({
   isError = false,
   onRetry,
 }: StatusBarChartProps) {
-  const chartData = data.map((item) => ({
+  const normalizedData: StatusBarChart[] = Array.isArray(rawData)
+    ? rawData
+    : rawData && typeof rawData === "object"
+      ? Object.entries(rawData)
+          .filter(([status]) => status.toLowerCase() !== "total")
+          .map(([status, count]) => ({
+            status: status.toUpperCase(),
+            count: Number(count),
+          }))
+      : [];
+
+  const chartData = normalizedData.map((item) => ({
     ...item,
     status: formatString(item.status),
   }));

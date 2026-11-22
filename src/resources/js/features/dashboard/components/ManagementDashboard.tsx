@@ -165,7 +165,16 @@ function RevenueTrend({ data: initialData }: { data?: any[] }) {
 
 function BookingStatus({ data: initialData }: { data?: any }) {
   const [range, setRange] = useState<BookingStatusRange>("all");
-  const data = initialData ?? [];
+  const data = Array.isArray(initialData)
+    ? initialData
+    : initialData && typeof initialData === "object"
+      ? Object.entries(initialData)
+          .filter(([status]) => status.toLowerCase() !== "total")
+          .map(([status, count]) => ({
+            status: status.toUpperCase(),
+            count: Number(count),
+          }))
+      : [];
 
   return (
     <DonutChart

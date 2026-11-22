@@ -52,7 +52,7 @@ import {
 import { testimonials } from "@/features/public/public.mock";
 import { Link, usePage } from "@inertiajs/react";
 
-// import { ContactForm, LocationPanel } from "./Contact";
+import { ContactForm, LocationPanel } from "./Contact";
 
 export const sectionPaddingClassName = "py-16 md:py-24 lg:py-28";
 const heroImages = [
@@ -390,7 +390,7 @@ function FeaturedRoomsSection({ rooms: propRooms }: { rooms?: any[] } = {}) {
                     </div>
                     <Button
                         nativeButton={false}
-                        // render={<Link to="/rooms" />}
+                        render={<Link href="/rooms" />}
                         className="h-11"
                         variant="link"
                     >
@@ -737,8 +737,8 @@ function ContactSection() {
         >
             <div className="container mx-auto max-w-7xl px-4 md:px-8 lg:px-12">
                 <div className="grid items-center gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(20rem,0.95fr)] lg:gap-10">
-                    {/* <ContactForm />
-          <LocationPanel /> */}
+                    <ContactForm />
+                    <LocationPanel />
                 </div>
             </div>
         </section>

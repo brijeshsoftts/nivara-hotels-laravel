@@ -148,7 +148,7 @@ export function ReceptionistDashboard({
       />
       <div className="grid gap-6 lg:grid-cols-2">
         <DonutChart
-          data={Array.isArray(roomStatus) ? roomStatus : []}
+          data={roomStatus}
           title="Room Availability"
           description="Current active room occupancy"
           centerLabel="Rooms"
@@ -158,7 +158,7 @@ export function ReceptionistDashboard({
           isError={false}
         />
         <StatusBarChart
-          data={Array.isArray(bookingStatus) ? bookingStatus : []}
+          data={bookingStatus}
           title="Booking pipeline"
           description="Total active and upcoming reservations"
           isLoading={false}

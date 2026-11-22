@@ -1,6 +1,8 @@
 import { usePage } from "@inertiajs/react";
 import type { SharedProps } from "@/types";
 
+export { useLogout } from "./useLogout";
+
 export function useAuth() {
   try {
     const { auth } = usePage<SharedProps>().props;

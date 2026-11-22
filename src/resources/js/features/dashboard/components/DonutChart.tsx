@@ -88,7 +88,7 @@ export type DonutChartData = {
 };
 
 interface DonutChartProps {
-  data: DonutChartData[];
+  data?: DonutChartData[] | Record<string, any> | any;
   config?: ChartConfig;
   title?: string;
   description?: string;
@@ -105,7 +105,7 @@ interface DonutChartProps {
 }
 
 export function DonutChart({
-  data,
+  data: rawData = [],
   config = statusConfig,
   title,
   description,
@@ -120,11 +120,22 @@ export function DonutChart({
   showRange = true,
   errorMessage = "Status data could not be loaded.",
 }: DonutChartProps) {
-  const chartData = data.map((item) => ({
+  const normalizedData: DonutChartData[] = Array.isArray(rawData)
+    ? rawData
+    : rawData && typeof rawData === "object"
+      ? Object.entries(rawData)
+          .filter(([status]) => status.toLowerCase() !== "total")
+          .map(([status, count]) => ({
+            status: status.toUpperCase(),
+            count: Number(count),
+          }))
+      : [];
+
+  const chartData = normalizedData.map((item) => ({
     ...item,
     label: formatString(item.status),
   }));
-  const total = data.reduce((sum, item) => sum + Number(item.count ?? 0), 0);
+  const total = normalizedData.reduce((sum, item) => sum + Number(item.count ?? 0), 0);
 
   return (
     <Card className="w-full min-w-0  border border-border bg-card text-card-foreground">

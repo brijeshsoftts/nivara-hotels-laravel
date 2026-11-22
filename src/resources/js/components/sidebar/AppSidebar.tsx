@@ -31,7 +31,7 @@ import {
   MANAGER_PAGES,
   RECEPTIONIST_PAGES,
 } from "@/constants/page";
-import { useLogout } from "@/features/auth/hooks/useLogout";
+import { useLogout } from "@/hooks/useLogout";
 import { useAuth } from "@/hooks/useAuth";
 import { getInitials } from "@/lib/format";
 
