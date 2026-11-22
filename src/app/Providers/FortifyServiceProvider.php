@@ -28,8 +28,8 @@ class FortifyServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Fortify::createUsersUsing(CreateNewUser::class);
-        Fortify::loginView(fn() => view('pages.auth.login'));
-        Fortify::registerView(fn() => view('pages.auth.register'));
+        Fortify::loginView(fn() => view('Pages.auth.login'));
+        Fortify::registerView(fn() => view('Pages.auth.register'));
         Fortify::authenticateUsing(function (Request $request): ?User {
             $user = User::query()
                 ->where('email', Str::lower((string) $request->input('email')))

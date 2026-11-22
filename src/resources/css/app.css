@@ -8,6 +8,9 @@
 @import "@fontsource-variable/inter";
 
 @import "@fontsource-variable/playfair-display";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/ibm-plex-sans";
+@import "@fontsource-variable/source-sans-3";
 
 /** 2. Dark mode variant*/
 
@@ -18,10 +21,9 @@
 @theme inline {
     /** Typography*/
 
-    --font-sans: "Inter Variable", "Inter", sans-serif;
+    --font-sans: 'IBM Plex Sans Variable', sans-serif;
 
-    --font-heading:
-        "Playfair Display Variable", "Playfair Display", Georgia, serif;
+    --font-heading: 'Source Sans 3 Variable', sans-serif;
 
     /** Brand colors*/
 
@@ -209,53 +211,53 @@
 
     /** Application surfaces*/
 
-    --background: #f7f5ef;
+    --background: oklch(1 0 0);
 
-    --foreground: #26332e;
+    --foreground: oklch(0.145 0 0);
 
-    --card: #ffffff;
+    --card: oklch(1 0 0);
 
-    --card-foreground: #26332e;
+    --card-foreground: oklch(0.145 0 0);
 
-    --popover: #ffffff;
+    --popover: oklch(1 0 0);
 
-    --popover-foreground: #26332e;
+    --popover-foreground: oklch(0.145 0 0);
 
     /** Primary actions*/
 
-    --primary: #173f35;
+    --primary: oklch(0.527 0.154 150.069);
 
-    --primary-foreground: #ffffff;
+    --primary-foreground: oklch(0.982 0.018 155.826);
 
     /** Secondary actions*/
 
-    --secondary: #dce7df;
+    --secondary: oklch(0.967 0.001 286.375);
 
-    --secondary-foreground: #26332e;
+    --secondary-foreground: oklch(0.21 0.006 285.885);
 
     /** Muted surfaces*/
 
-    --muted: #e9e3d7;
+    --muted: oklch(0.97 0 0);
 
-    --muted-foreground: #5f6b63;
+    --muted-foreground: oklch(0.556 0 0);
 
     /** Accent surfaces*/
 
-    --accent: #dce7df;
+    --accent: oklch(0.97 0 0);
 
-    --accent-foreground: #173f35;
+    --accent-foreground: oklch(0.205 0 0);
 
     /** Borders and focus*/
 
-    --border: #dedcd3;
+    --border: oklch(0.922 0 0);
 
-    --input: #dedcd3;
+    --input: oklch(0.922 0 0);
 
-    --ring: #173f35;
+    --ring: oklch(0.708 0 0);
 
     /** Destructive*/
 
-    --destructive: #a64f36;
+    --destructive: oklch(0.577 0.245 27.325);
 
     /** Feedback colors stay within the brand palette*/
 
@@ -277,37 +279,37 @@
 
     /** Charts — Nivara palette*/
 
-    --chart-1: #173f35;
+    --chart-1: oklch(0.87 0 0);
 
-    --chart-2: #b58a4a;
+    --chart-2: oklch(0.556 0 0);
 
-    --chart-3: #5f6b63;
+    --chart-3: oklch(0.439 0 0);
 
-    --chart-4: #dce7df;
+    --chart-4: oklch(0.371 0 0);
 
-    --chart-5: #173f35;
+    --chart-5: oklch(0.269 0 0);
 
     /** Light sidebar — always-dark sidebar on light content */
 
-    --sidebar: #1a2f28;
+    --sidebar: oklch(0.985 0 0);
 
-    --sidebar-foreground: #e2ded3;
+    --sidebar-foreground: oklch(0.145 0 0);
 
-    --sidebar-primary: #b58a4a;
+    --sidebar-primary: oklch(0.627 0.194 149.214);
 
-    --sidebar-primary-foreground: #1a2f28;
+    --sidebar-primary-foreground: oklch(0.982 0.018 155.826);
 
-    --sidebar-accent: #253e36;
+    --sidebar-accent: oklch(0.97 0 0);
 
-    --sidebar-accent-foreground: #e8e4d9;
+    --sidebar-accent-foreground: oklch(0.205 0 0);
 
-    --sidebar-border: #2c4940;
+    --sidebar-border: oklch(0.922 0 0);
 
-    --sidebar-ring: #b58a4a;
+    --sidebar-ring: oklch(0.708 0 0);
 
     /** Geometry*/
 
-    --radius: 0.75rem;
+    --radius: 0.875rem;
 
     /** Shadows*/
 
@@ -340,41 +342,41 @@
 .dark {
     color-scheme: dark;
 
-    --background: #14231e;
+    --background: oklch(0.145 0 0);
 
-    --foreground: #f7f5ef;
+    --foreground: oklch(0.985 0 0);
 
-    --card: #1d3029;
+    --card: oklch(0.205 0 0);
 
-    --card-foreground: #f7f5ef;
+    --card-foreground: oklch(0.985 0 0);
 
-    --popover: #243a32;
+    --popover: oklch(0.205 0 0);
 
-    --popover-foreground: #f7f5ef;
+    --popover-foreground: oklch(0.985 0 0);
 
-    --primary: #b58a4a;
+    --primary: oklch(0.448 0.119 151.328);
 
-    --primary-foreground: #14231e;
+    --primary-foreground: oklch(0.982 0.018 155.826);
 
-    --secondary: #30483d;
+    --secondary: oklch(0.274 0.006 286.033);
 
-    --secondary-foreground: #f7f5ef;
+    --secondary-foreground: oklch(0.985 0 0);
 
-    --muted: #293d35;
+    --muted: oklch(0.269 0 0);
 
-    --muted-foreground: #c2cec6;
+    --muted-foreground: oklch(0.708 0 0);
 
-    --accent: #30483d;
+    --accent: oklch(0.269 0 0);
 
-    --accent-foreground: #dce7df;
+    --accent-foreground: oklch(0.985 0 0);
 
-    --destructive: #f87171;
+    --destructive: oklch(0.704 0.191 22.216);
 
-    --border: #3b5147;
+    --border: oklch(1 0 0 / 10%);
 
-    --input: #496055;
+    --input: oklch(1 0 0 / 15%);
 
-    --ring: #b58a4a;
+    --ring: oklch(0.556 0 0);
 
     --success: #4ade80;
 
@@ -392,33 +394,33 @@
 
     --info-foreground: #ffffff;
 
-    --chart-1: #b58a4a;
+    --chart-1: oklch(0.87 0 0);
 
-    --chart-2: #a7c4b2;
+    --chart-2: oklch(0.556 0 0);
 
-    --chart-3: #dce7df;
+    --chart-3: oklch(0.439 0 0);
 
-    --chart-4: #6fa58a;
+    --chart-4: oklch(0.371 0 0);
 
-    --chart-5: #f7f5ef;
+    --chart-5: oklch(0.269 0 0);
 
     /** Dark sidebar — deeper dark sidebar on dark content */
 
-    --sidebar: #0f1b16;
+    --sidebar: oklch(0.205 0 0);
 
-    --sidebar-foreground: #e2ded3;
+    --sidebar-foreground: oklch(0.985 0 0);
 
-    --sidebar-primary: #b58a4a;
+    --sidebar-primary: oklch(0.723 0.219 149.579);
 
-    --sidebar-primary-foreground: #0f1b16;
+    --sidebar-primary-foreground: oklch(0.982 0.018 155.826);
 
-    --sidebar-accent: #1a2f28;
+    --sidebar-accent: oklch(0.269 0 0);
 
-    --sidebar-accent-foreground: #e8e4d9;
+    --sidebar-accent-foreground: oklch(0.985 0 0);
 
-    --sidebar-border: #223b33;
+    --sidebar-border: oklch(1 0 0 / 10%);
 
-    --sidebar-ring: #b58a4a;
+    --sidebar-ring: oklch(0.556 0 0);
 
     /** Dark shadows*/
 
@@ -600,6 +602,7 @@
         scrollbar-width: thin;
 
         scrollbar-color: var(--border) transparent;
+    @apply border-border outline-ring/50;
     }
 
     ::-webkit-scrollbar {
