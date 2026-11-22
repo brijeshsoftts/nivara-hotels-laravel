@@ -37,3 +37,4 @@ class PasswordResetFlowTest extends TestCase
         $response->assertSee('Reset password');
     }
 }
+

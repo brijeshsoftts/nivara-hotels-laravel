@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Enums\UserRole;
-use App\Models\RoomType;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -81,31 +80,47 @@ class InertiaPagesAndApiTest extends TestCase
         $this->get(route('dashboard'))->assertRedirect(route('login'));
         $this->get(route('dashboard.users'))->assertRedirect(route('login'));
         $this->get(route('dashboard.rooms'))->assertRedirect(route('login'));
+        $this->get(route('dashboard.staff'))->assertRedirect(route('login'));
+        $this->get(route('dashboard.customers'))->assertRedirect(route('login'));
+        $this->get(route('dashboard.bookings'))->assertRedirect(route('login'));
+        $this->get(route('dashboard.tasks'))->assertRedirect(route('login'));
+        $this->get(route('dashboard.issues'))->assertRedirect(route('login'));
+        $this->get(route('dashboard.invoices'))->assertRedirect(route('login'));
+        $this->get(route('dashboard.payments'))->assertRedirect(route('login'));
+        $this->get(route('dashboard.inquiries'))->assertRedirect(route('login'));
+        $this->get(route('dashboard.audit-logs'))->assertRedirect(route('login'));
+        $this->get(route('dashboard.profile'))->assertRedirect(route('login'));
     }
 
-    public function test_authenticated_admin_can_access_dashboard_and_pages(): void
+    public function test_authenticated_admin_can_access_all_dashboard_pages(): void
     {
         $admin = User::where('role', UserRole::ADMIN->value)->firstOrFail();
 
-        $this->actingAs($admin)
-            ->get(route('dashboard'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page->component('protect/dashboard/index'));
+        $routesToComponents = [
+            'dashboard' => 'protect/dashboard/index',
+            'dashboard.users' => 'protect/users/index',
+            'dashboard.staff' => 'protect/staff/index',
+            'dashboard.customers' => 'protect/customers/index',
+            'dashboard.rooms' => 'protect/rooms/index',
+            'dashboard.room-types' => 'protect/rooms/index',
+            'dashboard.amenities' => 'protect/rooms/index',
+            'dashboard.bookings' => 'protect/bookings/index',
+            'dashboard.bookings.new' => 'protect/bookings/new',
+            'dashboard.tasks' => 'protect/tasks/index',
+            'dashboard.issues' => 'protect/issues/index',
+            'dashboard.invoices' => 'protect/invoices/index',
+            'dashboard.payments' => 'protect/payments/index',
+            'dashboard.inquiries' => 'protect/inquiries/index',
+            'dashboard.audit-logs' => 'protect/audit-logs/index',
+            'dashboard.profile' => 'protect/profile/index',
+        ];
 
-        $this->actingAs($admin)
-            ->get(route('dashboard.users'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page->component('protect/users/index'));
-
-        $this->actingAs($admin)
-            ->get(route('dashboard.rooms'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page->component('protect/rooms/index'));
-
-        $this->actingAs($admin)
-            ->get(route('dashboard.bookings'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page->component('protect/bookings/index'));
+        foreach ($routesToComponents as $routeName => $componentName) {
+            $this->actingAs($admin)
+                ->get(route($routeName))
+                ->assertOk()
+                ->assertInertia(fn (Assert $page) => $page->component($componentName));
+        }
     }
 
     public function test_dashboard_stats_and_profile_api(): void

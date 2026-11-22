@@ -439,17 +439,6 @@ Route::prefix('dashboard')->group(function () {
         ]);
     });
 
-    Route::get('/tasks', function () {
-        $tasks = HousekeepingTask::with('room')->get()->map(fn($t) => [
-            'id' => $t->id,
-            'roomNumber' => $t->room?->room_number ?? '101',
-            'taskType' => $t->task_type instanceof \BackedEnum ? $t->task_type->value : (string) $t->task_type,
-            'status' => $t->status instanceof \BackedEnum ? $t->status->value : (string) $t->status,
-            'scheduledDate' => $t->scheduled_date?->toIso8601String(),
-        ]);
-        return apiItem($tasks);
-    });
-
     Route::get('/next-booking', function () {
         $booking = Booking::with(['bookingRooms.room.roomType'])
             ->where('check_in_date', '>=', Carbon::today())
@@ -471,17 +460,6 @@ Route::prefix('dashboard')->group(function () {
             'roomTypeName' => $firstRoom?->roomType?->name ?? 'Deluxe Room',
             'status' => $booking->status instanceof \BackedEnum ? $booking->status->value : (string) $booking->status,
         ]);
-    });
-
-    Route::get('/payments', function () {
-        $payments = Payment::with('invoice')->orderByDesc('created_at')->take(5)->get()->map(fn($p) => [
-            'id' => $p->id,
-            'amount' => $p->amount,
-            'paymentMethod' => $p->payment_method instanceof \BackedEnum ? $p->payment_method->value : (string) $p->payment_method,
-            'paymentStatus' => $p->payment_status instanceof \BackedEnum ? $p->payment_status->value : (string) $p->payment_status,
-            'paidAt' => $p->paid_at?->toIso8601String(),
-        ]);
-        return apiItem($payments);
     });
 });
 
@@ -1013,6 +991,24 @@ Route::post('/rooms', function (Request $request) {
     ]);
 
     return apiMsg('Room created successfully.', $room);
+});
+
+Route::get('/rooms/{id}', function (string $id) {
+    $room = Room::with('roomType')->findOrFail($id);
+    return apiItem([
+        'id' => $room->id,
+        'roomNumber' => $room->room_number,
+        'name' => $room->name,
+        'floor' => (string) $room->floor,
+        'roomTypeId' => $room->room_type_id,
+        'roomType' => [
+            'id' => $room->room_type_id,
+            'name' => $room->roomType?->name ?? 'Room Type',
+        ],
+        'occupancyStatus' => $room->occupancy_status instanceof \BackedEnum ? $room->occupancy_status->value : (string) $room->occupancy_status,
+        'housekeepingStatus' => $room->housekeeping_status instanceof \BackedEnum ? $room->housekeeping_status->value : (string) $room->housekeeping_status,
+        'isActive' => (bool) $room->is_active,
+    ]);
 });
 
 Route::patch('/rooms/{id}/release-out-of-order', function (string $id) {

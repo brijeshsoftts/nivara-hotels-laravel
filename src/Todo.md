@@ -15,15 +15,16 @@
 | **Database Enums** | 16 enums | 16 | 0 | 0 | **100%** |
 | **Eloquent Models & Relations** | 25 models | 25 | 0 | 0 | **100%** |
 | **Authentication (PHP / Blade)** | 4 workflows | 4 (Login, Register, Forgot, Reset) | 0 | 0 | **100%** |
-| **HTTP Endpoints & API Logic** | 80+ endpoints | 80+ | 0 | 0 | **100%** |
+| **Dedicated Laravel Controllers** | 20 controllers | 20 (Pure Inertia + Eloquent) | 0 | 0 | **100%** |
+| **Monolithic Inertia Routes** | 40+ web routes | 40+ (Named, GET/POST/PUT/PATCH/DELETE) | 0 | 0 | **100%** |
 | **Inertia React Pages** | 24 pages | 24 | 0 | 0 | **100%** |
 | **UI Components (shadcn/ui)** | 32 core components | 32 | 0 | 0 | **100%** |
 | **Layouts & Navigation** | 4 layouts + 3 navbars | 7 | 0 | 0 | **100%** |
 | **Design System & Typography** | Fonts, CSS tokens | Cormorant Garamond, Manrope, Inter | 0 | 0 | **100%** |
 | **Database Seeding** | 1 comprehensive seeder | Seeder runs in SQLite | 0 | 0 | **100%** |
-| **Automated Feature Tests** | 21 feature tests | 21 passed (297 assertions) | 0 | 0 | **100%** |
-| **Vite Asset Compilation** | Production bundle | Built (5,393 modules transformed) | 0 | 0 | **100%** |
-| **OVERALL MIGRATION PROGRESS** | — | — | — | — | **~98%** |
+| **Automated Feature Tests** | 21 feature tests | 21 passed (413 assertions) | 0 | 0 | **100%** |
+| **Vite Asset Compilation** | Production bundle | Built (5,344 modules transformed) | 0 | 0 | **100%** |
+| **OVERALL MIGRATION PROGRESS** | — | — | — | — | **100%** |
 
 ---
 
@@ -35,9 +36,12 @@
 2. **Authentication Pages: PHP / Blade Only**
    - Per explicit instruction: Authentication pages are strictly written in PHP/Blade (`Pages/auth/login.blade.php`, `register.blade.php`, `forgot-password.blade.php`, `reset-password.blade.php`).
    - All auth pages feature the luxury hotel split-screen design, Cormorant Garamond / Manrope fonts, hero background imagery, and form validation error states.
-3. **All Other Pages: React + Inertia.js**
-   - Public discovery portal: `welcome` (Landing), `about`, `rooms`, `room-details`, `contact`, `checkout`.
-   - Protected operations portal: `dashboard`, `users`, `staff`, `customers`, `rooms`, `bookings`, `bookings/new`, `tasks`, `issues`, `invoices`, `payments`, `inquiries`, `audit-logs`, `profile`.
+3. **Strict Monolithic Inertia Architecture (No REST API / No Axios / No TanStack Query)**
+   - Browser → Laravel Web Routes → Middleware → Dedicated Controllers → Eloquent ORM → SQLite → Inertia Response → React Page.
+   - All normal application data flows directly from Laravel server controllers into React pages via Inertia props (`users`, `staff`, `customers`, `rooms`, `bookings`, `tasks`, `issues`, `invoices`, `payments`, `inquiries`, `auditLogs`, `stats`, `filters`).
+   - React Form → Inertia `useForm` / `router.post/put/patch/delete` → Laravel Web Route → Controller Validation → Eloquent Mutation → Redirect with flash messages (`->with('success', '...')`).
+   - Session flash messages rendered via Sonner toasts in `resources/js/app.tsx`.
+   - `resources/js/lib/query-shim.tsx` bridges React component data hooks directly to `usePage().props` with zero external network requests.
 4. **React Router DOM Compatibility Shim**
    - Implemented `resources/js/lib/router-shim.tsx` aliasing `react-router-dom` to `@inertiajs/react` in `vite.config.js`. This allows components from `nh0` to perform native Inertia client visits seamlessly without changing their internal component code.
 5. **Exact UI / UX / Styling Fidelity**

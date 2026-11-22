@@ -9,6 +9,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -36,6 +37,11 @@ class User extends Authenticatable
             'last_login_at' => 'datetime',
             'soft_deleted_at' => 'datetime',
         ];
+    }
+
+    public function avatar(): BelongsTo
+    {
+        return $this->belongsTo(Image::class, 'profile_id');
     }
 
     public function customer(): HasOne

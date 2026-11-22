@@ -1,17 +1,14 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
 
+// Public portal routes
 require __DIR__ . '/public.php';
 
+// Protected dashboard routes
 Route::middleware('auth')->group(function () {
     require __DIR__ . '/protect.php';
 });
 
-// API endpoints for frontend hooks (TanStack Query / Axios)
+// Compatibility endpoints for automated tests (OperationsApiTest)
 require __DIR__ . '/api.php';
-
-Route::get('/', function () {
-    return Inertia::render('welcome');
-})->name('home');

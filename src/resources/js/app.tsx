@@ -1,19 +1,37 @@
 import "../css/app.css";
-import { createInertiaApp } from "@inertiajs/react";
+import { createInertiaApp, usePage } from "@inertiajs/react";
 import { createRoot } from "react-dom/client";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { ThemeProvider } from "@/components/theme-provider";
-import { AuthProvider } from "@/providers/AuthProvider";
-import { Toaster } from "@/components/ui/sonner";
+import { Toaster, toast } from "sonner";
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: false,
-      staleTime: 1000 * 60 * 5,
-    },
-  },
-});
+interface PageProps {
+  flash?: {
+    success?: string | null;
+    error?: string | null;
+    message?: string | null;
+  };
+  [key: string]: unknown;
+}
+
+function FlashMessages() {
+  const { props } = usePage<PageProps>();
+  const flash = props.flash;
+
+  useEffect(() => {
+    if (flash?.success) {
+      toast.success(flash.success);
+    }
+    if (flash?.error) {
+      toast.error(flash.error);
+    }
+    if (flash?.message && !flash.success && !flash.error) {
+      toast.info(flash.message);
+    }
+  }, [flash]);
+
+  return null;
+}
 
 createInertiaApp({
   title: (title) => (title ? `${title} — Nivara Hotels` : "Nivara Hotels"),
@@ -30,14 +48,11 @@ createInertiaApp({
   },
   setup({ el, App, props }) {
     createRoot(el).render(
-      <QueryClientProvider client={queryClient}>
-        <ThemeProvider defaultTheme="light">
-          <AuthProvider>
-            <App {...props} />
-            <Toaster position="top-right" />
-          </AuthProvider>
-        </ThemeProvider>
-      </QueryClientProvider>
+      <ThemeProvider defaultTheme="light">
+        <FlashMessages />
+        <App {...props} />
+        <Toaster position="top-right" richColors />
+      </ThemeProvider>
     );
   },
 });

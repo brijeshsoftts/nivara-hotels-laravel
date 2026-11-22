@@ -28,6 +28,10 @@ export default defineConfig({
                 __dirname,
                 "./resources/js/lib/router-shim.tsx"
             ),
+            "@tanstack/react-query": path.resolve(
+                __dirname,
+                "./resources/js/lib/query-shim.tsx"
+            ),
         },
     },
     server: {

@@ -1,22 +1,18 @@
-import { useMutation } from "@tanstack/react-query";
-
-import { notifyError } from "@/lib/notification";
-
-import { authMutationKeys } from "../auth.keys";
-import { authService } from "../auth.service";
+import { router } from "@inertiajs/react";
+import { useState } from "react";
 
 export function useLogout() {
-  const { isPending, mutate } = useMutation({
-    mutationKey: authMutationKeys.logout,
-    mutationFn: authService.logout,
-    onSuccess: () => {
-      window.location.href = "/login";
-    },
-    onError: notifyError,
-  });
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleLogout = () => {
+    setIsLoading(true);
+    router.post("/logout", {}, {
+      onFinish: () => setIsLoading(false),
+    });
+  };
 
   return {
-    handleLogout: () => mutate(),
-    isLoading: isPending,
+    handleLogout,
+    isLoading,
   };
 }

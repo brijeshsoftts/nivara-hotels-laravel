@@ -34,8 +34,18 @@ class Issue extends Model
         return $this->belongsTo(User::class, 'reported_by_id');
     }
 
+    public function reportedByStaff(): BelongsTo
+    {
+        return $this->belongsTo(Staff::class, 'reported_by');
+    }
+
     public function assignedTo(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_to_id');
+    }
+
+    public function assignedToStaff(): BelongsTo
+    {
+        return $this->belongsTo(Staff::class, 'assigned_to');
     }
 }
