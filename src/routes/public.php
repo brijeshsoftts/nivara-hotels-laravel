@@ -1,19 +1,23 @@
 <?php
 
-use App\Http\Controllers\AboutController;
-use App\Http\Controllers\PublicCheckoutController;
-use App\Http\Controllers\PublicContactController;
-use App\Http\Controllers\PublicRoomController;
-use App\Http\Controllers\WelcomeController;
+use App\Http\Controllers\PublicController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', [WelcomeController::class, 'index'])->name('home');
-Route::get('/about', [AboutController::class, 'index'])->name('about');
-Route::get('/rooms', [PublicRoomController::class, 'index'])->name('rooms.index');
-Route::get('/rooms-list', [PublicRoomController::class, 'index'])->name('rooms');
-Route::get('/rooms/{slug}', [PublicRoomController::class, 'show'])->name('rooms.show');
-Route::get('/contact', [PublicContactController::class, 'index'])->name('contact');
-Route::post('/contact', [PublicContactController::class, 'store'])->name('contact.store');
-Route::get('/checkout', [PublicCheckoutController::class, 'index'])->name('checkout');
-Route::post('/checkout', [PublicCheckoutController::class, 'store'])->name('checkout.store');
-Route::get('/rooms/{slug}/book', [PublicCheckoutController::class, 'index'])->name('rooms.book');
+Route::controller(PublicController::class)->group(function () {
+    Route::get('/', 'home')->name('home');
+    Route::get('/about', 'about')->name('about');
+    Route::get('/contact', 'contact')->name('contact');
+    Route::post('/contact', 'storeContact')->name('contact.store');
+
+    Route::get('/rooms', 'rooms')->name('rooms.index');
+    Route::get('/rooms-list', 'rooms')->name('rooms');
+    Route::get('/rooms/{slug}', 'roomDetails')->name('rooms.show');
+    Route::get('/checkout', 'checkout')->name('checkout');
+    Route::post('/checkout', 'storeCheckout')->name('checkout.store');
+    Route::get('/rooms/{slug}/book', 'checkout')->name('rooms.book');
+
+    // Compatibility endpoints for public API / tests
+    Route::get('/public/rooms', 'roomsApi')->name('public.rooms');
+    Route::get('/public/amenities', 'amenitiesApi')->name('public.amenities');
+    Route::post('/public/contact', 'storeContact')->name('public.contact');
+});

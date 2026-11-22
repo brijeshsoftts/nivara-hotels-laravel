@@ -1,11 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
-
-import { tasksKeys } from "../tasks.keys";
-import { tasksService } from "../tasks.service";
+import { usePage } from "@inertiajs/react";
 
 export function useTasksStats() {
-  return useQuery({
-    queryKey: tasksKeys.stats(),
-    queryFn: tasksService.getStats,
-  });
+  const page = usePage<any>();
+  return {
+    data: page.props?.stats ?? [],
+    isLoading: false,
+    isError: false,
+    refetch: () => { },
+  };
 }

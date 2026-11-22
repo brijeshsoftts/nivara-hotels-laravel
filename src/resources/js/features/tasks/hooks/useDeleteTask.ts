@@ -1,30 +1,27 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { router } from "@inertiajs/react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { notifyError } from "@/lib/notification";
 
-import { roomsKeys } from "../../rooms/rooms/rooms.keys";
-import { tasksKeys, tasksMutationKeys } from "../tasks.keys";
-import { tasksService } from "../tasks.service";
+export function useDeleteTask(id: string) {
+  const [isDeleting, setIsDeleting] = useState(false);
 
-export function useDeleteTask() {
-  const queryClient = useQueryClient();
-
-  const { isPending, mutate } = useMutation({
-    mutationKey: tasksMutationKeys.delete,
-    mutationFn: tasksService.delete,
-    onSuccess: (res) => {
-      toast.success(res?.message || "Task deleted successfully");
-      queryClient.invalidateQueries({
-        queryKey: tasksKeys.lists(),
-      });
-      void queryClient.invalidateQueries({ queryKey: roomsKeys.all });
-    },
-    onError: notifyError,
-  });
+  const handleDelete = () => {
+    setIsDeleting(true);
+    router.delete(`/dashboard/tasks/${id}`, {
+      onSuccess: () => {
+        toast.success("Task deleted successfully");
+      },
+      onError: (err) => {
+        notifyError(err);
+      },
+      onFinish: () => setIsDeleting(false),
+    });
+  };
 
   return {
-    isDeleting: isPending,
-    handleDelete: mutate,
+    isDeleting,
+    handleDelete,
   };
 }

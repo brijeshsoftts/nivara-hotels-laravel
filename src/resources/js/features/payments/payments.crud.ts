@@ -1,58 +1,82 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { router, usePage } from "@inertiajs/react";
+import { useState } from "react";
 import { toast } from "sonner";
-
-import { bookingsKeys } from "@/features/bookings/bookings.keys";
-import { invoicesKeys } from "@/features/invoices/invoices.keys";
-import { roomsKeys } from "@/features/rooms/rooms/rooms.keys";
-import { createCrud } from "@/lib/crud/createCrud";
 import { notifyError } from "@/lib/notification";
-
-import { paymentsKeys } from "./payments.keys";
-import { paymentsService } from "./payments.service";
 import type { PaymentItem } from "./payments.types";
 
-type Payment = PaymentItem;
+export function usePayments<T = PaymentItem>(_params?: any) {
+  const page = usePage<any>();
+  const payments = page.props?.payments ?? { data: [], meta: { page: 1, limit: 10, total: 0, totalPages: 1 } };
 
-export const paymentsCrud = createCrud<Payment, undefined>()({
-  resource: "payments",
-  endpoint: "/payments",
-  label: "Payment",
-});
-
-export const { useList: usePayments } = paymentsCrud;
+  return {
+    items: (payments.data ?? []) as T[],
+    data: (payments.data ?? []) as T[],
+    pagination: payments.meta,
+    isLoading: false,
+    isPending: false,
+    isError: false,
+    refetch: () => {},
+  };
+}
 
 export function useCollectCash() {
-  const queryClient = useQueryClient();
+  const [isPending, setIsPending] = useState(false);
 
-  return useMutation({
-    mutationFn: paymentsService.createCashPayment,
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: paymentsKeys.all }),
-        queryClient.invalidateQueries({ queryKey: bookingsKeys.all }),
-        queryClient.invalidateQueries({ queryKey: roomsKeys.all }),
-        queryClient.invalidateQueries({ queryKey: invoicesKeys.all }),
-      ]);
-      toast.success("Cash payment collected.");
-    },
-    onError: notifyError,
-  });
+  const mutate = (data: any, options?: { onSuccess?: () => void; onError?: (err: any) => void }) => {
+    setIsPending(true);
+    router.post("/dashboard/payments/cash", data, {
+      onSuccess: () => {
+        toast.success("Cash payment collected.");
+        options?.onSuccess?.();
+      },
+      onError: (err) => {
+        notifyError(err);
+        options?.onError?.(err);
+      },
+      onFinish: () => setIsPending(false),
+    });
+  };
+
+  return {
+    mutate,
+    mutateAsync: mutate,
+    isPending,
+    isError: false,
+    error: null,
+    reset: () => {},
+  };
 }
 
 export function useRecordQrPayment() {
-  const queryClient = useQueryClient();
+  const [isPending, setIsPending] = useState(false);
 
-  return useMutation({
-    mutationFn: paymentsService.recordQrPayment,
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: paymentsKeys.all }),
-        queryClient.invalidateQueries({ queryKey: bookingsKeys.all }),
-        queryClient.invalidateQueries({ queryKey: roomsKeys.all }),
-        queryClient.invalidateQueries({ queryKey: invoicesKeys.all }),
-      ]);
-      toast.success("QR payment recorded. Verify it against the bank/app.");
-    },
-    onError: notifyError,
-  });
+  const mutate = (data: any, options?: { onSuccess?: () => void; onError?: (err: any) => void }) => {
+    setIsPending(true);
+    router.post("/dashboard/payments/qr", data, {
+      onSuccess: () => {
+        toast.success("QR payment recorded. Verify it against the bank/app.");
+        options?.onSuccess?.();
+      },
+      onError: (err) => {
+        notifyError(err);
+        options?.onError?.(err);
+      },
+      onFinish: () => setIsPending(false),
+    });
+  };
+
+  return {
+    mutate,
+    mutateAsync: mutate,
+    isPending,
+    isError: false,
+    error: null,
+    reset: () => {},
+  };
 }
+
+export const paymentsCrud = {
+  useList: usePayments,
+  useCollectCash,
+  useRecordQrPayment,
+};

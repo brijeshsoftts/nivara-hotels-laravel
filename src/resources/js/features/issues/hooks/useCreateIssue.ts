@@ -1,36 +1,18 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { router } from "@inertiajs/react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 import { notifyError } from "@/lib/notification";
-
-import { issuesKeys, issuesMutationKeys } from "../issues.keys";
-import { issuesService } from "../issues.service";
 import {
   type CreateIssue,
   CreateIssueSchema,
 } from "../schemas/createIssue.schema";
 
-function useCreateIssue() {
-  const queryClient = useQueryClient();
-
-  const mutation = useMutation({
-    mutationKey: issuesMutationKeys.create,
-    mutationFn: issuesService.create,
-    onSuccess: (res) => {
-      toast.success(res?.message || "Issue created successfully.");
-      queryClient.invalidateQueries({
-        queryKey: issuesKeys.all,
-      });
-    },
-    onError: notifyError,
-  });
-  return mutation;
-}
-
 export function useCreateIssueFacade() {
-  const { mutate, isPending, isSuccess } = useCreateIssue();
+  const [isPending, setIsPending] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const {
     handleSubmit,
@@ -38,12 +20,28 @@ export function useCreateIssueFacade() {
     control,
     formState: { errors },
     getValues,
+    reset,
   } = useForm<CreateIssue>({
     resolver: zodResolver(CreateIssueSchema),
   });
 
+  const submit = (data: CreateIssue) => {
+    setIsPending(true);
+    router.post("/dashboard/issues", data as any, {
+      onSuccess: () => {
+        setIsSuccess(true);
+        toast.success("Issue reported successfully.");
+        reset();
+      },
+      onError: (err) => {
+        notifyError(err);
+      },
+      onFinish: () => setIsPending(false),
+    });
+  };
+
   return {
-    submit: (data: CreateIssue) => mutate(data),
+    submit,
     isPending,
     isSuccess,
     register,
@@ -51,5 +49,6 @@ export function useCreateIssueFacade() {
     handleSubmit,
     errors,
     getValues,
+    reset,
   };
 }

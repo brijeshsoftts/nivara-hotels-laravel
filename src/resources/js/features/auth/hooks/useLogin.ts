@@ -1,29 +1,41 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation } from "@tanstack/react-query";
+import { router } from "@inertiajs/react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 
 import { notifyError } from "@/lib/notification";
-
-import { authMutationKeys } from "../auth.keys";
-import { authService } from "../auth.service";
 import { type Login, LoginSchema } from "../schema/login.schema";
 
 export function useLogin() {
-  const mutation = useMutation({
-    mutationKey: authMutationKeys.login,
-    mutationFn: authService.login,
-    onSuccess: () => {
-      window.location.href = "/dashboard";
-    },
-    onError: notifyError,
-  });
+  const [isPending, setIsPending] = useState(false);
 
-  return mutation;
+  const mutate = (data: Login) => {
+    setIsPending(true);
+    router.post("/login", data as any, {
+      onSuccess: () => {
+        toast.success("Logged in successfully.");
+        window.location.href = "/dashboard";
+      },
+      onError: (err) => {
+        notifyError(err);
+      },
+      onFinish: () => setIsPending(false),
+    });
+  };
+
+  return {
+    mutate,
+    isPending,
+    isSuccess: false,
+    error: null,
+    reset: () => {},
+  };
 }
 
 export function useLoginFacade() {
   const mutation = useLogin();
-  const { mutate, isPending, isSuccess, error } = mutation;
+  const { mutate, isPending } = mutation;
 
   const {
     handleSubmit,
@@ -38,13 +50,13 @@ export function useLoginFacade() {
   return {
     submit: (data: Login) => mutate(data),
     isPending,
-    isSuccess,
-    error,
+    isSuccess: false,
+    error: null,
     register,
     handleSubmit,
     errors,
     getValues,
     reset,
-    resetMutation: mutation.reset,
+    resetMutation: () => {},
   };
 }

@@ -1,19 +1,18 @@
-import { Navigate } from "react-router-dom";
-
+import { NoAccess } from "@/components/common/NoAccess";
 import { CustomerIssues } from "@/features/issues/components/CustomerIssues";
 import { ManagementIssue } from "@/features/issues/components/ManagementIssue";
 import { useAuth } from "@/hooks/useAuth";
 
-export default function IssuesPage() {
+export default function IssuesPage(props: any) {
   const { user } = useAuth();
 
   switch (user?.role) {
     case "ADMIN":
     case "MANAGER":
-      return <ManagementIssue />;
+      return <ManagementIssue {...props} />;
     case "CUSTOMER":
-      return <CustomerIssues />;
+      return <CustomerIssues {...props} />;
     default:
-      return <Navigate to="/dashboard" replace />;
+      return <NoAccess />;
   }
 }

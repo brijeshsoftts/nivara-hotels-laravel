@@ -22,6 +22,25 @@ class User extends Authenticatable
     /** @use HasFactory<UserFactory> */
     use HasCuid, HasFactory, Notifiable;
 
+    protected static function booted(): void
+    {
+        static::saving(function (User $user) {
+            if ($user->password && empty($user->password_hash)) {
+                $user->password_hash = $user->password;
+            }
+        });
+    }
+
+    protected $with = ['staff', 'avatar'];
+    protected $appends = ['category'];
+
+    public function getCategoryAttribute(): ?string
+    {
+        return $this->staff?->category instanceof \BackedEnum
+            ? $this->staff->category->value
+            : ($this->staff?->category ? (string) $this->staff->category : null);
+    }
+
     /**
      * Get the attributes that should be cast.
      *

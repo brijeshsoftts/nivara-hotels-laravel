@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link } from "@inertiajs/react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -31,10 +31,10 @@ export const DropdownProfile = ({
           children ?? (
             <Avatar>
               {user?.avatar?.url ? (
-                <AvatarImage src={user?.avatar?.url} alt={user?.fullName} />
+                <AvatarImage src={user?.avatar?.url} alt={user?.fullName ?? user?.name} />
               ) : (
                 <AvatarFallback className={"bg-primary text-background"}>
-                  {getInitials(user?.fullName)}
+                  {getInitials(user?.fullName ?? user?.name)}
                 </AvatarFallback>
               )}
             </Avatar>
@@ -46,15 +46,15 @@ export const DropdownProfile = ({
           <DropdownMenuLabel className="flex items-center gap-2">
             <Avatar>
               {user?.avatar?.url ? (
-                <AvatarImage src={user?.avatar?.url} alt={user?.fullName} />
+                <AvatarImage src={user?.avatar?.url} alt={user?.fullName ?? user?.name} />
               ) : (
                 <AvatarFallback className={"bg-primary text-background"}>
-                  {getInitials(user?.fullName)}
+                  {getInitials(user?.fullName ?? user?.name)}
                 </AvatarFallback>
               )}
             </Avatar>
             <div className="flex flex-1 flex-col">
-              <span className="text-popover-foreground">{user?.fullName}</span>
+              <span className="text-popover-foreground">{user?.fullName ?? user?.name}</span>
               <span className="text-xs text-muted-foreground">
                 {user?.email}
               </span>
@@ -64,7 +64,7 @@ export const DropdownProfile = ({
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem>
-            <Link to="/dashboard/profile" className="w-full">
+            <Link href="/dashboard/profile" className="w-full">
               Profile
             </Link>
           </DropdownMenuItem>
@@ -77,7 +77,7 @@ export const DropdownProfile = ({
             Logout
           </DropdownMenuItem>
           <DropdownMenuItem>
-            <Link to="/" className="w-full">
+            <Link href="/" className="w-full">
               Back to Home
             </Link>
           </DropdownMenuItem>

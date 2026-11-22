@@ -89,7 +89,7 @@ export function CustomerPaymentsTab({
   return (
     <div className="space-y-3">
       <div className="max-h-100 space-y-3 overflow-y-auto pr-1">
-        {payments.map((payment) => (
+        {payments.map((payment: any) => (
           <CustomerPaymentCard
             key={payment.id}
             payment={payment}

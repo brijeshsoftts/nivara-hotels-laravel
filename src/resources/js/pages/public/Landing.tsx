@@ -1,4 +1,5 @@
 import { cn } from "cn";
+import { router } from "@inertiajs/react";
 import {
     ArrowLeft,
     ArrowRight,
@@ -49,7 +50,7 @@ import {
     sectionHeadingClassName,
 } from "@/features/public/components/sectionStyles";
 import { testimonials } from "@/features/public/public.mock";
-import { useAvailableRooms } from "@/features/public/useAvailableRooms";
+import { Link, usePage } from "@inertiajs/react";
 
 // import { ContactForm, LocationPanel } from "./Contact";
 
@@ -361,10 +362,11 @@ function AboutSection() {
     );
 }
 
-function FeaturedRoomsSection() {
-    const { rooms, isLoading, isError, refetch } = useAvailableRooms({
-        limit: 6,
-    });
+function FeaturedRoomsSection({ rooms: propRooms }: { rooms?: any[] } = {}) {
+    const page = usePage<any>();
+    const rooms = propRooms ?? (page.props?.featuredRooms?.data as any[]) ?? [];
+    const isLoading = false;
+    const isError = false;
     return (
         <section
             className={cn("w-full bg-muted font-sans", sectionPaddingClassName)}
@@ -413,7 +415,7 @@ function FeaturedRoomsSection() {
                             </p>
                             <Button
                                 className="mt-5"
-                                onClick={() => void refetch()}
+                                onClick={() => void router.reload()}
                                 variant="outline"
                             >
                                 Try again
@@ -870,12 +872,18 @@ function CTASection() {
     );
 }
 
-export default function Landing() {
+export default function Landing({
+    featuredRooms,
+    amenities,
+}: {
+    featuredRooms?: any;
+    amenities?: any;
+} = {}) {
     return (
         <>
             <HeroSection />
             <AboutSection />
-            <FeaturedRoomsSection />
+            <FeaturedRoomsSection rooms={featuredRooms?.data} />
             <AmenitiesSection />
             <TestimonialsSection />
             <ContactSection />

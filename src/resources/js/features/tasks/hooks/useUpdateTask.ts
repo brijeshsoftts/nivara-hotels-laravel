@@ -1,36 +1,18 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { router } from "@inertiajs/react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 import { notifyError } from "@/lib/notification";
-
 import {
   type UpdateTask,
   UpdateTaskSchema,
 } from "../schemas/updateTask.schema";
-import { tasksKeys, tasksMutationKeys } from "../tasks.keys";
-import { tasksService } from "../tasks.service";
-
-function useUpdateTask(id: string) {
-  const queryClient = useQueryClient();
-
-  const mutation = useMutation({
-    mutationKey: tasksMutationKeys.create,
-    mutationFn: (data: UpdateTask) => tasksService.update(id, data),
-    onSuccess: (res) => {
-      toast.success(res?.message || "Task updated successfully.");
-      queryClient.invalidateQueries({
-        queryKey: tasksKeys.all,
-      });
-    },
-    onError: notifyError,
-  });
-  return mutation;
-}
 
 export function useUpdateTaskFacade(id: string) {
-  const { mutate, isPending, isSuccess } = useUpdateTask(id);
+  const [isPending, setIsPending] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const {
     handleSubmit,
@@ -38,12 +20,27 @@ export function useUpdateTaskFacade(id: string) {
     control,
     formState: { errors },
     getValues,
+    reset,
   } = useForm({
     resolver: zodResolver(UpdateTaskSchema),
   });
 
+  const submit = (data: UpdateTask) => {
+    setIsPending(true);
+    router.put(`/dashboard/tasks/${id}`, data as any, {
+      onSuccess: () => {
+        setIsSuccess(true);
+        toast.success("Task updated successfully.");
+      },
+      onError: (err) => {
+        notifyError(err);
+      },
+      onFinish: () => setIsPending(false),
+    });
+  };
+
   return {
-    submit: (data: UpdateTask) => mutate(data),
+    submit,
     isPending,
     isSuccess,
     register,
@@ -51,5 +48,6 @@ export function useUpdateTaskFacade(id: string) {
     handleSubmit,
     errors,
     getValues,
+    reset,
   };
 }

@@ -1,26 +1,30 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { router } from "@inertiajs/react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { notifyError } from "@/lib/notification";
-
-import { roomTypesKeys, roomTypesMutationKeys } from "../roomTypes.keys";
-import { roomTypesService } from "../roomTypes.service";
 import type { UpdateRoomTypePayload } from "../schemas/updateRoomType.schema";
 
 export function useUpdateRoomType(id: string) {
-  const queryClient = useQueryClient();
+  const [isPending, setIsPending] = useState(false);
 
-  return useMutation({
-    mutationKey: roomTypesMutationKeys.update,
-    mutationFn: (data: UpdateRoomTypePayload) =>
-      roomTypesService.update(id, data),
-    onSuccess: async (response) => {
-      toast.success(response.message ?? "Room type updated successfully.");
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: roomTypesKeys.lists() }),
-        queryClient.invalidateQueries({ queryKey: roomTypesKeys.details() }),
-      ]);
-    },
-    onError: notifyError,
-  });
+  const mutate = (data: UpdateRoomTypePayload, options?: { onSuccess?: () => void; onError?: (err: any) => void }) => {
+    setIsPending(true);
+    router.put(`/dashboard/room-types/${id}`, data as any, {
+      onSuccess: () => {
+        toast.success("Room type updated successfully.");
+        options?.onSuccess?.();
+      },
+      onError: (err) => {
+        notifyError(err);
+        options?.onError?.(err);
+      },
+      onFinish: () => setIsPending(false),
+    });
+  };
+
+  return {
+    mutate,
+    isPending,
+  };
 }

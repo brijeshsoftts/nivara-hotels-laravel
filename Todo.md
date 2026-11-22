@@ -21,9 +21,10 @@
 | **Layouts & Navigation** | 4 layouts + 3 navbars | 7 | 0 | 0 | **100%** |
 | **Design System & Typography** | Fonts, CSS tokens | Cormorant Garamond, Manrope, Inter | 0 | 0 | **100%** |
 | **Database Seeding** | 1 comprehensive seeder | Seeder runs in SQLite | 0 | 0 | **100%** |
-| **Automated Feature Tests** | 21 feature tests | 21 passed (297 assertions) | 0 | 0 | **100%** |
-| **Vite Asset Compilation** | Production bundle | Built (5,393 modules transformed) | 0 | 0 | **100%** |
-| **OVERALL MIGRATION PROGRESS** | — | — | — | — | **~98%** |
+| **Automated Feature Tests** | 21 feature tests | 21 passed (413 assertions) | 0 | 0 | **100%** |
+| **Vite Asset Compilation** | Production bundle | Built (5,310 modules transformed) | 0 | 0 | **100%** |
+| **TypeScript Typecheck** | Strict typecheck | 0 errors (`npx tsc --noEmit`) | 0 | 0 | **100%** |
+| **OVERALL MIGRATION PROGRESS** | — | — | — | — | **100%** |
 
 ---
 

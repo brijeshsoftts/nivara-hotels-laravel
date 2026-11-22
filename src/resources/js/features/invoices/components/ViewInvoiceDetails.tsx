@@ -502,7 +502,7 @@ export function ViewInvoiceDetails({
                   </div>
                 ) : (
                   <div className="mt-3 space-y-3">
-                    {invoice.payments.map((payment) => (
+                    {invoice.payments.map((payment: any) => (
                       <div
                         key={payment.id}
                         className="min-w-0 rounded-xl border p-4"

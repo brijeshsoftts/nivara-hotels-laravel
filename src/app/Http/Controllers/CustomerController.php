@@ -111,10 +111,12 @@ class CustomerController extends Controller
 
     public function search(Request $request)
     {
-        $s = $request->input('search', '');
+        $s = $request->input('q', $request->input('search', ''));
         $customers = Customer::with('user')
-            ->whereHas('user', fn($q) => $q->where('name', 'like', "%{$s}%")->orWhere('email', 'like', "%{$s}%")->orWhere('phone', 'like', "%{$s}%"))
-            ->orWhere('id_proof_number', 'like', "%{$s}%")
+            ->where(function ($query) use ($s) {
+                $query->whereHas('user', fn($q) => $q->where('name', 'like', "%{$s}%")->orWhere('email', 'like', "%{$s}%")->orWhere('phone', 'like', "%{$s}%"))
+                    ->orWhere('id_proof_number', 'like', "%{$s}%");
+            })
             ->take(10)
             ->get()
             ->map(fn($c) => [
@@ -127,6 +129,43 @@ class CustomerController extends Controller
             ]);
 
         return response()->json(['data' => $customers]);
+    }
+
+    public function show(string $id)
+    {
+        $c = Customer::with(['user', 'bookings'])->findOrFail($id);
+        return response()->json([
+            'data' => [
+                'id' => $c->id,
+                'userId' => $c->user_id,
+                'name' => $c->user?->name ?? 'Guest',
+                'fullName' => $c->user?->full_name ?? $c->user?->name ?? 'Guest',
+                'email' => $c->user?->email,
+                'phone' => $c->user?->phone,
+                'idProofType' => $c->id_proof_type,
+                'idProofNumber' => $c->id_proof_number,
+                'city' => $c->city,
+                'state' => $c->state,
+                'country' => $c->country ?? 'India',
+                'status' => $c->status,
+                'totalBookings' => $c->bookings->count(),
+                'createdAt' => $c->created_at?->toIso8601String(),
+            ]
+        ]);
+    }
+
+    public function customerBookings(string $id)
+    {
+        $c = Customer::findOrFail($id);
+        $bookings = \App\Models\Booking::where('customer_id', $c->user_id)->get();
+        return response()->json(['data' => $bookings]);
+    }
+
+    public function customerPayments(string $id)
+    {
+        $c = Customer::findOrFail($id);
+        $payments = \App\Models\Payment::where('customer_id', $c->user_id)->get();
+        return response()->json(['data' => $payments]);
     }
 
     public function store(Request $request)
@@ -154,22 +193,19 @@ class CustomerController extends Controller
                     'phone' => $validated['phone'],
                     'role' => UserRole::CUSTOMER->value,
                     'password' => Hash::make(Str::random(16)),
+                    'password_hash' => Hash::make(Str::random(16)),
                     'is_active' => true,
                 ]
             );
 
             $customer = Customer::create([
                 'user_id' => $user->id,
-                'id_proof_type' => $validated['idProofType'] ?? 'PASSPORT',
                 'id_proof_number' => $validated['idProofNumber'] ?? ('ID_' . strtoupper(Str::random(8))),
-                'city' => $validated['city'] ?? null,
-                'state' => $validated['state'] ?? null,
-                'country' => $validated['country'] ?? 'India',
-                'status' => 'ACTIVE',
+                'address' => $validated['address'] ?? ($validated['city'] ?? 'Nivara Residence'),
             ]);
 
             if ($request->wantsJson() && !$request->header('X-Inertia')) {
-                return response()->json(['data' => ['id' => $customer->id], 'message' => 'Customer created successfully'], 201);
+                return response()->json(['data' => ['id' => $customer->id], 'message' => 'Customer created successfully.'], 200);
             }
 
             return redirect()->back()->with('success', 'Customer registered successfully.');
@@ -222,3 +258,4 @@ class CustomerController extends Controller
         return redirect()->back()->with('success', 'Customer deleted successfully.');
     }
 }
+

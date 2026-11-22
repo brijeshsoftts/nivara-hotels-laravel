@@ -1,23 +1,27 @@
-import { useMutation } from "@tanstack/react-query";
+import { router } from "@inertiajs/react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { notifyError } from "@/lib/notification";
 
-import { amenitiesMutationKeys } from "../amenities.keys";
-import { amenitiesService } from "../amenities.service";
-
 export function useDeleteAmenity(id: string) {
-  const { mutate, isPending } = useMutation({
-    mutationKey: amenitiesMutationKeys.delete,
-    mutationFn: () => amenitiesService.delete(id),
-    onSuccess: (res) => {
-      toast.success(res?.message || "Amenity deleted successfully.");
-    },
-    onError: notifyError,
-  });
+  const [isPending, setIsPending] = useState(false);
+
+  const handleDelete = () => {
+    setIsPending(true);
+    router.delete(`/dashboard/amenities/${id}`, {
+      onSuccess: () => {
+        toast.success("Amenity deleted successfully.");
+      },
+      onError: (err) => {
+        notifyError(err);
+      },
+      onFinish: () => setIsPending(false),
+    });
+  };
 
   return {
-    handleDelete: () => mutate(),
+    handleDelete,
     isPending,
   };
 }

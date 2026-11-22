@@ -1,52 +1,65 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { router } from "@inertiajs/react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 import { notifyError } from "@/lib/notification";
-
-import { roomsKeys, roomsMutationKeys } from "../rooms.keys";
-import { roomsService } from "../rooms.service";
 import {
   type UpdateRoom,
   UpdateRoomSchema,
 } from "../schemas/updateRoom.schema";
 
 export function useReleaseOutOfOrderRoom(id: string) {
-  const queryClient = useQueryClient();
+  const [isPending, setIsPending] = useState(false);
 
-  return useMutation({
-    mutationKey: ["rooms", "release-out-of-order", id],
-    mutationFn: () => roomsService.releaseOutOfOrder(id),
-    onSuccess: (res) => {
-      toast.success(res?.message || "Room returned to service.");
-      void queryClient.invalidateQueries({ queryKey: roomsKeys.all });
-    },
-    onError: notifyError,
-  });
+  const mutate = (_data?: any, options?: { onSuccess?: () => void; onError?: (err: any) => void }) => {
+    setIsPending(true);
+    router.patch(`/dashboard/rooms/${id}/release-out-of-order`, {}, {
+      onSuccess: () => {
+        toast.success("Room returned to service.");
+        options?.onSuccess?.();
+      },
+      onError: (err) => {
+        notifyError(err);
+        options?.onError?.(err);
+      },
+      onFinish: () => setIsPending(false),
+    });
+  };
+
+  return {
+    mutate,
+    isPending,
+  };
 }
 
 export function useUpdateRoomMutation(id: string) {
-  const queryClient = useQueryClient();
+  const [isPending, setIsPending] = useState(false);
 
-  return useMutation({
-    mutationKey: roomsMutationKeys.update,
-    mutationFn: (data: UpdateRoom) => roomsService.update(id, data),
+  const mutate = (data: any, options?: { onSuccess?: () => void; onError?: (err: any) => void }) => {
+    setIsPending(true);
+    router.put(`/dashboard/rooms/${id}`, data as any, {
+      onSuccess: () => {
+        toast.success("Room updated successfully.");
+        options?.onSuccess?.();
+      },
+      onError: (err) => {
+        notifyError(err);
+        options?.onError?.(err);
+      },
+      onFinish: () => setIsPending(false),
+    });
+  };
 
-    onSuccess: (res) => {
-      toast.success(res?.message || "Room updated successfully.");
-
-      queryClient.invalidateQueries({
-        queryKey: roomsKeys.all,
-      });
-    },
-
-    onError: notifyError,
-  });
+  return {
+    mutate,
+    isPending,
+  };
 }
 
 export function useUpdateRoomFacade(id: string) {
-  const { mutate, isPending, isSuccess } = useUpdateRoomMutation(id);
+  const { mutate, isPending, isSuccess } = useUpdateRoomMutation(id) as any;
 
   const {
     handleSubmit,
@@ -59,10 +72,14 @@ export function useUpdateRoomFacade(id: string) {
     resolver: zodResolver(UpdateRoomSchema),
   });
 
+  const submit = (data: UpdateRoom) => {
+    mutate(data);
+  };
+
   return {
-    submit: (data: UpdateRoom) => mutate(data),
+    submit,
     isPending,
-    isSuccess,
+    isSuccess: isSuccess || false,
     register,
     handleSubmit,
     errors,

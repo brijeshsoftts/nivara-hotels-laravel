@@ -13,7 +13,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link } from "@inertiajs/react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -335,7 +335,7 @@ function BookingBar({
         )}
         {room.roomStatusSummary?.occupancy?.available > 0 ? (
           <Button size="lg" className="rounded-lg px-6 sm:px-8">
-            <Link to={`/rooms/${room.slug}/book`} onClick={onClose}>
+            <Link href={`/rooms/${room.slug}/book`} onClick={onClose}>
               <CalendarCheck className="size-4" />
               Book this room
             </Link>

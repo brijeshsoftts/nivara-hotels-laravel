@@ -1,12 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
-
-import { dashbaordKeys } from "../dashboard.keys";
-import { dashboardService } from "../dashboard.service";
+import { usePage } from "@inertiajs/react";
 
 export const useDashbaordStats = () => {
-  return useQuery({
-    queryKey: dashbaordKeys.stats,
-    queryFn: () => dashboardService.getStats(),
-    refetchInterval: 1000 * 60 * 5,
-  });
+  const page = usePage<any>();
+  return {
+    data: page.props?.stats ?? [],
+    isLoading: false,
+    isError: false,
+    refetch: () => {},
+  };
 };

@@ -34,7 +34,8 @@ import { useListParams } from "@/hooks/useListParams";
 import { formatPrice } from "@/lib/format";
 
 import { bookingFilters } from "../booking-filters";
-import { useBookingDetails, useBookings } from "../bookings.crud";
+import { useBooking as useBookingDetails } from "../hooks/useBooking";
+import { useBookings } from "../hooks/useBookings";
 import type {
   CustomerBooking,
   CustomerBookingDetails,

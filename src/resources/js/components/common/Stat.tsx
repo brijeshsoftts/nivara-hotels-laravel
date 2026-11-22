@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link } from "@inertiajs/react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,7 +15,7 @@ function Stat({ stat }: { stat: DashboardStat }) {
   const Icon = icons[stat.icon] ?? icons.BedDouble;
 
   return (
-    <Link to={stat.link} className="block">
+    <Link href={stat.link} className="block">
       <Card className="group relative overflow-hidden rounded-xl border border-border/70 bg-card p-2 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
         {/* Subtle gradient glow */}
         <div className="pointer-events-none absolute -top-8 -right-6 size-20 rounded-full bg-primary/10 blur-2xl" />

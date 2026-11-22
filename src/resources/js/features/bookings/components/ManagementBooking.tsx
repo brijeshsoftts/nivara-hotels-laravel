@@ -1,5 +1,5 @@
 import { Plus, Users } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link } from "@inertiajs/react";
 
 import { type ColumnDef, DataTable } from "@/components/common/DataTable";
 import { BookingBadge, InvoiceBadge } from "@/components/common/EnumBadges";
@@ -152,7 +152,7 @@ export function ManagementBooking() {
         rightContent={
           <HeaderActionButton
             nativeButton={false}
-            render={<Link to="/dashboard/bookings/new" />}
+            render={<Link href="/dashboard/bookings/new" />}
           >
             <Plus />
             New booking

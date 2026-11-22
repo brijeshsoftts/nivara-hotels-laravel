@@ -1,4 +1,3 @@
-import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -36,7 +35,6 @@ export function TaskAssignmentDialog({
   onOpenChange,
   task,
 }: TaskAssignmentDialogProps) {
-  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<HousekeeperLookupItem | null>(null);
   const query = useDebounce(search, 300);
@@ -47,7 +45,6 @@ export function TaskAssignmentDialog({
   });
   const updateTask = useUpdateTask(task.id, {
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: roomsKeys.all });
       onOpenChange(false);
     },
   });

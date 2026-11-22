@@ -1,4 +1,3 @@
-import { useQueryClient } from "@tanstack/react-query";
 import { formatDate } from "date-fns";
 import { Check } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -105,9 +104,7 @@ export function TaskDialog({
   task,
   onEdit,
 }: TaskDialogProps) {
-  const queryClient = useQueryClient();
   const closeOnSuccess = () => {
-    void queryClient.invalidateQueries({ queryKey: roomsKeys.all });
     onOpenChange(false);
   };
   const createTask = useCreateTask({ onSuccess: closeOnSuccess });

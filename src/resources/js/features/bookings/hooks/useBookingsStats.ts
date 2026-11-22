@@ -1,12 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
-
-import { bookingsKeys } from "../bookings.keys";
-import { bookingsService } from "../bookings.service";
+import { usePage } from "@inertiajs/react";
 
 export function useBookingsStats() {
-  return useQuery({
-    queryKey: bookingsKeys.stats(),
-    queryFn: () => bookingsService.getStats(),
-  });
+  const page = usePage<any>();
+  return {
+    data: page.props?.stats ?? [],
+    isLoading: false,
+    isError: false,
+    refetch: () => {},
+  };
 }
-

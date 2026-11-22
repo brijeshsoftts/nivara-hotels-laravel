@@ -1,23 +1,16 @@
-import { useQuery } from "@tanstack/react-query";
-
-import { publicKeys } from "../public.keys";
-import { publicService } from "../public.service";
+import { usePage } from "@inertiajs/react";
 import type { InquiriesParams } from "../public.types";
 
-export function useInquiries(params: InquiriesParams, enabled = true) {
-  const query = useQuery({
-    queryKey: publicKeys.inquiries(params),
-    queryFn: () => publicService.findInquiries(params),
-    enabled,
-    placeholderData: (previousData) => previousData,
-  });
+export function useInquiries(_params?: InquiriesParams, _enabled = true) {
+  const page = usePage<any>();
+  const inquiries = page.props?.inquiries ?? { data: [], meta: { page: 1, limit: 10, total: 0, totalPages: 1 } };
 
   return {
-    inquiries: query.data?.data ?? [],
-    pagination: query.data?.meta,
-    isLoading: query.isLoading,
-    isFetching: query.isFetching,
-    isError: query.isError,
-    refetch: query.refetch,
+    inquiries: inquiries.data ?? [],
+    pagination: inquiries.meta,
+    isLoading: false,
+    isFetching: false,
+    isError: false,
+    refetch: () => {},
   };
 }

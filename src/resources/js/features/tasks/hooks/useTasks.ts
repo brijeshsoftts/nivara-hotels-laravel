@@ -1,22 +1,15 @@
-import { useQuery } from "@tanstack/react-query";
-
+import { usePage } from "@inertiajs/react";
 import type { ListParams } from "@/types/api.types";
 
-import { tasksKeys } from "../tasks.keys";
-import { tasksService } from "../tasks.service";
-
-export function useTasks(params?: ListParams) {
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: tasksKeys.list(params),
-    queryFn: () => tasksService.findAll(params),
-    placeholderData: (previousData) => previousData,
-  });
+export function useTasks(_params?: ListParams) {
+  const page = usePage<any>();
+  const tasks = page.props?.tasks ?? { data: [], meta: { page: 1, limit: 10, total: 0, totalPages: 1 } };
 
   return {
-    items: data?.data ?? [],
-    pagination: data?.meta,
-    isLoading,
-    isError,
-    refetch,
+    items: tasks.data ?? [],
+    pagination: tasks.meta,
+    isLoading: false,
+    isError: false,
+    refetch: () => {},
   };
 }

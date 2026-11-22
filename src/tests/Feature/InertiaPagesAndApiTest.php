@@ -23,19 +23,19 @@ class InertiaPagesAndApiTest extends TestCase
     {
         $this->get(route('home'))
             ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page->component('welcome'));
+            ->assertInertia(fn (Assert $page) => $page->component('public/Home'));
 
         $this->get(route('about'))
             ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page->component('public/about'));
+            ->assertInertia(fn (Assert $page) => $page->component('public/About'));
 
         $this->get(route('rooms.index'))
             ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page->component('public/rooms'));
+            ->assertInertia(fn (Assert $page) => $page->component('public/Rooms'));
 
         $this->get(route('contact'))
             ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page->component('public/contact'));
+            ->assertInertia(fn (Assert $page) => $page->component('public/Contact'));
 
         $this->get(route('rooms.show', ['slug' => 'deluxe-room']))
             ->assertOk()
@@ -97,7 +97,7 @@ class InertiaPagesAndApiTest extends TestCase
         $admin = User::where('role', UserRole::ADMIN->value)->firstOrFail();
 
         $routesToComponents = [
-            'dashboard' => 'protect/dashboard/index',
+            'dashboard' => 'protect/Dashboard',
             'dashboard.users' => 'protect/users/index',
             'dashboard.staff' => 'protect/staff/index',
             'dashboard.customers' => 'protect/customers/index',

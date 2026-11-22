@@ -218,8 +218,8 @@ export function BookingDetailsSheet({
 
   const totalPaid =
     booking.invoice?.payments
-      ?.filter((payment) => payment.paymentStatus === "COMPLETED")
-      .reduce((total, payment) => total + payment.amount, 0) ?? 0;
+      ?.filter((payment: any) => payment.paymentStatus === "COMPLETED")
+      .reduce((total: number, payment: any) => total + payment.amount, 0) ?? 0;
 
   const remainingAmount = Math.max(
     0,
@@ -432,7 +432,7 @@ export function BookingDetailsSheet({
                       {booking.bookingRoom.assignedRoom?.housekeepers.length ? (
                         <div className="mt-2 space-y-3">
                           {booking.bookingRoom.assignedRoom.housekeepers.map(
-                            (housekeeper) => (
+                            (housekeeper: any) => (
                               <div key={housekeeper.id} className="space-y-1">
                                 <p className="text-sm font-medium">
                                   {housekeeper.fullName}
@@ -501,7 +501,7 @@ export function BookingDetailsSheet({
                     </thead>
 
                     <tbody>
-                      {booking.bookingGuests.map((guest) => (
+                      {booking.bookingGuests.map((guest: any) => (
                         <tr key={guest.id} className="border-b last:border-0">
                           <td className="px-3 py-3 font-medium">
                             {guest.fullName}
@@ -636,7 +636,7 @@ export function BookingDetailsSheet({
                   </div>
 
                   <div className="divide-y">
-                    {booking.invoice.payments.map((payment) => (
+                    {booking.invoice.payments.map((payment: any) => (
                       <div
                         key={payment.id}
                         className="flex items-center justify-between gap-3 p-3"

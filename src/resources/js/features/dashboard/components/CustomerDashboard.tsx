@@ -9,7 +9,7 @@ import {
   Hotel,
   type LucideIcon,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link } from "@inertiajs/react";
 
 import { DataTable } from "@/components/common/DataTable";
 import { BookingBadge } from "@/components/common/EnumBadges";
@@ -21,7 +21,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useBookings } from "@/features/bookings/bookings.crud";
+import { useBookings } from "@/features/bookings/hooks/useBookings";
 import type { CustomerBooking } from "@/features/bookings/bookings.types";
 import { columns } from "@/features/bookings/components/CustomerBookings";
 import {} from "@/features/customers/components/CustomerTable";
@@ -107,7 +107,7 @@ function NextBookingCard() {
               You don’t have an upcoming booking yet.
             </p>
             <Link
-              to="/rooms"
+              href="/rooms"
               className="text-sm font-medium text-primary underline-offset-4 hover:underline"
             >
               Browse rooms
@@ -179,7 +179,7 @@ function ShortcutLinks({
       {items.map(({ label, href, icon: Icon }) => (
         <Link
           key={href}
-          to={href}
+          href={href}
           className="flex min-h-11 items-center gap-2.5 rounded-lg border border-border bg-card px-3 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         >
           <Icon className="size-4 shrink-0 text-muted-foreground" />

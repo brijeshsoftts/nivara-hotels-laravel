@@ -7,9 +7,9 @@ import {
   UserRoundPlus,
 } from "lucide-react";
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "@inertiajs/react";
 
-import { Logo } from "@/app/layout/PublicLayout";
+import { Logo } from "@/layouts/PublicLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,7 +25,7 @@ export default function RegisterPage() {
     <div className="w-full rounded-xl border border-border/70 bg-card px-6 py-7 shadow-lg sm:px-8 sm:py-7">
       <Logo
         className="mx-auto flex-col gap-1.5 [&>div:last-child]:items-center"
-        to="/"
+        href="/"
       />
       <h1 className="mt-4 text-center font-heading text-3xl font-medium text-foreground">
         Create an Account
@@ -191,7 +191,7 @@ export default function RegisterPage() {
         Already have an account?{" "}
         <Link
           className="font-semibold text-foreground underline decoration-primary underline-offset-4 transition-colors hover:text-primary focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-          to="/login"
+          href="/login"
         >
           Login
         </Link>

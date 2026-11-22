@@ -20,7 +20,8 @@ import {
   useTransform,
 } from "motion/react";
 import { useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
+import { PublicLayout } from "@/layouts/PublicLayout";
+import { Link } from "@inertiajs/react";
 
 import HeroImage from "@/assets/cta_image.png";
 import { Button } from "@/components/ui/button";
@@ -138,7 +139,7 @@ function StorySection() {
             <div>
               <Button
                 nativeButton={false}
-                render={<Link to="/rooms" />}
+                render={<Link href="/rooms" />}
                 className="h-11 rounded-lg px-8 text-sm font-medium shadow-md transition-all"
               >
                 Explore Rooms <ArrowRight className="ml-2 h-4 w-4" />
@@ -329,7 +330,7 @@ function ValuesSection() {
 
             {/* Action Button */}
             <div>
-              <Link to="/#amenities">
+              <Link href="/#amenities">
                 <Button
                   className="h-11 rounded-lg px-8 text-sm font-medium shadow-md transition-all"
                   variant={"secondary"}
@@ -529,15 +530,15 @@ function GalleryStripSection() {
   );
 }
 
-export default function AboutPage() {
+export default function AboutPage(props: { amenities?: any } = {}) {
   return (
-    <>
+    <PublicLayout>
       <HeroSection />
       <StorySection />
       <StatsSection />
       <ValuesSection />
       <ExperienceSection />
       <GalleryStripSection />
-    </>
+    </PublicLayout>
   );
 }

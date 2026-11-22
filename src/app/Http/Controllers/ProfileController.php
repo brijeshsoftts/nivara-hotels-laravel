@@ -8,6 +8,21 @@ use Inertia\Inertia;
 
 class ProfileController extends Controller
 {
+    public function me(Request $request)
+    {
+        $user = $request->user();
+        return response()->json([
+            'data' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'fullName' => $user->full_name ?? $user->name,
+                'email' => $user->email,
+                'role' => $user->role instanceof \BackedEnum ? $user->role->value : (string) $user->role,
+                'isActive' => (bool) $user->is_active,
+            ]
+        ]);
+    }
+
     public function edit(Request $request)
     {
         $user = $request->user();
@@ -120,3 +135,4 @@ class ProfileController extends Controller
         return redirect()->back()->with('success', 'Password updated successfully.');
     }
 }
+

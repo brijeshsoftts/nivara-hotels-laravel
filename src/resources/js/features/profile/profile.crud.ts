@@ -1,12 +1,11 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { router, usePage } from "@inertiajs/react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
-import { apiClient } from "@/lib/apiClient";
-import { createCrud } from "@/lib/crud/createCrud";
 import { notifyError } from "@/lib/notification";
-
+import type { SharedProps } from "@/types";
 import {
   type ChangePassword,
   ChangePasswordSchema,
@@ -14,34 +13,33 @@ import {
 import { type UpdateProfile } from "./schemas/profileUpdate.schema";
 import type { Profile, ProfileDetails } from "./profile.types";
 
-export const profile = createCrud()({
-  resource: "profile",
-  endpoint: "/profile",
-  label: "Profile",
-});
-
-export const profileKeys = profile.keys;
-export const profileService = profile.service;
-
-const useChangePasswordMutation = profile.createAction<ChangePassword>({
-  name: "changePassword",
-  mutationFn: (data) =>
-    apiClient.patch("/profile/change-password", data).then((r) => r.data),
-  successMessage: "Password changed successfully.",
-});
-
 export function useChangePassword() {
-  const mutation = useChangePasswordMutation();
+  const [isPending, setIsPending] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const form = useForm<ChangePassword>({
     resolver: zodResolver(ChangePasswordSchema),
   });
 
+  const submit = (data: ChangePassword) => {
+    setIsPending(true);
+    router.patch("/dashboard/profile/change-password", data as any, {
+      onSuccess: () => {
+        setIsSuccess(true);
+        toast.success("Password changed successfully.");
+        form.reset();
+      },
+      onError: (err) => {
+        notifyError(err);
+      },
+      onFinish: () => setIsPending(false),
+    });
+  };
+
   return {
-    submit: (data: ChangePassword) =>
-      mutation.mutate(data, { onSuccess: () => form.reset() }),
-    isPending: mutation.isPending,
-    isSuccess: mutation.isSuccess,
+    submit,
+    isPending,
+    isSuccess,
     errors: form.formState.errors,
     handleSubmit: form.handleSubmit,
     register: form.register,
@@ -49,75 +47,102 @@ export function useChangePassword() {
 }
 
 export function useUpdateProfile() {
-  const queryClient = useQueryClient();
+  const [isPending, setIsPending] = useState(false);
 
-  return useMutation({
-    mutationKey: profile.mutationKeys.update,
-    mutationFn: (data: UpdateProfile) =>
-      apiClient.patch("/profile/me", data).then((r) => r.data),
-    onSuccess: (response) => {
-      toast.success(response?.message || "Profile updated successfully.");
-      void queryClient.invalidateQueries({ queryKey: profile.keys.all });
-    },
-    onError: notifyError,
-  });
+  const mutate = (data: UpdateProfile, options?: { onSuccess?: () => void }) => {
+    setIsPending(true);
+    router.patch("/dashboard/profile", data as any, {
+      onSuccess: () => {
+        toast.success("Profile updated successfully.");
+        options?.onSuccess?.();
+      },
+      onError: (err) => {
+        notifyError(err);
+      },
+      onFinish: () => setIsPending(false),
+    });
+  };
+
+  return {
+    mutate,
+    isPending,
+  };
 }
 
 export function useUpdateAvatar() {
-  const queryClient = useQueryClient();
+  const [isPending, setIsPending] = useState(false);
 
-  return useMutation({
-    mutationKey: profile.keys.custom("avatar", "update"),
-    mutationFn: (file: File) => {
-      const formData = new FormData();
-      formData.append("avatar", file);
-      return apiClient.patch("/profile/avatar", formData).then((r) => r.data);
-    },
-    onSuccess: (response) => {
-      toast.success(
-        response?.message || "Profile image updated successfully."
-      );
-      void queryClient.invalidateQueries({ queryKey: profile.keys.all });
-    },
-    onError: notifyError,
-  });
+  const mutate = (file: File, options?: { onSuccess?: () => void; onError?: (err: any) => void }) => {
+    setIsPending(true);
+    const formData = new FormData();
+    formData.append("avatar", file);
+
+    router.post("/dashboard/profile/avatar", formData as any, {
+      onSuccess: () => {
+        toast.success("Profile image updated successfully.");
+        options?.onSuccess?.();
+      },
+      onError: (err) => {
+        notifyError(err);
+        options?.onError?.(err);
+      },
+      onFinish: () => setIsPending(false),
+    });
+  };
+
+  return {
+    mutate,
+    isPending,
+  };
 }
 
 export function useRemoveAvatar() {
-  const queryClient = useQueryClient();
+  const [isPending, setIsPending] = useState(false);
 
-  return useMutation({
-    mutationKey: profile.keys.custom("avatar", "remove"),
-    mutationFn: () =>
-      apiClient.delete("/profile/avatar").then((r) => r.data),
-    onSuccess: (response) => {
-      toast.success(
-        response?.message || "Profile image removed successfully."
-      );
-      void queryClient.invalidateQueries({ queryKey: profile.keys.all });
-    },
-    onError: notifyError,
-  });
+  const mutate = (_?: void, options?: { onSuccess?: () => void; onError?: (err: any) => void }) => {
+    setIsPending(true);
+    router.delete("/dashboard/profile/avatar", {
+      onSuccess: () => {
+        toast.success("Profile image removed successfully.");
+        options?.onSuccess?.();
+      },
+      onError: (err) => {
+        notifyError(err);
+        options?.onError?.(err);
+      },
+      onFinish: () => setIsPending(false),
+    });
+  };
+
+  return {
+    mutate,
+    isPending,
+  };
 }
 
 export function useProfile() {
-  const query = useQuery({
-    queryKey: profile.keys.custom("me"),
-    queryFn: (): Promise<Profile> =>
-      apiClient.get("/profile/me").then((r) => r.data?.data),
-  });
+  const page = usePage<any>();
+  const sharedAuth = usePage<SharedProps>().props.auth;
+  const user = page.props?.profile?.data ?? sharedAuth?.user ?? null;
 
   return {
-    user: query.data,
-    isLoading: query.isLoading,
-    isError: query.isError,
+    user: user as Profile | null,
+    isLoading: false,
+    isPending: false,
+    isError: false,
+    refetch: () => {},
   };
 }
 
 export function useProfileDetails() {
-  return useQuery({
-    queryKey: profile.keys.custom("details"),
-    queryFn: (): Promise<ProfileDetails> =>
-      apiClient.get("/profile/details").then((r) => r.data?.data),
-  });
+  const page = usePage<any>();
+  const sharedAuth = usePage<SharedProps>().props.auth;
+  const data = page.props?.details?.data ?? page.props?.details ?? sharedAuth?.user ?? null;
+  return {
+    data: data as ProfileDetails | null,
+    isLoading: false,
+    isPending: false,
+    isError: false,
+    refetch: () => {},
+  };
 }

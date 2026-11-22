@@ -1,37 +1,34 @@
 import { createContext, type ReactNode } from "react";
 import { usePage } from "@inertiajs/react";
+import type { SharedProps } from "@/types";
 
-import { useProfile } from "@/features/profile/profile.crud";
-import type { AuthCTX } from "@/types/shared.types";
+export interface AuthContextType {
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  user: any;
+}
 
-const initialCTX: AuthCTX = {
+export const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,
   isLoading: false,
   user: null,
-};
-
-export const AuthContext = createContext<AuthCTX>(initialCTX);
+});
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  let pageUser: any = null;
+  let user: any = null;
   try {
-    const page = usePage();
-    pageUser = (page.props as any)?.auth?.user;
+    const { auth } = usePage<SharedProps>().props;
+    user = auth?.user ?? null;
   } catch {
     // If rendered outside Inertia context
   }
-
-  const { user: queryUser, isLoading: queryLoading } = useProfile();
-
-  const user = pageUser || queryUser || null;
-  const isLoading = pageUser ? false : queryLoading;
 
   return (
     <AuthContext.Provider
       value={{
         isAuthenticated: !!user,
-        isLoading: isLoading,
-        user: user ?? null,
+        isLoading: false,
+        user,
       }}
     >
       {children}

@@ -1,18 +1,20 @@
-import { useQuery } from "@tanstack/react-query";
-
+import { usePage } from "@inertiajs/react";
 import type { ListParams } from "@/types/api.types";
 
-import { customersKeys } from "../customers.keys";
-import { customersService } from "../customers.service";
-
 export function useCustomerBookings(
-  customerId: string,
-  params: ListParams,
-  enabled: boolean
+  _customerId: string,
+  _params?: ListParams,
+  _enabled = true
 ) {
-  return useQuery({
-    queryKey: customersKeys.bookings(customerId, params),
-    queryFn: () => customersService.findBookings(customerId, params),
-    enabled: Boolean(customerId) && enabled,
-  });
+  const page = usePage<any>();
+  const bookings = page.props?.bookings ?? { data: [], meta: { page: 1, limit: 10, total: 0, totalPages: 1 } };
+
+  return {
+    data: bookings,
+    isLoading: false,
+    isFetching: false,
+    isPending: false,
+    isError: false,
+    refetch: () => {},
+  };
 }

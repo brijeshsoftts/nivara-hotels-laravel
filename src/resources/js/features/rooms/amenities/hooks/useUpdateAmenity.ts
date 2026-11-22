@@ -1,50 +1,50 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation } from "@tanstack/react-query";
+import { router } from "@inertiajs/react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 import { notifyError } from "@/lib/notification";
-
-import { amenitiesMutationKeys } from "../amenities.keys";
-import { amenitiesService } from "../amenities.service";
 import {
   type UpdateAmenity,
   UpdateAmenitySchema,
 } from "../schemas/updateAmenity.schema";
 
-function useUpdateAmenity(id: string) {
-  return useMutation({
-    mutationKey: amenitiesMutationKeys.update,
-    mutationFn: (data: UpdateAmenity) => amenitiesService.update(id, data),
-    onSuccess: (res) => {
-      toast.success(res?.message || "Amenity updated successfully.");
-    },
-    onError: notifyError,
-  });
-}
-
 export function useUpdateAmenityFacade(id: string) {
-  const { mutate, isPending, isSuccess } = useUpdateAmenity(id);
+  const [isPending, setIsPending] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const {
     handleSubmit,
     register,
     formState: { errors },
-    getValues,
     reset,
     control,
-  } = useForm<UpdateAmenity>({
+  } = useForm({
     resolver: zodResolver(UpdateAmenitySchema),
   });
 
+  const submit = (data: UpdateAmenity) => {
+    setIsPending(true);
+    router.put(`/dashboard/amenities/${id}`, data as any, {
+      onSuccess: () => {
+        setIsSuccess(true);
+        toast.success("Amenity updated successfully.");
+      },
+      onError: (err) => {
+        notifyError(err);
+      },
+      onFinish: () => setIsPending(false),
+    });
+  };
+
   return {
-    submit: (data: UpdateAmenity) => mutate(data),
+    submit,
     isPending,
     isSuccess,
     register,
     handleSubmit,
     errors,
-    getValues,
     reset,
     control,
   };

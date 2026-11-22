@@ -1,27 +1,21 @@
-import { useQuery } from "@tanstack/react-query";
+import { usePage } from "@inertiajs/react";
 
 import type { ListParams } from "@/types/api.types";
 import type { UserRole } from "@/types/enum.types";
-
-import { usersKeys } from "../users.keys";
-import { usersService } from "../users.service";
 
 export type UserListParams = ListParams & {
   role?: UserRole;
 };
 
 export function useUsers(params: UserListParams = {}) {
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: usersKeys.list(params),
-    queryFn: () => usersService.findAll(params),
-    placeholderData: (previousData) => previousData,
-  });
+  const page = usePage<any>();
+  const users = page.props?.users ?? { data: [], meta: { page: 1, limit: 10, total: 0, totalPages: 1 } };
 
   return {
-    items: data?.data ?? [],
-    pagination: data?.meta,
-    isLoading,
-    isError,
-    refetch,
+    items: users.data ?? [],
+    pagination: users.meta,
+    isLoading: false,
+    isError: false,
+    refetch: () => {},
   };
 }

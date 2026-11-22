@@ -1,40 +1,30 @@
-import { AxiosError } from "axios";
 import { toast } from "sonner";
 
-type ApiError = {
-  success: boolean;
-  message: string;
-  statusCode: number;
-  error?: {
-    code: string;
-    errors?: Record<
-      string,
-      {
-        message: string;
-      }
-    >;
-  };
-};
-
 export function notifyError(error: unknown) {
-  if (error instanceof AxiosError) {
-    const data = error.response?.data as ApiError | undefined;
+  if (typeof error === "string") {
+    toast.error(error);
+    return;
+  }
 
-    // Validation errors
-    if (data?.error?.errors) {
-      Object.values(data.error.errors).forEach((err) => {
-        toast.error(err.message);
-      });
+  if (error && typeof error === "object") {
+    const errObj = error as Record<string, any>;
+    if (errObj.message) {
+      toast.error(errObj.message);
       return;
     }
-
-    // API message
-    if (data?.message) {
-      toast.error(data.message);
-      return;
+    const errors = errObj.errors || errObj.error?.errors;
+    if (errors && typeof errors === "object") {
+      const first = Object.values(errors)[0];
+      if (typeof first === "string") {
+        toast.error(first);
+        return;
+      }
+      if (first && typeof first === "object" && "message" in (first as any)) {
+        toast.error((first as any).message);
+        return;
+      }
     }
   }
 
-  // Fallback
   toast.error("Something went wrong.");
 }

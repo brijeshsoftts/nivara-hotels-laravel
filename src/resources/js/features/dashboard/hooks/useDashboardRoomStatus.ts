@@ -1,11 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
+import { usePage } from "@inertiajs/react";
 
-import { dashbaordKeys } from "../dashboard.keys";
-import { dashboardService } from "../dashboard.service";
-
-export const useDashboardRoomStatus = () =>
-  useQuery({
-    queryKey: dashbaordKeys.roomStatus,
-    queryFn: dashboardService.getRoomStatus,
-    refetchInterval: 1000 * 60 * 5,
-  });
+export const useDashboardRoomStatus = () => {
+  const page = usePage<any>();
+  return {
+    data: page.props?.roomStatus ?? [],
+    isLoading: false,
+    isError: false,
+    refetch: () => {},
+  };
+};

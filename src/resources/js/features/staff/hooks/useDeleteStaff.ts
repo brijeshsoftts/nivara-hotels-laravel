@@ -1,27 +1,27 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { router } from "@inertiajs/react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { notifyError } from "@/lib/notification";
 
-import { staffKeys, staffMutationKeys } from "../staff.keys";
-import { staffService } from "../staff.service";
-
 export function useDeleteStaff(id: string) {
-  const queryClient = useQueryClient();
-  const { mutate, isPending } = useMutation({
-    mutationKey: staffMutationKeys.delete,
-    mutationFn: () => staffService.delete(id),
-    onSuccess: (res) => {
-      toast.success(res?.message || "Staff deleted successfully");
-      queryClient.invalidateQueries({
-        queryKey: staffKeys.lists,
-      });
-    },
-    onError: notifyError,
-  });
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDelete = () => {
+    setIsDeleting(true);
+    router.delete(`/dashboard/staff/${id}`, {
+      onSuccess: () => {
+        toast.success("Staff deleted successfully");
+      },
+      onError: (err) => {
+        notifyError(err);
+      },
+      onFinish: () => setIsDeleting(false),
+    });
+  };
 
   return {
-    isDeleting: isPending,
-    handleDelete: () => mutate(),
+    isDeleting,
+    handleDelete,
   };
 }

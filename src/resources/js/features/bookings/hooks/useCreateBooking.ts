@@ -1,33 +1,30 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { router } from "@inertiajs/react";
+import { useState } from "react";
 import { toast } from "sonner";
 
-import { invoicesKeys } from "@/features/invoices/invoices.keys";
-import { paymentsKeys } from "@/features/payments/payments.keys";
-import { roomsKeys } from "@/features/rooms/rooms/rooms.keys";
 import { notifyError } from "@/lib/notification";
 
-import { bookingsKeys, bookingsMutationKeys } from "../bookings.keys";
-import { bookingsService } from "../bookings.service";
-
 export function useCreateBooking() {
-  const queryClient = useQueryClient();
+  const [isPending, setIsPending] = useState(false);
 
-  return useMutation({
-    mutationKey: bookingsMutationKeys.create,
-    mutationFn: bookingsService.create,
-    onSuccess: async (response) => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: bookingsKeys.lists() }),
-        queryClient.invalidateQueries({ queryKey: invoicesKeys.all }),
-        queryClient.invalidateQueries({ queryKey: paymentsKeys.all }),
-        queryClient.invalidateQueries({ queryKey: roomsKeys.all }),
-      ]);
-      toast.success(
-        response.paymentMethod === "CASH"
-          ? `Booking ${response.bookingReference} confirmed and paid.`
-          : `Booking ${response.bookingReference} created.`
-      );
-    },
-    onError: notifyError,
-  });
+  const mutate = (data: any, options?: { onSuccess?: (res?: any) => void; onError?: (err: any) => void }) => {
+    setIsPending(true);
+    router.post("/dashboard/bookings", data, {
+      onSuccess: (page) => {
+        toast.success("Booking created successfully.");
+        options?.onSuccess?.(page);
+      },
+      onError: (err) => {
+        notifyError(err);
+        options?.onError?.(err);
+      },
+      onFinish: () => setIsPending(false),
+    });
+  };
+
+  return {
+    mutate,
+    mutateAsync: mutate,
+    isPending,
+  };
 }

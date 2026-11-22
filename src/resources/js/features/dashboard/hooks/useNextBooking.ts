@@ -1,12 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
-
-import { dashbaordKeys } from "../dashboard.keys";
-import { dashboardService } from "../dashboard.service";
+import { usePage } from "@inertiajs/react";
 
 export function useNextBooking() {
-  return useQuery({
-    queryKey: dashbaordKeys.nextBooking,
-    queryFn: dashboardService.getNextBooking,
-    refetchInterval: 1000 * 60 * 5,
-  });
+  const page = usePage<any>();
+  return {
+    data: page.props?.nextBooking ?? null,
+    isLoading: false,
+    isError: false,
+    refetch: () => {},
+  };
 }

@@ -7,7 +7,7 @@ import {
   User,
 } from "lucide-react";
 import * as React from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { router } from "@inertiajs/react";
 
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -29,8 +29,9 @@ function parseQueryDate(value: string | null) {
 }
 
 export function BookingBar() {
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const searchParams = new URLSearchParams(
+    typeof window !== "undefined" ? window.location.search : ""
+  );
   const today = startOfToday();
   const preferences = getBookingPreferences(searchParams);
   const initialCheckInDate = parseQueryDate(preferences.checkInDate);
@@ -90,7 +91,7 @@ export function BookingBar() {
     });
     const roomType = searchParams.get("roomType");
     if (roomType) params.set("roomType", roomType);
-    navigate(`/rooms?${params.toString()}#availability`);
+    router.visit(`/rooms?${params.toString()}#availability`);
   };
 
   return (

@@ -1,8 +1,8 @@
 import { Eye, EyeOff, LockKeyhole, LogIn, Mail } from "lucide-react";
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "@inertiajs/react";
 
-import { Logo } from "@/app/layout/PublicLayout";
+import { Logo } from "@/layouts/PublicLayout";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -35,7 +35,7 @@ export default function LoginPage() {
       <div className="w-full">
         <Logo
           className="mx-auto flex-col gap-1.5 [&>div:last-child]:items-center"
-          to="/"
+          href="/"
         />
         <h1 className="mt-5 text-center font-heading text-3xl font-medium text-foreground">
           Welcome Back
@@ -173,7 +173,7 @@ export default function LoginPage() {
           Don&apos;t have an account?{" "}
           <Link
             className="font-semibold text-foreground underline decoration-primary underline-offset-4 transition-colors hover:text-primary focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-            to="/register"
+            href="/register"
           >
             Create account
           </Link>

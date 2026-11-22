@@ -1,11 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
-
-import { paymentsKeys } from "../payments.keys";
-import { paymentsService } from "../payments.service";
+import { usePage } from "@inertiajs/react";
 
 export function usePaymentsStats() {
-  return useQuery({
-    queryKey: paymentsKeys.stats(),
-    queryFn: paymentsService.getStats,
-  });
+  const page = usePage<any>();
+  return {
+    data: page.props?.stats ?? [],
+    isLoading: false,
+    isError: false,
+    refetch: () => {},
+  };
 }

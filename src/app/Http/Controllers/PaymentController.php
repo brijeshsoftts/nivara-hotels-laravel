@@ -9,6 +9,7 @@ use App\Models\Invoice;
 use App\Models\Payment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class PaymentController extends Controller
@@ -143,18 +144,30 @@ class PaymentController extends Controller
             $invoice = Invoice::findOrFail($validated['invoiceId']);
 
             $payment = Payment::create([
+                'payment_reference' => 'PAY-CASH-' . strtoupper(Str::random(6)),
                 'invoice_id' => $invoice->id,
+                'booking_id' => $invoice->booking_id,
+                'customer_id' => $invoice->customer_id,
                 'amount' => $validated['amount'],
+                'amount_paise' => (int) ($validated['amount'] * 100),
                 'currency' => 'INR',
                 'payment_method' => PaymentMethod::CASH->value,
-                'status' => PaymentStatus::COMPLETED->value,
-                'transaction_id' => 'CASH-' . time(),
+                'payment_status' => PaymentStatus::COMPLETED->value,
+                'transaction_id' => 'CASH-' . time() . '-' . Str::random(4),
+                'paid_at' => now(),
+                'recorded_by' => $request->user()?->id,
             ]);
 
             $invoice->update(['status' => InvoiceStatus::PAID->value]);
 
             if ($request->wantsJson() && !$request->header('X-Inertia')) {
-                return response()->json(['data' => ['id' => $payment->id], 'message' => 'Cash payment recorded successfully'], 201);
+                return response()->json([
+                    'data' => [
+                        'id' => $payment->id,
+                        'status' => 'COMPLETED',
+                    ],
+                    'message' => 'Cash payment recorded successfully.',
+                ], 200);
             }
 
             return redirect()->back()->with('success', 'Cash payment recorded successfully.');

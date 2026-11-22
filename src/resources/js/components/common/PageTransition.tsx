@@ -1,6 +1,6 @@
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { ReactNode } from "react";
-import { useLocation } from "react-router-dom";
+import { usePage } from "@inertiajs/react";
 
 import { cn } from "@/lib/utils";
 
@@ -19,9 +19,9 @@ export function PageTransition({
   animateOnMount = true,
   className,
 }: PageTransitionProps) {
-  const location = useLocation();
+  const { url } = usePage();
   const shouldReduceMotion = useReducedMotion() ?? false;
-  const key = transitionKey ?? location.pathname;
+  const key = transitionKey ?? (url ? url.split("?")[0] : "default");
 
   return (
     <AnimatePresence

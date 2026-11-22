@@ -18,9 +18,8 @@
         "isolatedModules": true,
         "verbatimModuleSyntax": true,
 
-        "baseUrl": ".",
         "paths": {
-            "@/*": ["resources/js/*"]
+            "@/*": ["./resources/js/*"]
         },
 
         "types": ["vite/client"]

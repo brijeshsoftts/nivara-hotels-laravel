@@ -1,5 +1,5 @@
 import { ArrowRight, Bed, Calendar, Users } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link } from "@inertiajs/react";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -97,7 +97,7 @@ export function RoomCard({ room, className }: RoomCardProps) {
         <div className="mt-auto grid grid-cols-2 gap-x-4">
           <Button
             nativeButton={false}
-            render={<Link to={`/rooms/${room.slug}`} />}
+            render={<Link href={`/rooms/${room.slug}`} />}
             className="group/button h-11 w-full rounded-lg text-sm font-medium shadow-sm transition-all"
             variant="outline"
           >
@@ -106,7 +106,7 @@ export function RoomCard({ room, className }: RoomCardProps) {
           </Button>
           <Button
             nativeButton={false}
-            render={<Link to={`/rooms/${room.slug}/book`} />}
+            render={<Link href={`/rooms/${room.slug}/book`} />}
             className="group/button h-11 w-full rounded-lg text-sm font-medium shadow-sm transition-all"
           >
             Book Now

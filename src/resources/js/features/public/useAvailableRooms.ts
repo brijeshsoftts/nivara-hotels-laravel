@@ -1,49 +1,33 @@
-import { useQuery } from "@tanstack/react-query";
-
-import { publicKeys } from "./public.keys";
-import { publicService } from "./public.service";
+import { usePage } from "@inertiajs/react";
 import type { AvailableRoomsParams } from "./public.types";
 
-export function useAvailableRooms(params: AvailableRoomsParams) {
-  const query = useQuery({
-    queryKey: publicKeys.availableRooms(params),
-    queryFn: () => publicService.findAvailableRooms(params),
-    placeholderData: (previousData) => previousData,
-  });
+export function useAvailableRooms(_params?: AvailableRoomsParams) {
+  const page = usePage<any>();
+  const rooms = page.props?.rooms ?? { data: [], meta: { page: 1, limit: 10, total: 0, totalPages: 1 } };
 
   return {
-    rooms: query.data?.data ?? [],
-    pagination: query.data?.meta,
-    isLoading: query.isLoading,
-    isError: query.isError,
-    refetch: query.refetch,
+    rooms: rooms.data ?? [],
+    pagination: rooms.meta,
+    isLoading: false,
+    isError: false,
+    refetch: () => {},
   };
 }
 
 export function useAvailableRoom(
   slug: string | null,
-  checkInDate?: string,
-  checkOutDate?: string
+  _checkInDate?: string,
+  _checkOutDate?: string
 ) {
-  const hasDates = Boolean(checkInDate && checkOutDate);
-  const query = useQuery({
-    queryKey: publicKeys.availableRoom(slug ?? "", checkInDate, checkOutDate),
-    queryFn: () =>
-      publicService.findAvailableRoom(
-        slug!,
-        hasDates
-          ? { checkInDate: checkInDate!, checkOutDate: checkOutDate! }
-          : undefined
-      ),
-    enabled: Boolean(slug),
-  });
+  const page = usePage<any>();
+  const room = page.props?.room ?? page.props?.roomType ?? null;
 
   return {
-    room: query.data?.data,
-    isLoading: query.isLoading,
-    isFetching: query.isFetching,
-    isError: query.isError,
-    error: query.error,
-    refetch: query.refetch,
+    room,
+    isLoading: false,
+    isFetching: false,
+    isError: false,
+    error: null,
+    refetch: () => {},
   };
 }

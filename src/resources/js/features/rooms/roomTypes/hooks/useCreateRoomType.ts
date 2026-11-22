@@ -1,82 +1,60 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { router } from "@inertiajs/react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 import { notifyError } from "@/lib/notification";
-
-import { roomTypesKeys, roomTypesMutationKeys } from "../roomTypes.keys";
-import { roomTypesService } from "../roomTypes.service";
 import {
   type CreateRoomType,
   CreateRoomTypeSchema,
 } from "../schemas/createRoomType.schema";
 
-function useCreateRoomType() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationKey: roomTypesMutationKeys.create,
-    mutationFn: roomTypesService.create,
-
-    onSuccess: (res) => {
-      toast.success(res?.message || "Room type created successfully.");
-
-      queryClient.invalidateQueries({
-        queryKey: roomTypesKeys.list(),
-      });
-    },
-
-    onError: notifyError,
-  });
-}
-
 export function useCreateRoomTypeFacade() {
-  const { mutate, isPending, isSuccess } = useCreateRoomType();
+  const [isPending, setIsPending] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const {
     handleSubmit,
     register,
     formState: { errors },
-    getValues,
     reset,
-    setValue,
     control,
+    setValue,
+    getValues,
     setError,
     clearErrors,
-  } = useForm({
-    resolver: zodResolver(CreateRoomTypeSchema),
-    defaultValues: {
-      name: "",
-      description: "",
-      sizeSqFt: undefined,
-      maxGuests: 1,
-      adults: 1,
-      children: 0,
-      basePrice: undefined,
-      currency: "INR",
-      bedType: undefined,
-      bedCount: 1,
-      smokingAllowed: false,
-      petsAllowed: false,
-      amenities: [],
-      images: [],
-    },
-    mode: "onBlur",
+  } = useForm<CreateRoomType>({
+    resolver: zodResolver(CreateRoomTypeSchema) as any,
   });
 
+  const submit = (data: CreateRoomType, onDone?: () => void) => {
+    setIsPending(true);
+    router.post("/dashboard/room-types", data as any, {
+      onSuccess: () => {
+        setIsSuccess(true);
+        toast.success("Room type created successfully.");
+        reset();
+        onDone?.();
+      },
+      onError: (err) => {
+        notifyError(err);
+      },
+      onFinish: () => setIsPending(false),
+    });
+  };
+
   return {
-    submit: (data: CreateRoomType, onSuccess?: () => void) =>
-      mutate(data, { onSuccess }),
+    submit,
     isPending,
     isSuccess,
     register,
     handleSubmit,
     errors,
-    getValues,
     reset,
-    setValue,
     control,
+    setValue,
+    getValues,
     setError,
     clearErrors,
   };

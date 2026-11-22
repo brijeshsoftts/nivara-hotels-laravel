@@ -1,5 +1,5 @@
 import { BedDouble, CalendarCheck, Eye, Maximize2, Users } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link } from "@inertiajs/react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -151,7 +151,7 @@ export function RoomCard({ room, onView }: RoomCardProps) {
                 Book
               </Button>
             ) : (
-              <Link to={`/rooms/${room.slug}/book`}>
+              <Link href={`/rooms/${room.slug}/book`}>
                 <Button className={cn("rounded-lg", goldButton)}>
                   <CalendarCheck className="size-4" />
                   Book

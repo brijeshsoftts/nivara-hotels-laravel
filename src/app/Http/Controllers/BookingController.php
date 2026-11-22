@@ -209,27 +209,22 @@ class BookingController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'customerId' => ['nullable', 'string'],
-            'customer' => ['nullable', 'array'],
-            'rooms' => ['required', 'array', 'min:1'],
-            'checkIn' => ['required', 'date'],
-            'checkOut' => ['required', 'date'],
-            'adults' => ['nullable', 'integer'],
-            'children' => ['nullable', 'integer'],
-            'specialRequests' => ['nullable', 'string'],
-        ]);
+        return DB::transaction(function () use ($request) {
+            $ref = 'BK-' . strtoupper(Str::random(8));
+            $checkInRaw = $request->input('checkInDate') ?? $request->input('checkIn');
+            $checkOutRaw = $request->input('checkOutDate') ?? $request->input('checkOut');
+            $checkIn = Carbon::parse($checkInRaw ?? Carbon::today());
+            $checkOut = Carbon::parse($checkOutRaw ?? Carbon::today()->addDays(2));
+            $days = max(1, $checkIn->diffInDays($checkOut));
 
-        return DB::transaction(function () use ($validated, $request) {
-            $user = null;
-            if (!empty($validated['customerId'])) {
-                $customer = Customer::find($validated['customerId']);
-                $user = $customer ? User::find($customer->user_id) : null;
-            }
-
-            if (!$user && !empty($validated['customer']['email'])) {
-                $cData = $validated['customer'];
-                $user = User::firstOrCreate(
+            $customerId = $request->input('customerId');
+            $userCustomerId = null;
+            if ($customerId) {
+                $cust = Customer::find($customerId);
+                $userCustomerId = $cust ? $cust->user_id : $customerId;
+            } elseif ($request->filled('customer.email')) {
+                $cData = $request->input('customer');
+                $guestUser = User::firstOrCreate(
                     ['email' => $cData['email']],
                     [
                         'name' => $cData['fullName'] ?? 'Guest',
@@ -240,71 +235,62 @@ class BookingController extends Controller
                         'is_active' => true,
                     ]
                 );
-                Customer::firstOrCreate(
-                    ['user_id' => $user->id],
-                    [
-                        'id_proof_type' => $cData['idProofType'] ?? 'PASSPORT',
-                        'id_proof_number' => $cData['idProofNumber'] ?? ('ID_' . strtoupper(Str::random(8))),
-                        'status' => 'ACTIVE',
-                    ]
-                );
+                Customer::firstOrCreate(['user_id' => $guestUser->id]);
+                $userCustomerId = $guestUser->id;
+            } else {
+                $userCustomerId = User::where('role', UserRole::CUSTOMER->value)->first()?->id ?? User::first()?->id;
             }
 
-            if (!$user) {
-                $user = User::where('role', UserRole::CUSTOMER->value)->first() ?? User::first();
-            }
-
-            $checkIn = Carbon::parse($validated['checkIn']);
-            $checkOut = Carbon::parse($validated['checkOut']);
-            $nights = max(1, $checkIn->diffInDays($checkOut));
-
+            $rooms = $request->input('rooms', []);
             $totalAmount = 0;
-            foreach ($validated['rooms'] as $r) {
-                $totalAmount += ($r['pricePerNight'] ?? 2500) * $nights;
-            }
-            $tax = round($totalAmount * 0.12, 2);
-            $grandTotal = $totalAmount + $tax;
 
             $booking = Booking::create([
-                'booking_reference' => 'BK-' . strtoupper(Str::random(8)),
-                'customer_id' => $user->id,
-                'check_in' => $checkIn->toDateString(),
-                'check_out' => $checkOut->toDateString(),
+                'booking_reference' => $ref,
+                'customer_id' => $userCustomerId,
+                'guest_name' => $request->input('customer.fullName', 'Walk-in Guest'),
+                'guest_email' => $request->input('customer.email', 'guest@example.com'),
+                'guest_phone' => $request->input('customer.phone', '+91 9876543210'),
+                'check_in_date' => $checkIn,
+                'check_out_date' => $checkOut,
+                'total_guests' => (int) ($request->input('totalGuests') ?? $request->input('adults', 1)),
+                'total_amount' => 0,
                 'status' => BookingStatus::CONFIRMED->value,
-                'adults' => $validated['adults'] ?? 1,
-                'children' => $validated['children'] ?? 0,
-                'special_requests' => $validated['specialRequests'] ?? null,
-                'source' => 'FRONT_DESK',
-                'total_amount' => $grandTotal,
+                'booked_at' => Carbon::now(),
             ]);
 
-            foreach ($validated['rooms'] as $r) {
-                $roomId = $r['roomId'] ?? $r['id'];
+            foreach ($rooms as $r) {
+                $roomId = is_array($r) ? ($r['roomId'] ?? $r['id']) : $r;
+                $physRoom = Room::with('roomType')->find($roomId);
+                $price = $physRoom?->roomType?->base_price ?? 3500;
+                $roomTotal = $price * $days;
+                $totalAmount += $roomTotal;
+
                 BookingRoom::create([
                     'booking_id' => $booking->id,
-                    'room_id' => $roomId,
-                    'price_per_night' => $r['pricePerNight'] ?? 2500,
+                    'room_type_id' => $physRoom?->room_type_id ?? RoomType::first()?->id,
+                    'assigned_room_id' => $physRoom?->id,
+                    'price_per_night' => $price,
                 ]);
-                Room::where('id', $roomId)->update(['occupancy_status' => OccupancyStatus::OCCUPIED->value]);
+
+                if ($physRoom) {
+                    $physRoom->occupancy_status = OccupancyStatus::OCCUPIED->value;
+                    $physRoom->save();
+                }
             }
 
-            BookingGuest::create([
-                'booking_id' => $booking->id,
-                'full_name' => $user->name,
-                'age' => 30,
-                'gender' => 'OTHER',
-            ]);
+            $booking->total_amount = max($totalAmount, 3500);
+            $booking->save();
 
-            Invoice::create([
+            $inv = Invoice::create([
                 'invoice_number' => 'INV-' . strtoupper(Str::random(8)),
                 'booking_id' => $booking->id,
-                'customer_id' => $user->id,
-                'subtotal' => $totalAmount,
-                'tax_amount' => $tax,
+                'customer_id' => $userCustomerId,
+                'subtotal' => $booking->total_amount,
+                'tax_amount' => round($booking->total_amount * 0.12, 2),
                 'discount_amount' => 0,
-                'total_amount' => $grandTotal,
+                'total_amount' => round($booking->total_amount * 1.12, 2),
                 'status' => InvoiceStatus::UNPAID->value,
-                'due_date' => Carbon::now()->addDays(2)->toDateString(),
+                'issued_at' => Carbon::now(),
             ]);
 
             if ($request->wantsJson() && !$request->header('X-Inertia')) {
@@ -312,9 +298,10 @@ class BookingController extends Controller
                     'data' => [
                         'id' => $booking->id,
                         'bookingReference' => $booking->booking_reference,
+                        'invoiceId' => $inv->id,
                     ],
-                    'message' => 'Booking created successfully',
-                ], 201);
+                    'message' => 'Booking created successfully.',
+                ], 200);
             }
 
             return redirect()->route('dashboard.bookings')->with('success', "Booking {$booking->booking_reference} created successfully.");
@@ -323,36 +310,43 @@ class BookingController extends Controller
 
     public function updateStatus(Request $request, string $id)
     {
-        $booking = Booking::with('rooms')->findOrFail($id);
+        $booking = Booking::with('bookingRooms')->findOrFail($id);
         $newStatus = $request->input('status');
 
         $booking->update(['status' => $newStatus]);
 
         if ($newStatus === BookingStatus::CHECKED_IN->value) {
-            foreach ($booking->rooms as $br) {
-                Room::where('id', $br->room_id)->update(['occupancy_status' => OccupancyStatus::OCCUPIED->value]);
+            foreach ($booking->bookingRooms as $br) {
+                $targetRoomId = $br->assigned_room_id ?? $br->room_id;
+                if ($targetRoomId) {
+                    Room::where('id', $targetRoomId)->update(['occupancy_status' => OccupancyStatus::OCCUPIED->value]);
+                }
             }
         } elseif ($newStatus === BookingStatus::CHECKED_OUT->value) {
-            $housekeeper = Staff::first();
-            foreach ($booking->rooms as $br) {
-                Room::where('id', $br->room_id)->update([
-                    'occupancy_status' => OccupancyStatus::VACANT->value,
-                    'housekeeping_status' => HousekeepingStatus::DIRTY->value,
-                ]);
+            $housekeeperUser = User::where('role', UserRole::STAFF->value)->first() ?? User::first();
+            foreach ($booking->bookingRooms as $br) {
+                $targetRoomId = $br->assigned_room_id ?? $br->room_id;
+                if ($targetRoomId) {
+                    Room::where('id', $targetRoomId)->update([
+                        'occupancy_status' => OccupancyStatus::VACANT->value,
+                        'housekeeping_status' => HousekeepingStatus::DIRTY->value,
+                    ]);
 
-                HousekeepingTask::create([
-                    'room_id' => $br->room_id,
-                    'assigned_to' => $housekeeper?->id,
-                    'task_type' => TaskType::CLEANING->value,
-                    'status' => TaskStatus::PENDING->value,
-                    'priority' => 'HIGH',
-                    'scheduled_date' => now(),
-                    'notes' => 'Post checkout cleaning',
-                ]);
+                    HousekeepingTask::create([
+                        'room_id' => $targetRoomId,
+                        'assigned_to' => $housekeeperUser?->id,
+                        'task_type' => TaskType::CLEANING->value,
+                        'status' => TaskStatus::PENDING->value,
+                        'scheduled_date' => now(),
+                    ]);
+                }
             }
         } elseif ($newStatus === BookingStatus::CANCELLED->value) {
-            foreach ($booking->rooms as $br) {
-                Room::where('id', $br->room_id)->update(['occupancy_status' => OccupancyStatus::VACANT->value]);
+            foreach ($booking->bookingRooms as $br) {
+                $targetRoomId = $br->assigned_room_id ?? $br->room_id;
+                if ($targetRoomId) {
+                    Room::where('id', $targetRoomId)->update(['occupancy_status' => OccupancyStatus::VACANT->value]);
+                }
             }
         }
 

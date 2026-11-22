@@ -51,6 +51,8 @@ class RoomTypeController extends Controller
             'maxGuests' => ['required', 'integer'],
             'bedType' => ['required', 'string'],
             'bedCount' => ['required', 'integer'],
+            'sizeSqFt' => ['nullable', 'numeric'],
+            'amenities' => ['nullable', 'array'],
             'amenityIds' => ['nullable', 'array'],
         ]);
 
@@ -66,18 +68,38 @@ class RoomTypeController extends Controller
             'children' => 0,
             'bed_type' => $validated['bedType'],
             'bed_count' => $validated['bedCount'],
+            'size_sq_ft' => $validated['sizeSqFt'] ?? 400,
             'is_active' => true,
         ]);
 
-        if (!empty($validated['amenityIds'])) {
-            $rt->amenities()->sync($validated['amenityIds']);
+        $amenityList = $validated['amenities'] ?? $validated['amenityIds'] ?? [];
+        if (!empty($amenityList)) {
+            $rt->amenities()->sync($amenityList);
         }
 
         if ($request->wantsJson() && !$request->header('X-Inertia')) {
-            return response()->json(['data' => ['id' => $rt->id], 'message' => 'Room type created successfully'], 201);
+            return response()->json(['data' => ['id' => $rt->id], 'message' => 'Room type created successfully.'], 200);
         }
 
         return redirect()->back()->with('success', 'Room type created successfully.');
+    }
+
+    public function show(string $id)
+    {
+        $rt = RoomType::with(['amenities', 'images'])->where('id', $id)->orWhere('slug', $id)->firstOrFail();
+        return response()->json([
+            'data' => [
+                'id' => $rt->id,
+                'name' => $rt->name,
+                'slug' => $rt->slug,
+                'description' => $rt->description,
+                'sizeSqFt' => $rt->size_sq_ft,
+                'maxGuests' => $rt->max_guests,
+                'basePrice' => $rt->base_price,
+                'bedType' => $rt->bed_type instanceof \BackedEnum ? $rt->bed_type->value : (string) $rt->bed_type,
+                'bedCount' => $rt->bed_count,
+            ]
+        ]);
     }
 
     public function update(Request $request, string $id)
@@ -124,3 +146,4 @@ class RoomTypeController extends Controller
         return redirect()->back()->with('success', 'Room type deleted successfully.');
     }
 }
+

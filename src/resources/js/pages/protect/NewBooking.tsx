@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { NoAccess } from "@/components/common/NoAccess";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -151,7 +151,7 @@ export default function NewBookingPage() {
   const totalGuests = booking.adults + booking.children;
   const nights = getNights(booking.checkInDate, booking.checkOutDate);
   const selectedRoom = useMemo(
-    () => rooms.find((room) => room.id === booking.roomId) ?? null,
+    () => rooms.find((room: any) => room.id === booking.roomId) ?? null,
     [booking.roomId, rooms]
   );
 
@@ -161,7 +161,7 @@ export default function NewBookingPage() {
     (user?.role === "STAFF" && user.category === "RECEPTIONIST");
 
   if (!canAccess) {
-    return <Navigate to="/dashboard" replace />;
+    return <NoAccess />;
   }
 
   const roomPrice = selectedRoom?.roomType.basePrice ?? 0;

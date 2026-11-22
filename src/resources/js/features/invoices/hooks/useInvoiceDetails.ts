@@ -1,12 +1,14 @@
-import { useQuery } from "@tanstack/react-query";
-
-import { invoicesKeys } from "../invoices.keys";
-import { invoicesService } from "../invoices.service";
+import { usePage } from "@inertiajs/react";
 
 export function useInvoiceDetails(id: string) {
-  return useQuery({
-    queryKey: invoicesKeys.detail(id),
-    queryFn: () => invoicesService.findOne(id),
-    placeholderData: (previousData) => previousData,
-  });
+  const page = usePage<any>();
+  const invoices = page.props?.invoices?.data ?? [];
+  const found = invoices.find((inv: any) => String(inv.id) === String(id)) ?? null;
+
+  return {
+    data: found,
+    isLoading: false,
+    isError: false,
+    refetch: () => {},
+  };
 }

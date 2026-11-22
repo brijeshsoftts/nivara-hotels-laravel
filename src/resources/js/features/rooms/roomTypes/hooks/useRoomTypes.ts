@@ -1,21 +1,15 @@
-import { useQuery } from "@tanstack/react-query";
-
+import { usePage } from "@inertiajs/react";
 import type { ListParams } from "@/types/api.types";
 
-import { roomTypesKeys } from "../roomTypes.keys";
-import { roomTypesService } from "../roomTypes.service";
-
-export function useRoomTypes(params: ListParams) {
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: roomTypesKeys.list(params),
-    queryFn: () => roomTypesService.findAll(params),
-  });
+export function useRoomTypes(_params?: ListParams) {
+  const page = usePage<any>();
+  const roomTypes = page.props?.roomTypes ?? { data: [], meta: { page: 1, limit: 10, total: 0, totalPages: 1 } };
 
   return {
-    items: data?.data ?? [],
-    pagination: data?.meta,
-    isLoading,
-    isError,
-    refetch,
+    items: roomTypes.data ?? [],
+    pagination: roomTypes.meta,
+    isLoading: false,
+    isError: false,
+    refetch: () => {},
   };
 }

@@ -1,42 +1,43 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { router } from "@inertiajs/react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 import { notifyError } from "@/lib/notification";
-
 import { type UpdateUser, UpdateUserSchema } from "../schema/updateUser.schema";
-import { usersKeys, usersMutationKeys } from "../users.keys";
-import { usersService } from "../users.service";
 
-function useUpdateUser(userId: string) {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationKey: usersMutationKeys.update,
-    mutationFn: (data: UpdateUser) => usersService.update(userId, data),
-    onSuccess: (res) => {
-      toast.success(res?.message || "User updated successfully.");
-      queryClient.invalidateQueries({ queryKey: usersKeys.all });
-    },
-    onError: notifyError,
-  });
-}
-
-export function useUpdateUserFacade(userId: string) {
-  const { mutate, isPending, isSuccess } = useUpdateUser(userId);
+export function useUpdateUserFacade(userId: string, onSuccess?: () => void) {
+  const [isPending, setIsPending] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const {
     handleSubmit,
     register,
     control,
+    reset,
     formState: { errors },
   } = useForm<UpdateUser>({
     resolver: zodResolver(UpdateUserSchema),
   });
 
+  const submit = (data: UpdateUser) => {
+    setIsPending(true);
+    router.patch(`/dashboard/users/${userId}`, data as any, {
+      onSuccess: () => {
+        setIsSuccess(true);
+        toast.success("User updated successfully.");
+        onSuccess?.();
+      },
+      onError: (err) => {
+        notifyError(err);
+      },
+      onFinish: () => setIsPending(false),
+    });
+  };
+
   return {
-    submit: (data: UpdateUser) => mutate(data),
+    submit,
     isPending,
     isSuccess,
     register,
@@ -47,19 +48,19 @@ export function useUpdateUserFacade(userId: string) {
 }
 
 export const useUpdateUserStatus = (userId: string, isActive: boolean) => {
-  const queryClient = useQueryClient();
-  const { mutate, isPending } = useMutation({
-    mutationKey: usersMutationKeys.update,
-    mutationFn: () => usersService.updateStatus(userId, !isActive),
-    onSuccess: (res) => {
-      toast.success(res?.message || "User status updated successfully.");
-      queryClient.invalidateQueries({ queryKey: usersKeys.all });
-    },
-    onError: notifyError,
-  });
+  const [isPending, setIsPending] = useState(false);
 
   const handleToggleStatus = () => {
-    mutate();
+    setIsPending(true);
+    router.patch(`/dashboard/users/${userId}/status`, { isActive: !isActive }, {
+      onSuccess: () => {
+        toast.success("User status updated successfully.");
+      },
+      onError: (err) => {
+        notifyError(err);
+      },
+      onFinish: () => setIsPending(false),
+    });
   };
 
   return {

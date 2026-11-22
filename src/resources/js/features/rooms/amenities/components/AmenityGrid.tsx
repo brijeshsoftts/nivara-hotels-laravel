@@ -67,7 +67,7 @@ export function AmenityGrid() {
     <>
       <AmenitySearch value={search} onChange={setSearch} />
       <div className="grid grid-cols-1 gap-6 p-4 sm:grid-cols-2 sm:px-6 lg:grid-cols-3 xl:grid-cols-4">
-        {items?.map((a) => (
+        {items?.map((a: any) => (
           <AmenityCard amenity={a} key={a.id} />
         ))}
       </div>

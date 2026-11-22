@@ -90,7 +90,7 @@ export function IssueUpdateForm({
             <InputField
               label="Title"
               maxLength={200}
-              error={errors.title?.message}
+              error={errors.title?.message as string | undefined}
               disabled={isPending}
               {...register("title")}
             />
@@ -99,14 +99,14 @@ export function IssueUpdateForm({
               control={control}
               label="Category"
               options={issueCategories}
-              error={errors.category?.message}
+              error={errors.category?.message as string | undefined}
               disabled={isPending}
             />
             <TextareaField
               label="Description"
               maxLength={5000}
               className="min-h-28"
-              error={errors.description?.message}
+              error={errors.description?.message as string | undefined}
               disabled={isPending}
               {...register("description")}
             />
@@ -119,7 +119,7 @@ export function IssueUpdateForm({
             control={control}
             label="Priority"
             options={issuePriorities}
-            error={errors.priority?.message}
+            error={errors.priority?.message as string | undefined}
             disabled={isPending}
           />
         )}
@@ -130,7 +130,7 @@ export function IssueUpdateForm({
             control={control}
             label="Status"
             options={issueStatuses}
-            error={errors.status?.message}
+            error={errors.status?.message as string | undefined}
             disabled={isPending}
           />
         )}

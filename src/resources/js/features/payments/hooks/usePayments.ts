@@ -1,14 +1,16 @@
-import { useQuery } from "@tanstack/react-query";
-
+import { usePage } from "@inertiajs/react";
 import type { ListParams } from "@/types/api.types";
 
-import { paymentsKeys } from "../payments.keys";
-import { paymentsService } from "../payments.service";
+export function usePayments<T = any>(_params?: ListParams) {
+  const page = usePage<any>();
+  const payments = page.props?.payments ?? { data: [], meta: { page: 1, limit: 10, total: 0, totalPages: 1 } };
 
-export function usePayments(params: ListParams) {
-  return useQuery({
-    queryKey: paymentsKeys.list(params),
-    queryFn: () => paymentsService.findAll(params),
-    placeholderData: (previousData) => previousData,
-  });
+  return {
+    data: payments,
+    items: (payments.data ?? []) as T[],
+    pagination: payments.meta,
+    isLoading: false,
+    isError: false,
+    refetch: () => {},
+  };
 }

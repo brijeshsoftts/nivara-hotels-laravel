@@ -1,5 +1,3 @@
-import { useSearchParams } from "react-router-dom";
-
 import { InputField } from "@/components/common/InputField";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,7 +12,9 @@ import { Spinner } from "@/components/ui/spinner";
 import { useResetPassword } from "@/features/auth/hooks/usePasswordRecovery";
 
 export default function ResetPasswordPage() {
-  const [search] = useSearchParams();
+  const search = new URLSearchParams(
+    typeof window !== "undefined" ? window.location.search : ""
+  );
 
   const { handleSubmit, submit, register, errors, isPending } =
     useResetPassword(search.get("token") || "");

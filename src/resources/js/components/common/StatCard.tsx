@@ -1,7 +1,7 @@
 import { Sparkles } from "lucide-react";
 import { motion } from "motion/react";
 import type { ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "@inertiajs/react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { icons } from "@/constants/icons";
@@ -162,7 +162,7 @@ export function StatCard({
       transition={{ type: "spring", stiffness: 400, damping: 25 }}
     >
       <Link
-        to={link ? `/dashboard/${link}` : "#"}
+        href={link ? `/dashboard/${link}` : "#"}
         className="block rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       >
         <Card

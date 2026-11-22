@@ -1,59 +1,52 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { router } from "@inertiajs/react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 import { notifyError } from "@/lib/notification";
-
-import { roomsKeys, roomsMutationKeys } from "../rooms.keys";
-import { roomsService } from "../rooms.service";
 import {
   type CreateRoom,
   CreateRoomSchema,
 } from "../schemas/createRoom.schema";
 
-function useCreateRoom() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationKey: roomsMutationKeys.create,
-    mutationFn: roomsService.create,
-
-    onSuccess: (res) => {
-      toast.success(res?.message || "Room created successfully.");
-
-      queryClient.invalidateQueries({
-        queryKey: roomsKeys.lists(),
-      });
-    },
-
-    onError: notifyError,
-  });
-}
-
 export function useCreateRoomFacade() {
-  const { mutate, isPending, isSuccess } = useCreateRoom();
+  const [isPending, setIsPending] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const {
     handleSubmit,
     register,
     control,
-    formState: { errors },
-    getValues,
     reset,
-  } = useForm({
-    resolver: zodResolver(CreateRoomSchema),
+    formState: { errors },
+  } = useForm<CreateRoom>({
+    resolver: zodResolver(CreateRoomSchema) as any,
   });
 
+  const submit = (data: CreateRoom) => {
+    setIsPending(true);
+    router.post("/dashboard/rooms", data as any, {
+      onSuccess: () => {
+        setIsSuccess(true);
+        toast.success("Room created successfully.");
+        reset();
+      },
+      onError: (err) => {
+        notifyError(err);
+      },
+      onFinish: () => setIsPending(false),
+    });
+  };
+
   return {
-    submit: (data: CreateRoom) => mutate(data),
+    submit,
     isPending,
-    control,
     isSuccess,
     register,
+    control,
     handleSubmit,
     errors,
-    getValues,
     reset,
   };
 }

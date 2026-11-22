@@ -1,11 +1,14 @@
-import { useQuery } from "@tanstack/react-query";
-
-import { staffKeys } from "../staff.keys";
-import { staffService } from "../staff.service";
+import { usePage } from "@inertiajs/react";
 
 export function useStaffDetails(id: string) {
-  return useQuery({
-    queryKey: staffKeys.detail(id),
-    queryFn: () => staffService.findOne(id),
-  });
+  const page = usePage<any>();
+  const staffList = page.props?.staff?.data ?? [];
+  const found = staffList.find((s: any) => String(s.id) === String(id)) ?? null;
+
+  return {
+    data: found,
+    isLoading: false,
+    isError: false,
+    refetch: () => {},
+  };
 }

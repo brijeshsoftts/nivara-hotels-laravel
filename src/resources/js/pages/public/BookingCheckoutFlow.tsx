@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import * as React from "react";
 import { useFieldArray, useForm } from "react-hook-form";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { Link, router, usePage } from "@inertiajs/react";
 import { z } from "zod";
 
 import CheckoutHeroImage from "@/assets/landing_hero.png";
@@ -242,7 +242,7 @@ function CheckoutError({
               Try again
             </Button>
           )}
-          <Button nativeButton={false} render={<Link to={backTo} />}>
+          <Button nativeButton={false} render={<Link href={backTo} />}>
             Back to room
           </Button>
         </div>
@@ -331,12 +331,12 @@ function BookingConfirmation({
           </div>
         </dl>
         <div className="mt-7 flex flex-wrap gap-3">
-          <Button nativeButton={false} render={<Link to="/rooms" />}>
+          <Button nativeButton={false} render={<Link href="/rooms" />}>
             Browse more rooms
           </Button>
           <Button
             nativeButton={false}
-            render={<Link to="/" />}
+            render={<Link href="/" />}
             variant="outline"
           >
             Return home
@@ -348,8 +348,11 @@ function BookingConfirmation({
 }
 
 export default function BookingCheckoutFlow() {
-  const { slug } = useParams();
-  const [searchParams] = useSearchParams();
+  const page = usePage<any>();
+  const slug = (page.props as any)?.slug || (typeof window !== "undefined" ? window.location.pathname.split("/")[2] : "");
+  const searchParams = new URLSearchParams(
+    typeof window !== "undefined" ? window.location.search : ""
+  );
   const preferences = getBookingPreferences(searchParams);
   const { checkInDate, checkOutDate, adults, children } = preferences;
   const stay = getStayDetails(checkInDate, checkOutDate);
@@ -415,7 +418,7 @@ export default function BookingCheckoutFlow() {
   });
 
   const availableRoom = room
-    ? availableRooms.find((item) => item.roomType.id === room.id)
+    ? availableRooms.find((item: any) => item.roomType.id === room.id)
     : undefined;
   const nights = stay
     ? differenceInCalendarDays(stay.checkOut, stay.checkIn)
@@ -564,17 +567,17 @@ export default function BookingCheckoutFlow() {
             aria-label="Breadcrumb"
             className="flex items-center gap-2 text-xs text-background/80 sm:text-sm"
           >
-            <Link className="hover:text-background" to="/">
+            <Link className="hover:text-background" href="/">
               Home
             </Link>
             <ChevronRight aria-hidden="true" className="size-3.5" />
-            <Link className="hover:text-background" to="/rooms">
+            <Link className="hover:text-background" href="/rooms">
               Rooms
             </Link>
             <ChevronRight aria-hidden="true" className="size-3.5" />
             <Link
               className="max-w-40 truncate hover:text-background"
-              to={roomBackTo}
+              href={roomBackTo}
             >
               {room.name}
             </Link>
@@ -729,7 +732,7 @@ export default function BookingCheckoutFlow() {
               </div>
               <Link
                 className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
-                to={roomBackTo}
+                href={roomBackTo}
               >
                 <ArrowLeft aria-hidden="true" className="size-4" />
                 Edit stay
@@ -811,7 +814,7 @@ export default function BookingCheckoutFlow() {
                     fetchPriority="high"
                     onError={handleRoomImageError}
                     src={
-                      room.images.find((image) => image.isPrimary)?.url ??
+                      room.images.find((image: any) => image.isPrimary)?.url ??
                       room.images[0].url
                     }
                   />

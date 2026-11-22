@@ -105,12 +105,12 @@ export function UpdateRoomTypeDialog({
   const petsAllowed = useWatch({ control: form.control, name: "petsAllowed" });
   const isActive = useWatch({ control: form.control, name: "isActive" });
   const retainedImages =
-    roomType?.images.filter((image) => !removedImageIds.includes(image.id)) ??
+    roomType?.images.filter((image: any) => !removedImageIds.includes(image.id)) ??
     [];
   const imageCount = retainedImages.length + newImages.length;
   const selectedPrimaryImageKey =
     primaryImageKey ||
-    roomType?.images.find((image) => image.isPrimary)?.id ||
+    roomType?.images.find((image: any) => image.isPrimary)?.id ||
     roomType?.images[0]?.id ||
     "";
 
@@ -127,19 +127,19 @@ export function UpdateRoomTypeDialog({
     if (!roomType || initializedForOpen.current) return;
 
     const hasMissingAmenityIds = roomType.amenities.some(
-      (amenity) => typeof amenity.id !== "string" || amenity.id.length === 0
+      (amenity: any) => typeof amenity.id !== "string" || amenity.id.length === 0
     );
     if (hasMissingAmenityIds && isAmenitiesLoading) return;
 
     const amenityIds = roomType.amenities
-      .map((amenity) => {
+      .map((amenity: any) => {
         if (typeof amenity.id === "string" && amenity.id.length > 0) {
           return amenity.id;
         }
 
-        return amenities.find((option) => option.name === amenity.name)?.id;
+        return amenities.find((option: any) => option.name === amenity.name)?.id;
       })
-      .filter((id): id is string => typeof id === "string" && id.length > 0);
+      .filter((id: any): id is string => typeof id === "string" && id.length > 0);
 
     form.reset({
       name: roomType.name,
@@ -212,7 +212,7 @@ export function UpdateRoomTypeDialog({
     setRemovedImageIds((current) => [...current, imageId]);
     if (selectedPrimaryImageKey === imageId) {
       const nextImage = [
-        ...retainedImages.filter((image) => image.id !== imageId),
+        ...retainedImages.filter((image: any) => image.id !== imageId),
         ...newImages,
       ][0];
       setPrimaryImageKey(nextImage?.id ?? "");
@@ -222,7 +222,7 @@ export function UpdateRoomTypeDialog({
   };
 
   const removeNewImage = (imageId: string) => {
-    const removedImage = newImages.find((image) => image.id === imageId);
+    const removedImage = newImages.find((image: any) => image.id === imageId);
     if (removedImage) URL.revokeObjectURL(removedImage.preview);
     const remainingImages = newImages.filter((image) => image.id !== imageId);
     setNewImages(remainingImages);
@@ -262,10 +262,10 @@ export function UpdateRoomTypeDialog({
       return;
     }
 
-    const retainedImageIds = retainedImages.map((image) => image.id);
+    const retainedImageIds = retainedImages.map((image: any) => image.id);
     const primaryImage = retainedImageIds.includes(selectedPrimaryImageKey)
       ? `existing:${selectedPrimaryImageKey}`
-      : `new:${newImages.findIndex((image) => image.id === selectedPrimaryImageKey)}`;
+      : `new:${newImages.findIndex((image: any) => image.id === selectedPrimaryImageKey)}`;
 
     updateMutation.mutate(
       {
@@ -282,13 +282,13 @@ export function UpdateRoomTypeDialog({
   };
 
   const allImages = [
-    ...retainedImages.map((image) => ({
+    ...retainedImages.map((image: any) => ({
       id: image.id,
       src: image.url,
       alt: image.altText ?? roomTypeSummary.name,
       isExisting: true,
     })),
-    ...newImages.map((image) => ({
+    ...newImages.map((image: any) => ({
       id: image.id,
       src: image.preview,
       alt: image.file.name,
@@ -472,7 +472,7 @@ export function UpdateRoomTypeDialog({
                     </p>
                   </div>
                   <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                    {amenities?.map((amenity) => {
+                    {amenities?.map((amenity: any) => {
                       const checked = selectedAmenities.includes(amenity.id);
                       return (
                         <label

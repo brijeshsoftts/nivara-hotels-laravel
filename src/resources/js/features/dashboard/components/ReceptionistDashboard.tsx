@@ -1,5 +1,6 @@
 import { formatDate } from "date-fns";
 import { useState } from "react";
+import { usePage } from "@inertiajs/react";
 
 import { type ColumnDef, DataTable } from "@/components/common/DataTable";
 import {
@@ -10,24 +11,13 @@ import { StatGrid } from "@/components/common/Stat";
 import { BookingDetailsSheet } from "@/features/bookings/components/BookingDetailsSheet";
 
 import type { ArrivalItem, DepartureItem } from "../dashboard.types";
-import { useDashbaordStats } from "../hooks/useDashbaordStats";
-import { useDashbaordStays } from "../hooks/useDashbaordStays";
-import { useDashbaordBookingStatus } from "../hooks/useDashboardBookingStatus";
-import { useDashboardRoomStatus } from "../hooks/useDashboardRoomStatus";
-
 import { DonutChart } from "./DonutChart";
 import { StatusBarChart } from "./StatusBarChart";
 
 function TodaysArrivals({
   items,
-  isLoading,
-  isError,
-  onRetry,
 }: {
   items: ArrivalItem[];
-  isLoading: boolean;
-  isError: boolean;
-  onRetry: () => void;
 }) {
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(
     null
@@ -60,11 +50,10 @@ function TodaysArrivals({
       columns={columns}
       showSearch={false}
       showPagination={false}
-      isLoading={isLoading}
-      isError={isError}
+      isLoading={false}
+      isError={false}
       errorMessage="Today's arrivals could not be loaded."
       emptyMessage="No arrivals scheduled for today."
-      refetch={onRetry}
       onRowClick={(row) => setSelectedBookingId(row.bookingId)}
       renderActions={(row) =>
         selectedBookingId === row.bookingId ? (
@@ -81,14 +70,8 @@ function TodaysArrivals({
 
 function TodaysDepartures({
   items,
-  isLoading,
-  isError,
-  onRetry,
 }: {
   items: DepartureItem[];
-  isLoading: boolean;
-  isError: boolean;
-  onRetry: () => void;
 }) {
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(
     null
@@ -121,11 +104,10 @@ function TodaysDepartures({
       columns={columns}
       showSearch={false}
       showPagination={false}
-      isLoading={isLoading}
-      isError={isError}
+      isLoading={false}
+      isError={false}
       errorMessage="Today's departures could not be loaded."
       emptyMessage="No departures scheduled for today."
-      refetch={onRetry}
       onRowClick={(row) => setSelectedBookingId(row.bookingId)}
       renderActions={(row) =>
         selectedBookingId === row.bookingId ? (
@@ -140,54 +122,53 @@ function TodaysDepartures({
   );
 }
 
-export function ReceptionistDashboard() {
-  const stats = useDashbaordStats();
-  const stays = useDashbaordStays();
-  const roomStatus = useDashboardRoomStatus();
-  const bookingStatus = useDashbaordBookingStatus("all");
+export function ReceptionistDashboard({
+  stats: propStats,
+  stays: propStays,
+  roomStatus: propRoomStatus,
+  bookingStatus: propBookingStatus,
+}: {
+  stats?: any[];
+  stays?: any;
+  roomStatus?: any;
+  bookingStatus?: any;
+} = {}) {
+  const page = usePage<any>();
+  const stats = propStats ?? page.props?.stats ?? [];
+  const stays = propStays ?? page.props?.stays ?? { arrivals: { items: [] }, departures: { items: [] } };
+  const roomStatus = propRoomStatus ?? page.props?.roomStatus ?? [];
+  const bookingStatus = propBookingStatus ?? page.props?.bookingStatus ?? [];
 
   return (
-    <>
+    <div className="space-y-6">
       <StatGrid
-        stats={stats.data}
-        isLoading={stats.isLoading}
-        isError={stats.isError}
+        stats={stats}
+        isLoading={false}
+        isError={false}
       />
       <div className="grid gap-6 lg:grid-cols-2">
         <DonutChart
-          data={roomStatus.data ?? []}
+          data={Array.isArray(roomStatus) ? roomStatus : []}
           title="Room Availability"
           description="Current active room occupancy"
           centerLabel="Rooms"
           showRange={false}
           errorMessage="Room availability could not be loaded."
-          isLoading={roomStatus.isLoading}
-          isError={roomStatus.isError}
-          onRetry={() => void roomStatus.refetch()}
+          isLoading={false}
+          isError={false}
         />
         <StatusBarChart
-          data={bookingStatus.data ?? []}
-          title="Booking Status"
-          description="Bookings across all statuses"
-          isLoading={bookingStatus.isLoading}
-          isError={bookingStatus.isError}
-          onRetry={() => void bookingStatus.refetch()}
+          data={Array.isArray(bookingStatus) ? bookingStatus : []}
+          title="Booking pipeline"
+          description="Total active and upcoming reservations"
+          isLoading={false}
+          isError={false}
         />
       </div>
       <div className="grid gap-6 lg:grid-cols-2">
-        <TodaysArrivals
-          items={stays.data?.arrivals.items ?? []}
-          isLoading={stays.isLoading}
-          isError={stays.isError}
-          onRetry={() => void stays.refetch()}
-        />
-        <TodaysDepartures
-          items={stays.data?.departures.items ?? []}
-          isLoading={stays.isLoading}
-          isError={stays.isError}
-          onRetry={() => void stays.refetch()}
-        />
+        <TodaysArrivals items={stays.arrivals?.items ?? []} />
+        <TodaysDepartures items={stays.departures?.items ?? []} />
       </div>
-    </>
+    </div>
   );
 }

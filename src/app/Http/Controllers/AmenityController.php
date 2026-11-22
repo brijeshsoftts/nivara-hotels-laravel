@@ -39,7 +39,7 @@ class AmenityController extends Controller
         ]);
 
         if ($request->wantsJson() && !$request->header('X-Inertia')) {
-            return response()->json(['data' => ['id' => $amenity->id], 'message' => 'Amenity created successfully'], 201);
+            return response()->json(['data' => ['id' => $amenity->id], 'message' => 'Amenity created successfully.'], 200);
         }
 
         return redirect()->back()->with('success', 'Amenity created successfully.');
@@ -80,3 +80,4 @@ class AmenityController extends Controller
         return redirect()->back()->with('success', 'Amenity deleted successfully.');
     }
 }
+

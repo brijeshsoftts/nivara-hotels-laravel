@@ -1,6 +1,6 @@
 import { EllipsisVertical, Eye, RefreshCw, Trash2 } from "lucide-react";
 import { useState } from "react";
-import { Navigate } from "react-router-dom";
+import { NoAccess } from "@/components/common/NoAccess";
 
 import { type ColumnDef, DataTable } from "@/components/common/DataTable";
 import { Header } from "@/components/common/Header";
@@ -53,7 +53,7 @@ export default function InquiryPage() {
     );
 
   if (!canViewInquiries) {
-    return <Navigate to="/dashboard" replace />;
+    return <NoAccess />;
   }
 
   const columns: ColumnDef<Inquiry>[] = [

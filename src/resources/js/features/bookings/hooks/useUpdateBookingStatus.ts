@@ -1,25 +1,32 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { router } from "@inertiajs/react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { notifyError } from "@/lib/notification";
 
-import { roomsKeys } from "../../rooms/rooms/rooms.keys";
-import { bookingsKeys, bookingsMutationKeys } from "../bookings.keys";
-import { bookingsService } from "../bookings.service";
-
 export function useUpdateBookingStatus() {
-  const queryClient = useQueryClient();
+  const [isPending, setIsPending] = useState(false);
 
-  return useMutation({
-    mutationKey: bookingsMutationKeys.updateStatus,
-    mutationFn: bookingsService.updateStatus,
-    onSuccess: () => {
-      toast.success("Booking status updated.");
-      void queryClient.invalidateQueries({ queryKey: bookingsKeys.lists() });
-      void queryClient.invalidateQueries({ queryKey: bookingsKeys.details() });
-      void queryClient.invalidateQueries({ queryKey: bookingsKeys.stats() });
-      void queryClient.invalidateQueries({ queryKey: roomsKeys.all });
-    },
-    onError: notifyError,
-  });
+  const mutate = (
+    { id, status }: { id: string; status: string },
+    options?: { onSuccess?: () => void; onError?: (err: any) => void }
+  ) => {
+    setIsPending(true);
+    router.patch(`/dashboard/bookings/${id}/status`, { status }, {
+      onSuccess: () => {
+        toast.success("Booking status updated.");
+        options?.onSuccess?.();
+      },
+      onError: (err) => {
+        notifyError(err);
+        options?.onError?.(err);
+      },
+      onFinish: () => setIsPending(false),
+    });
+  };
+
+  return {
+    mutate,
+    isPending,
+  };
 }

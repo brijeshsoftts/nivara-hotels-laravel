@@ -1,27 +1,25 @@
-import { Navigate } from "react-router-dom";
-
+import { NoAccess } from "@/components/common/NoAccess";
 import { HouseKeeperRooms } from "@/features/rooms/components/HouseKeeperRooms";
 import { ManagementRooms } from "@/features/rooms/components/ManagementRooms";
 import { useAuth } from "@/hooks/useAuth";
 
-export default function RoomsPage() {
+export default function RoomsPage(props: any) {
   const { user } = useAuth();
 
   switch (user?.role) {
     case "ADMIN":
     case "MANAGER":
-      return <ManagementRooms />;
+      return <ManagementRooms {...props} />;
     case "STAFF":
       if (user.category === "RECEPTIONIST") {
-        return <ManagementRooms />;
+        return <ManagementRooms {...props} />;
       }
       if (user.category === "HOUSEKEEPER") {
-        return <HouseKeeperRooms />;
+        return <HouseKeeperRooms {...props} />;
       }
-      return <Navigate to="/dashboard" replace />;
+      return <NoAccess />;
     case "CUSTOMER":
-      return <Navigate to="/rooms" replace />;
     default:
-      return <Navigate to="/dashboard" replace />;
+      return <NoAccess />;
   }
 }

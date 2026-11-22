@@ -1,10 +1,9 @@
-import { Navigate } from "react-router-dom";
-
+import { NoAccess } from "@/components/common/NoAccess";
 import { CustomerBookings } from "@/features/bookings/components/CustomerBookings";
 import { ManagementBooking } from "@/features/bookings/components/ManagementBooking";
 import { useAuth } from "@/hooks/useAuth";
 
-export default function BookingsPage() {
+export default function BookingsPage(props: any) {
   const { user } = useAuth();
 
   switch (user?.role) {
@@ -12,12 +11,12 @@ export default function BookingsPage() {
     case "MANAGER":
     case "STAFF":
       if (user.category !== "HOUSEKEEPER") {
-        return <ManagementBooking />;
+        return <ManagementBooking {...props} />;
       }
-      return <Navigate to="/dashboard" />;
+      return <NoAccess />;
     case "CUSTOMER":
-      return <CustomerBookings />;
+      return <CustomerBookings {...props} />;
     default:
-      return <Navigate to="/dashboard" />;
+      return <NoAccess />;
   }
 }

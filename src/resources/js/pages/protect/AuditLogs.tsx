@@ -1,6 +1,6 @@
 import { Braces, Check, Clipboard, RefreshCw } from "lucide-react";
 import { useState } from "react";
-import { Navigate } from "react-router-dom";
+import { NoAccess } from "@/components/common/NoAccess";
 import { toast } from "sonner";
 
 import {
@@ -125,7 +125,7 @@ export default function AuditLogsPage() {
   });
 
   if (user?.role !== "ADMIN") {
-    return <Navigate to="/dashboard" replace />;
+    return <NoAccess />;
   }
 
   const columns: ColumnDef<AuditLog>[] = [

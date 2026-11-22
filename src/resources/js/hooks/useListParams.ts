@@ -1,22 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { router } from "@inertiajs/react";
 
 import type { ListParams } from "@/types/api.types";
-
 import { useDebounce } from "./useDebounce";
 
 const RESERVED_KEYS = new Set(["limit", "page", "search", "filters"]);
 
 export function useListParams(initial: Partial<ListParams> = {}) {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const paramsString = searchParams.toString();
+  const getSearchString = () => (typeof window !== "undefined" ? window.location.search : "");
+  const [paramsString, setParamsString] = useState(getSearchString);
 
   const [filters, setFilters] = useState<Partial<ListParams>>(() => {
     const result: Record<string, unknown> = { ...initial };
-
     RESERVED_KEYS.forEach((key) => delete result[key]);
 
-    new URLSearchParams(paramsString).forEach((value, key) => {
+    new URLSearchParams(getSearchString()).forEach((value, key) => {
       if (!RESERVED_KEYS.has(key)) {
         result[key] = value;
       }
@@ -24,6 +22,8 @@ export function useListParams(initial: Partial<ListParams> = {}) {
 
     return result as Partial<ListParams>;
   });
+
+  const searchParams = new URLSearchParams(paramsString);
 
   const [page, setPage] = useState(
     () => Number(searchParams.get("page")) || initial.page || 1
@@ -34,11 +34,16 @@ export function useListParams(initial: Partial<ListParams> = {}) {
   );
 
   const search = useDebounce(searchInput);
-
-  // Track whether the latest URL change was made by this hook.
   const lastWrittenUrl = useRef<string | null>(null);
 
-  // Sync external URL changes (KPI cards, browser back/forward, etc.).
+  useEffect(() => {
+    const onPopState = () => {
+      setParamsString(getSearchString());
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
   useEffect(() => {
     if (lastWrittenUrl.current === paramsString) {
       lastWrittenUrl.current = null;
@@ -70,7 +75,6 @@ export function useListParams(initial: Partial<ListParams> = {}) {
     [filters, page, search, searchParams]
   );
 
-  // Debounced state -> URL synchronization.
   useEffect(() => {
     const timeout = setTimeout(() => {
       const next = new URLSearchParams(paramsString);
@@ -84,8 +88,7 @@ export function useListParams(initial: Partial<ListParams> = {}) {
         next.delete("search");
       }
 
-      // Remove old filters and write the current ones.
-      for (const key of next.keys()) {
+      for (const key of Array.from(next.keys())) {
         if (!RESERVED_KEYS.has(key) && !(key in filters)) {
           next.delete(key);
         }
@@ -105,14 +108,23 @@ export function useListParams(initial: Partial<ListParams> = {}) {
 
       next.delete("filters");
 
-      if (next.toString() !== paramsString) {
-        lastWrittenUrl.current = next.toString();
-        setSearchParams(next, { replace: true });
+      const nextStr = next.toString();
+      if (nextStr !== paramsString.replace(/^\?/, "")) {
+        lastWrittenUrl.current = nextStr;
+        setParamsString(`?${nextStr}`);
+        if (typeof window !== "undefined") {
+          const targetUrl = `${window.location.pathname}${nextStr ? `?${nextStr}` : ""}`;
+          router.get(targetUrl, {}, {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+          });
+        }
       }
     }, 400);
 
     return () => clearTimeout(timeout);
-  }, [filters, params, paramsString, setSearchParams]);
+  }, [filters, params, paramsString]);
 
   return {
     params,

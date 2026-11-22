@@ -18,7 +18,8 @@ import {
 import { motion, useReducedMotion } from "motion/react";
 import * as React from "react";
 import { Controller, useForm } from "react-hook-form";
-import { Link } from "react-router-dom";
+import { Link } from "@inertiajs/react";
+import { PublicLayout } from "@/layouts/PublicLayout";
 
 import HeroImage from "@/assets/landing_hero.png";
 import { Button } from "@/components/ui/button";
@@ -509,7 +510,7 @@ function QuickHelp() {
                 </p>
                 <Link
                   className="mt-3 rounded-sm text-xs font-semibold text-primary hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                  to={href}
+                  href={href}
                 >
                   {action}
                 </Link>
@@ -565,7 +566,7 @@ function SupportBanner() {
 
 export default function ContactPage() {
   return (
-    <>
+    <PublicLayout>
       <ContactHero />
       <ContactDetailsStrip />
       <div className="container mx-auto max-w-7xl px-4 pt-10 sm:px-6 sm:pt-12 lg:px-8">
@@ -576,6 +577,6 @@ export default function ContactPage() {
         <QuickHelp />
         <SupportBanner />
       </div>
-    </>
+    </PublicLayout>
   );
 }

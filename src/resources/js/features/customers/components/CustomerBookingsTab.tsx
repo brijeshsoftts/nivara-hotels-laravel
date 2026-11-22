@@ -77,7 +77,7 @@ export function CustomerBookingsTab({
   return (
     <div className="space-y-3">
       <div className="max-h-100 space-y-3 overflow-y-auto pr-1">
-        {bookings.map((booking) => (
+        {bookings.map((booking: any) => (
           <CustomerBookingCard
             key={booking.id}
             booking={booking}

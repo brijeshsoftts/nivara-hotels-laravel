@@ -32,8 +32,8 @@ export function CollectCashDialog({
   const collectCash = useCollectCash();
   const validPaidAmount =
     booking?.invoice?.payments
-      ?.filter((payment) => payment.paymentStatus === "COMPLETED")
-      .reduce((total, payment) => total + payment.amount, 0) ?? 0;
+      ?.filter((payment: any) => payment.paymentStatus === "COMPLETED")
+      .reduce((total: number, payment: any) => total + payment.amount, 0) ?? 0;
   const totalAmount =
     booking?.invoice?.totalAmount ?? booking?.totalAmount ?? 0;
   const outstandingBalance = Math.max(totalAmount - validPaidAmount, 0);

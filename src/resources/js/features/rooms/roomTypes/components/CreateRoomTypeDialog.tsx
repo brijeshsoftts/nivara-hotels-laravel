@@ -135,7 +135,7 @@ export function CreateRoomTypeDialog({ children }: CreateRoomTypeDialogProps) {
     const removedImage = images[index];
 
     const updatedImages = images.filter(
-      (_, imageIndex) => imageIndex !== index
+      (_: any, imageIndex: number) => imageIndex !== index
     );
 
     if (removedImage?.isPrimary && updatedImages.length > 0) {
@@ -157,7 +157,7 @@ export function CreateRoomTypeDialog({ children }: CreateRoomTypeDialogProps) {
         URL.revokeObjectURL(removed.preview);
       }
 
-      const updated = previous.filter((_, imageIndex) => imageIndex !== index);
+      const updated = previous.filter((_: any, imageIndex: number) => imageIndex !== index);
 
       if (removed?.isPrimary && updated.length > 0) {
         updated[0] = {
@@ -173,7 +173,7 @@ export function CreateRoomTypeDialog({ children }: CreateRoomTypeDialogProps) {
   const setPrimaryImage = (index: number) => {
     const images = getValues("images");
 
-    const updatedImages = images?.map((item, imageIndex) => ({
+    const updatedImages = images?.map((item: any, imageIndex: number) => ({
       ...item,
       isPrimary: imageIndex === index,
     }));
@@ -303,7 +303,7 @@ export function CreateRoomTypeDialog({ children }: CreateRoomTypeDialogProps) {
                     required
                     {...register("currency", {
                       onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
-                        setValue("currency", event.target.value.toUpperCase(), {
+                        setValue("currency", event.target.value.toUpperCase() as "INR", {
                           shouldValidate: true,
                         }),
                     })}
@@ -452,7 +452,7 @@ export function CreateRoomTypeDialog({ children }: CreateRoomTypeDialogProps) {
                 </div>
 
                 <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                  {items?.map((amenity) => {
+                  {items?.map((amenity: any) => {
                     const checked = selectedAmenities.includes(amenity.id);
 
                     return (
@@ -468,7 +468,7 @@ export function CreateRoomTypeDialog({ children }: CreateRoomTypeDialogProps) {
                               value
                                 ? [...selectedAmenities, amenity.id]
                                 : selectedAmenities.filter(
-                                    (id) => id !== amenity.id
+                                    (id: any) => id !== amenity.id
                                   ),
                               { shouldDirty: true, shouldValidate: true }
                             )
@@ -482,7 +482,7 @@ export function CreateRoomTypeDialog({ children }: CreateRoomTypeDialogProps) {
                 </div>
                 {errors.amenities?.message && (
                   <p className="text-sm text-destructive" role="alert">
-                    {errors.amenities.message}
+                    {String(errors.amenities.message)}
                   </p>
                 )}
               </section>
@@ -608,7 +608,7 @@ export function CreateRoomTypeDialog({ children }: CreateRoomTypeDialogProps) {
                 </div>
                 {errors.images?.message && (
                   <p className="text-sm text-destructive" role="alert">
-                    {errors.images.message}
+                    {String(errors.images.message)}
                   </p>
                 )}
               </section>

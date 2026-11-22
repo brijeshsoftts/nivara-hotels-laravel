@@ -1,10 +1,10 @@
-import { usePage, router } from "@inertiajs/react";
-import type { AuthCTX, AuthUser } from "@/types/shared.types";
+import { usePage } from "@inertiajs/react";
+import type { SharedProps } from "@/types";
 
-export function useAuth(): AuthCTX {
+export function useAuth() {
   try {
-    const page = usePage<any>();
-    const rawUser = page.props?.auth?.user;
+    const { auth } = usePage<SharedProps>().props;
+    const rawUser = auth?.user;
     if (!rawUser) {
       return {
         isAuthenticated: false,
@@ -13,20 +13,10 @@ export function useAuth(): AuthCTX {
       };
     }
 
-    const user: AuthUser = {
-      id: rawUser.id,
-      fullName: rawUser.full_name || rawUser.name,
-      email: rawUser.email,
-      phone: rawUser.phone,
-      role: rawUser.role,
-      category: rawUser.category,
-      isActive: rawUser.is_active,
-    };
-
     return {
       isAuthenticated: true,
       isLoading: false,
-      user: user as any,
+      user: rawUser,
     };
   } catch {
     return {

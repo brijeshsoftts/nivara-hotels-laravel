@@ -1,102 +1,178 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { router, usePage } from "@inertiajs/react";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
-import { apiClient } from "@/lib/apiClient";
-import { createCrud } from "@/lib/crud/createCrud";
 import { notifyError } from "@/lib/notification";
-import type { ApiListResponse } from "@/types/api.types";
 import type { TaskStatus } from "@/types/enum.types";
-
-import { roomsKeys } from "../rooms/rooms/rooms.keys";
-
-import { CreateTaskSchema } from "./schemas/createTask.schema";
-import { UpdateTaskSchema } from "./schemas/updateTask.schema";
 import type {
   HousekeeperLookupItem,
   RoomLookupItem,
   TaskItem,
 } from "./tasks.types";
 
-export const tasksCrud = createCrud<TaskItem, undefined>()({
-  resource: "tasks",
-  endpoint: "/tasks",
-  label: "Task",
-  createSchema: CreateTaskSchema,
-  updateSchema: UpdateTaskSchema,
-});
+export function useTasks() {
+  const page = usePage<any>();
+  const tasks = page.props?.tasks ?? { data: [], meta: { page: 1, limit: 10, total: 0, totalPages: 1 } };
 
-export const tasksKeys = tasksCrud.keys;
-export const tasksService = tasksCrud.service;
+  return {
+    items: tasks.data ?? [],
+    pagination: tasks.meta,
+    isLoading: false,
+    isError: false,
+    refetch: () => {},
+  };
+}
 
-export const {
+export function useTask(id: string) {
+  const page = usePage<any>();
+  const tasks = page.props?.tasks?.data ?? [];
+  const found = tasks.find((t: any) => String(t.id) === String(id)) ?? null;
+
+  return { data: found, isLoading: false, isError: false, refetch: () => {} };
+}
+
+export function useCreateTask(options?: { onSuccess?: (res?: any) => void; onError?: (err: any) => void }) {
+  const [isPending, setIsPending] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const form = useForm<any>();
+
+  const mutate = (data: any, callOptions?: any) => {
+    setIsPending(true);
+    router.post("/dashboard/tasks", data, {
+      onSuccess: (p) => {
+        setIsSuccess(true);
+        toast.success("Task created successfully.");
+        options?.onSuccess?.(p);
+        callOptions?.onSuccess?.(p);
+      },
+      onError: (err) => {
+        notifyError(err);
+        options?.onError?.(err);
+        callOptions?.onError?.(err);
+      },
+      onFinish: () => setIsPending(false),
+    });
+  };
+
+  return {
+    form,
+    mutation: { isPending, isSuccess, mutate, mutateAsync: mutate },
+    submit: mutate,
+    mutate,
+    mutateAsync: mutate,
+    isPending,
+  };
+}
+
+export function useUpdateTask(taskId?: string, options?: { onSuccess?: (res?: any) => void; onError?: (err: any) => void }) {
+  const [isPending, setIsPending] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const form = useForm<any>();
+
+  const mutate = (dataOrId: any, maybeOptions?: any) => {
+    setIsPending(true);
+    const targetId = taskId || dataOrId?.id;
+    const data = taskId ? dataOrId : dataOrId?.data ?? dataOrId;
+    router.put(`/dashboard/tasks/${targetId}`, data, {
+      onSuccess: (p) => {
+        setIsSuccess(true);
+        toast.success("Task updated successfully.");
+        options?.onSuccess?.(p);
+        maybeOptions?.onSuccess?.(p);
+      },
+      onError: (err) => {
+        notifyError(err);
+        options?.onError?.(err);
+        maybeOptions?.onError?.(err);
+      },
+      onFinish: () => setIsPending(false),
+    });
+  };
+
+  return {
+    form,
+    mutation: { isPending, isSuccess, mutate, mutateAsync: mutate },
+    submit: mutate,
+    mutate,
+    mutateAsync: mutate,
+    isPending,
+  };
+}
+
+export function useDeleteTask(taskId?: string) {
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDelete = (id?: string) => {
+    setIsDeleting(true);
+    const targetId = taskId || id;
+    router.delete(`/dashboard/tasks/${targetId}`, {
+      onSuccess: () => {
+        toast.success("Task deleted successfully.");
+      },
+      onError: (err) => {
+        notifyError(err);
+      },
+      onFinish: () => setIsDeleting(false),
+    });
+  };
+
+  return { isDeleting, isPending: isDeleting, handleDelete, mutate: handleDelete };
+}
+
+export function useUpdateStatus(id: string) {
+  const [isPending, setIsPending] = useState(false);
+
+  const mutate = (data: { status: TaskStatus }) => {
+    setIsPending(true);
+    router.patch(`/dashboard/tasks/${id}/status`, data, {
+      onSuccess: () => {
+        toast.success("Task status updated");
+      },
+      onError: (err) => {
+        notifyError(err);
+      },
+      onFinish: () => setIsPending(false),
+    });
+  };
+
+  return { mutate, isPending };
+}
+
+export function useLookupHousekeepers(_params?: any) {
+  const page = usePage<any>();
+  const staff = page.props?.staff ?? [];
+  return {
+    data: staff as HousekeeperLookupItem[],
+    isLoading: false,
+    refetch: () => {},
+  };
+}
+
+export function useLookupRooms(_params?: any) {
+  const page = usePage<any>();
+  const rooms = page.props?.rooms ?? [];
+  return {
+    data: rooms as RoomLookupItem[],
+    isLoading: false,
+    refetch: () => {},
+  };
+}
+
+export function useHousekeeperTaskQueue() {
+  const page = usePage<any>();
+  const tasks = page.props?.tasks?.data ?? page.props?.tasks ?? [];
+  return {
+    data: (tasks as TaskItem[]).slice(0, 5),
+    isLoading: false,
+    refetch: () => {},
+  };
+}
+
+export const tasksCrud = {
   useList: useTasks,
   useDetail: useTask,
   useDelete: useDeleteTask,
   useCreate: useCreateTask,
   useUpdate: useUpdateTask,
-} = tasksCrud;
-
-export function useLookupHousekeepers(params?: {
-  search: string;
-  limit: number;
-  category: string;
-}) {
-  return useQuery({
-    queryKey: tasksCrud.keys.custom("lookup", "housekeepers", params),
-    queryFn: (): Promise<HousekeeperLookupItem[]> =>
-      apiClient.get("/staff/lookup", { params }).then((r) => r.data?.data),
-    enabled: !!params,
-  });
-}
-
-export function useLookupRooms(params?: { search: string; limit: number }) {
-  return useQuery({
-    queryKey: tasksCrud.keys.custom("lookup", "rooms", params),
-    queryFn: (): Promise<RoomLookupItem[]> =>
-      apiClient.get("/rooms/lookup", { params }).then((r) => r.data?.data),
-    enabled: !!params,
-  });
-}
-
-export function useUpdateStatus(id: string) {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationKey: ["tasks", "updateStatus", id],
-    mutationFn: (data: { status: TaskStatus }) =>
-      apiClient.patch(`/tasks/${id}/status`, data).then((r) => r.data),
-    onSuccess: (res) => {
-      toast.success(res?.message || "Task status updated");
-      void queryClient.invalidateQueries({ queryKey: tasksKeys.all });
-      void queryClient.invalidateQueries({ queryKey: roomsKeys.all });
-    },
-    onError: notifyError,
-  });
-}
-
-export function useHousekeeperTaskQueue() {
-  return useQuery({
-    queryKey: tasksCrud.keys.custom("housekeeper-dashboard", "open-tasks", 5),
-    queryFn: async () => {
-      const [pendingResponse, inProgressResponse] = await Promise.all([
-        apiClient.get<ApiListResponse<TaskItem>>("/tasks", {
-          params: { page: 1, limit: 5, status: "PENDING" },
-        }),
-        apiClient.get<ApiListResponse<TaskItem>>("/tasks", {
-          params: { page: 1, limit: 5, status: "IN_PROGRESS" },
-        }),
-      ]);
-
-      return [...pendingResponse.data.data, ...inProgressResponse.data.data]
-        .sort((left, right) => {
-          const dueDateOrder =
-            new Date(left.scheduledDate).getTime() -
-            new Date(right.scheduledDate).getTime();
-
-          if (dueDateOrder !== 0) return dueDateOrder;
-          return left.status === "PENDING" ? -1 : 1;
-        })
-        .slice(0, 5);
-    },
-  });
-}
+};

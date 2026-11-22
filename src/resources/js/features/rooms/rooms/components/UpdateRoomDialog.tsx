@@ -39,7 +39,7 @@ export function UpdateRoomDialog({
     control,
   } = useUpdateRoomFacade(room.id);
   const { items } = useRoomTypes({ limit: 20 });
-  const roomTypeOptions = items?.map((i) => ({
+  const roomTypeOptions = items?.map((i: any) => ({
     id: i.id,
     name: i.name,
   }));

@@ -78,7 +78,7 @@ export function TaskGrid() {
         </p>
       ) : (
         <div className="grid grid-cols-1 gap-6 p-4  sm:grid-cols-2 sm:p-6 lg:grid-cols-4">
-          {items.map((task) => (
+          {items.map((task: any) => (
             <TaskCard key={task.id} task={task} />
           ))}
         </div>

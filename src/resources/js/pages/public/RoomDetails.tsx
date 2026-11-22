@@ -32,12 +32,7 @@ import {
   X,
 } from "lucide-react";
 import * as React from "react";
-import {
-  Link,
-  useNavigate,
-  useParams,
-  useSearchParams,
-} from "react-router-dom";
+import { Link, router, usePage } from "@inertiajs/react";
 
 import RoomFallbackImage from "@/assets/landing_hero.png";
 import { Button } from "@/components/ui/button";
@@ -160,7 +155,7 @@ function SimilarRoomCard({
   return (
     <Link
       className="group min-w-0 overflow-hidden rounded-lg border border-border bg-card transition-colors hover:border-primary/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-      to={`/rooms/${room.slug}`}
+      href={`/rooms/${room.slug}`}
     >
       <div className="aspect-video overflow-hidden bg-muted">
         {room.image ? (
@@ -195,10 +190,13 @@ function SimilarRoomCard({
   );
 }
 
-export default function RoomDetailsPage() {
-  const { slug } = useParams();
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+export default function RoomDetailsPage(props: { room?: any; similarRooms?: any; slug?: string }) {
+  const page = usePage<any>();
+  const pageProps = page.props || {};
+  const slug = props.slug || pageProps.slug || (typeof window !== "undefined" ? window.location.pathname.split("/")[2] : "");
+  const searchParams = new URLSearchParams(
+    typeof window !== "undefined" ? window.location.search : ""
+  );
   const preferences = getBookingPreferences(searchParams);
   const [checkInDate, setCheckInDate] = React.useState(preferences.checkInDate);
   const [checkOutDate, setCheckOutDate] = React.useState(
@@ -218,17 +216,13 @@ export default function RoomDetailsPage() {
     checkInDate >= format(startOfToday(), "yyyy-MM-dd") &&
     checkOutDate > checkInDate;
 
-  const { room, isLoading, isFetching, isError, refetch } = useAvailableRoom(
-    slug ?? null,
-    hasValidStay ? checkInDate : undefined,
-    hasValidStay ? checkOutDate : undefined
-  );
-  const { rooms } = useAvailableRooms({
-    ...(hasValidStay && { checkInDate, checkOutDate }),
-    adults: requestedAdults,
-    children: requestedChildren,
-    limit: 8,
-  });
+  const room = props.room || pageProps.room;
+  const initialSimilarRooms = props.similarRooms || pageProps.similarRooms || [];
+  const rooms = initialSimilarRooms;
+  const isLoading = !room;
+  const isFetching = false;
+  const isError = false;
+  const refetch = () => router.reload();
   const [selectedImageIndex, setSelectedImageIndex] = React.useState(0);
   const [galleryOpen, setGalleryOpen] = React.useState(false);
   const [bookingError, setBookingError] = React.useState("");
@@ -266,7 +260,7 @@ export default function RoomDetailsPage() {
     : 0;
   const roomTotal = room ? room.basePrice * nights : 0;
   const similarRooms = room
-    ? rooms.filter((item) => item.id !== room.id).slice(0, 4)
+    ? rooms.filter((item: any) => item.id !== room.id).slice(0, 4)
     : [];
 
   const changeImage = (direction: -1 | 1) => {
@@ -300,7 +294,7 @@ export default function RoomDetailsPage() {
       adults: String(adults),
       children: String(children),
     });
-    navigate(`/rooms/${room.slug}/book?${checkoutParams.toString()}`);
+    router.visit(`/rooms/${room.slug}/book?${checkoutParams.toString()}`);
   };
 
   if (isLoading) return <RoomDetailsSkeleton />;
@@ -325,7 +319,7 @@ export default function RoomDetailsPage() {
               >
                 Try again
               </Button>
-              <Button nativeButton={false} render={<Link to="/rooms" />}>
+              <Button nativeButton={false} render={<Link href="/rooms" />}>
                 Browse rooms
               </Button>
             </div>
@@ -342,11 +336,11 @@ export default function RoomDetailsPage() {
           aria-label="Breadcrumb"
           className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground"
         >
-          <Link className="transition-colors hover:text-foreground" to="/">
+          <Link className="transition-colors hover:text-foreground" href="/">
             Home
           </Link>
           <ChevronRight aria-hidden="true" className="size-3.5" />
-          <Link className="transition-colors hover:text-foreground" to="/rooms">
+          <Link className="transition-colors hover:text-foreground" href="/rooms">
             Rooms
           </Link>
           <ChevronRight aria-hidden="true" className="size-3.5" />
@@ -503,7 +497,7 @@ export default function RoomDetailsPage() {
               </h2>
               {room.amenities.length ? (
                 <ul className="mt-5 grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-3 lg:grid-cols-4">
-                  {room.amenities.map((amenity) => {
+                  {room.amenities.map((amenity: any) => {
                     const Icon =
                       amenityIcons[amenity.name.toLowerCase()] ?? Check;
                     return (
@@ -909,14 +903,14 @@ export default function RoomDetailsPage() {
               </h2>
               <Link
                 className="inline-flex shrink-0 items-center gap-2 text-sm font-medium text-primary hover:underline"
-                to="/rooms"
+                href="/rooms"
               >
                 View all rooms
                 <ArrowRight aria-hidden="true" className="size-4" />
               </Link>
             </div>
             <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {similarRooms.map((similarRoom) => (
+              {similarRooms.map((similarRoom: any) => (
                 <SimilarRoomCard key={similarRoom.id} room={similarRoom} />
               ))}
             </div>

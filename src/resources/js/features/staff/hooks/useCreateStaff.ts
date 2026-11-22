@@ -1,72 +1,53 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { router } from "@inertiajs/react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 import { notifyError } from "@/lib/notification";
-
 import {
   type CreateStaff,
   CreateStaffSchema,
 } from "../schemas/createStaff.schema";
-import { staffKeys, staffMutationKeys } from "../staff.keys";
-import { staffService } from "../staff.service";
 
-function useCreateStaff() {
-  const queryClient = useQueryClient();
-
-  const mutation = useMutation({
-    mutationKey: staffMutationKeys.create,
-    mutationFn: staffService.create,
-    onSuccess: (res) => {
-      toast.success(res?.message || "Staff member registered successfully.");
-      queryClient.invalidateQueries({
-        queryKey: staffKeys.all,
-      });
-    },
-    onError: notifyError,
-  });
-  return mutation;
-}
-
-export function useCreateStaffFacade() {
-  const {
-    mutate,
-    isPending,
-    isSuccess,
-    reset: resetMutation,
-  } = useCreateStaff();
+export function useCreateStaffFacade(onSuccess?: () => void) {
+  const [isPending, setIsPending] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const {
     handleSubmit,
     register,
     control,
-    reset: resetForm,
+    reset,
     formState: { errors },
-    getValues,
   } = useForm<CreateStaff>({
     resolver: zodResolver(CreateStaffSchema),
   });
 
-  useEffect(() => {
-    if (isSuccess) {
-      resetForm();
-    }
-  }, [isSuccess, resetForm]);
+  const submit = (data: CreateStaff) => {
+    setIsPending(true);
+    router.post("/dashboard/staff", data as any, {
+      onSuccess: () => {
+        setIsSuccess(true);
+        toast.success("Staff member registered successfully.");
+        reset();
+        onSuccess?.();
+      },
+      onError: (err) => {
+        notifyError(err);
+      },
+      onFinish: () => setIsPending(false),
+    });
+  };
 
   return {
-    submit: (data: CreateStaff) => mutate(data),
+    submit,
     isPending,
     isSuccess,
     register,
     control,
     handleSubmit,
     errors,
-    getValues,
-    reset: () => {
-      resetMutation();
-      resetForm();
-    },
+    reset,
   };
 }

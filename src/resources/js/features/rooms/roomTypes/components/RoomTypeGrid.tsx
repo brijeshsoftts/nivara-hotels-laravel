@@ -68,7 +68,7 @@ export function RoomTypeGrid() {
     <>
       <RoomTypeSearch value={search} onChange={setSearch} />
       <div className="grid grid-cols-1 gap-6 p-4 sm:grid-cols-2 sm:px-6 xl:grid-cols-3">
-        {items.map((roomType) => (
+        {items.map((roomType: any) => (
           <RoomTypeCard key={roomType.id} roomType={roomType} />
         ))}
       </div>

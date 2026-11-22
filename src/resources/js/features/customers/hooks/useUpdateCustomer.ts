@@ -1,83 +1,72 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { router } from "@inertiajs/react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 import { notifyError } from "@/lib/notification";
-
-import { customersKeys, customersMutationKeys } from "../customers.keys";
-import { customersService } from "../customers.service";
 import {
   type UpdateCustomer,
   UpdateCustomerSchema,
 } from "../schema/updateCustomer.schema";
 
-function useUpdateCustomer(id: string) {
-  const queryClient = useQueryClient();
-
-  const mutation = useMutation({
-    mutationKey: customersMutationKeys.update,
-    mutationFn: (data: UpdateCustomer) => customersService.update(id, data),
-    onSuccess: (res) => {
-      toast.success(res?.message || "Customer updated successfully");
-      queryClient.invalidateQueries({
-        queryKey: customersKeys.all,
-      });
-    },
-    onError: notifyError,
-  });
-
-  return mutation;
-}
-
-export function useUpdateCustomerFacade(id: string) {
-  const { mutate, isPending, isSuccess } = useUpdateCustomer(id);
+export function useUpdateCustomerFacade(id: string, onSuccess?: () => void) {
+  const [isPending, setIsPending] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const {
     handleSubmit,
     register,
     control,
     formState: { errors },
-    getValues,
   } = useForm<UpdateCustomer>({
     resolver: zodResolver(UpdateCustomerSchema),
   });
 
+  const submit = (data: UpdateCustomer) => {
+    setIsPending(true);
+    router.put(`/dashboard/customers/${id}`, data as any, {
+      onSuccess: () => {
+        setIsSuccess(true);
+        toast.success("Customer updated successfully");
+        onSuccess?.();
+      },
+      onError: (err) => {
+        notifyError(err);
+      },
+      onFinish: () => setIsPending(false),
+    });
+  };
+
   return {
-    submit: (data: UpdateCustomer) => mutate(data),
+    submit,
     isPending,
     isSuccess,
     register,
     control,
     handleSubmit,
     errors,
-    getValues,
   };
 }
 
-export const useUpdateCustomerStatus = (
-  customerId: string,
-  isActive: boolean
-) => {
-  const queryClient = useQueryClient();
-  const { mutate, isPending } = useMutation({
-    mutationKey: customersMutationKeys.update,
-    mutationFn: () => customersService.updateStatus(customerId, !isActive),
-    onSuccess: (res) => {
-      toast.success(res?.message || "Customer status updated successfully.");
-      queryClient.invalidateQueries({
-        queryKey: customersKeys.all,
-      });
-    },
-    onError: notifyError,
-  });
+export function useUpdateCustomerStatus(id: string, isActive: boolean) {
+  const [isPending, setIsPending] = useState(false);
 
   const handleToggleStatus = () => {
-    mutate();
+    setIsPending(true);
+    router.patch(`/dashboard/customers/${id}/status`, { isActive: !isActive }, {
+      onSuccess: () => {
+        toast.success("Customer status updated successfully.");
+      },
+      onError: (err) => {
+        notifyError(err);
+      },
+      onFinish: () => setIsPending(false),
+    });
   };
 
   return {
     isPending,
     handleToggleStatus,
   };
-};
+}

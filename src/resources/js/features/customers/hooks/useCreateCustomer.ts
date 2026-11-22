@@ -1,63 +1,52 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { router } from "@inertiajs/react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 import { notifyError } from "@/lib/notification";
-
-import { customersKeys, customersMutationKeys } from "../customers.keys";
-import { customersService } from "../customers.service";
 import {
   type CreateCustomer,
   CreateCustomerSchema,
 } from "../schema/createCustomer.schema";
 
-function useCreateCustomer() {
-  const queryClient = useQueryClient();
-
-  const mutation = useMutation({
-    mutationKey: customersMutationKeys.create,
-    mutationFn: customersService.create,
-    onSuccess: (res) => {
-      toast.success(res?.message || "Customer registered successfully.");
-      queryClient.invalidateQueries({
-        queryKey: customersKeys.all,
-      });
-    },
-    onError: notifyError,
-  });
-  return mutation;
-}
-
 export function useCreateCustomerFacade(onSuccess?: () => void) {
-  const { mutate, isPending, isSuccess } = useCreateCustomer();
+  const [isPending, setIsPending] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const {
     handleSubmit,
     register,
     control,
-    formState: { errors },
-    getValues,
     reset,
+    formState: { errors },
   } = useForm<CreateCustomer>({
     resolver: zodResolver(CreateCustomerSchema),
   });
 
+  const submit = (data: CreateCustomer) => {
+    setIsPending(true);
+    router.post("/dashboard/customers", data as any, {
+      onSuccess: () => {
+        setIsSuccess(true);
+        toast.success("Customer registered successfully.");
+        reset();
+        onSuccess?.();
+      },
+      onError: (err) => {
+        notifyError(err);
+      },
+      onFinish: () => setIsPending(false),
+    });
+  };
+
   return {
-    submit: (data: CreateCustomer) =>
-      mutate(data, {
-        onSuccess: () => {
-          reset();
-          onSuccess?.();
-        },
-      }),
+    submit,
     isPending,
     isSuccess,
     register,
     control,
     handleSubmit,
     errors,
-    getValues,
-    reset,
   };
 }

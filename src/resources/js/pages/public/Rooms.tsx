@@ -8,6 +8,7 @@ import {
   Tv,
   Wifi,
 } from "lucide-react";
+import { usePage } from "@inertiajs/react";
 
 import HeroImage from "@/assets/landing_hero.png";
 import {
@@ -22,9 +23,7 @@ import {
   sectionEyebrowClassName,
   sectionHeadingClassName,
 } from "@/features/public/components/sectionStyles";
-// import { rooms } from "@/features/public/public.mock";
-import { useAvailableRooms } from "@/features/public/useAvailableRooms";
-import { useListParams } from "@/hooks/useListParams";
+import { PublicLayout } from "@/layouts/PublicLayout";
 
 import { sectionPaddingClassName } from "./Landing";
 
@@ -80,9 +79,9 @@ function HeroSection() {
   );
 }
 
-function RoomsSection() {
-  const { params } = useListParams();
-  const { rooms, isLoading, isError, refetch } = useAvailableRooms(params);
+function RoomsSection({ rooms: propRooms }: { rooms?: any[] } = {}) {
+  const page = usePage<any>();
+  const rooms = propRooms ?? (page.props?.rooms?.data as any[]) ?? [];
 
   return (
     <section
@@ -93,7 +92,6 @@ function RoomsSection() {
           <div>
             <span className={sectionEyebrowClassName}>Our Rooms</span>
 
-            {/* Heading */}
             <h2 className={sectionHeadingClassName}>
               <HoverText staggerDelay={30} duration={400}>
                 Handpicked Rooms for a{" "}
@@ -104,28 +102,7 @@ function RoomsSection() {
         </div>
 
         <StaggerContainer className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {isLoading ? (
-            <RoomsSkeleton />
-          ) : isError && rooms.length === 0 ? (
-            <div
-              className="col-span-full border-y border-border py-12 text-center sm:py-16"
-              role="alert"
-            >
-              <h3 className="font-heading text-2xl font-medium text-foreground">
-                Rooms could not be loaded
-              </h3>
-              <p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-muted-foreground">
-                Please check your connection and try loading the rooms again.
-              </p>
-              <Button
-                className="mt-5"
-                onClick={() => void refetch()}
-                variant="outline"
-              >
-                Try again
-              </Button>
-            </div>
-          ) : rooms.length === 0 ? (
+          {rooms.length === 0 ? (
             <p className="col-span-full py-12 text-center text-sm text-muted-foreground">
               No rooms match these filters.
             </p>
@@ -150,13 +127,11 @@ function IncludedAmenitiesBar() {
     { label: "24/7 Room Service", icon: ConciergeBell },
     { label: "LED TV", icon: Tv },
     { label: "Premium Toiletries", icon: Droplet },
-    { label: "Daily Housekeeping", icon: Briefcase }, // Briefcase used as visual proxy for the cleaning caddy
+    { label: "Daily Housekeeping", icon: Briefcase },
   ];
   return (
     <section className="flex w-full justify-center bg-background px-4 py-8 font-sans md:px-8 md:py-12">
-      {/* Main Container Card */}
       <div className="flex w-full max-w-300 flex-col items-center gap-8 rounded-2xl border border-border/60 bg-secondary/40 p-8 shadow-sm md:rounded-2xl md:p-10 lg:flex-row lg:gap-12">
-        {/* Left: Heading */}
         <div className="shrink-0 text-center lg:text-left">
           <h3 className="font-heading text-2xl leading-tight tracking-tight text-foreground md:text-[28px]">
             <HoverText staggerDelay={30} duration={400}>
@@ -166,10 +141,8 @@ function IncludedAmenitiesBar() {
           </h3>
         </div>
 
-        {/* Separator (Horizontal on mobile, Vertical on desktop) */}
         <div className="h-px w-full shrink-0 bg-primary/20 lg:h-16 lg:w-px" />
 
-        {/* Right: Icons Grid/Flex */}
         <div className="flex w-full flex-wrap items-start justify-center gap-6 md:gap-4 lg:flex-nowrap lg:justify-between">
           {includedAmenities.map((item, index) => {
             const Icon = item.icon;
@@ -178,12 +151,10 @@ function IncludedAmenitiesBar() {
                 key={index}
                 className="group flex w-25 flex-col items-center gap-3 lg:w-auto"
               >
-                {/* Icon */}
                 <div className="text-primary transition-transform duration-300 group-hover:-translate-y-1">
                   <Icon className="h-7 w-7 stroke-[1.25] md:h-7.5 md:w-7.5" />
                 </div>
 
-                {/* Label */}
                 <span className="text-center text-2xs leading-tight font-medium text-foreground/90 md:text-xs">
                   {item.label}
                 </span>
@@ -196,12 +167,12 @@ function IncludedAmenitiesBar() {
   );
 }
 
-export default function RoomsPage() {
+export default function RoomsPage({ rooms }: { rooms?: any } = {}) {
   return (
-    <>
+    <PublicLayout>
       <HeroSection />
-      <RoomsSection />
+      <RoomsSection rooms={rooms?.data} />
       <IncludedAmenitiesBar />
-    </>
+    </PublicLayout>
   );
 }

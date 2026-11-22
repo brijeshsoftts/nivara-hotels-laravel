@@ -1,22 +1,15 @@
-import { useQuery } from "@tanstack/react-query";
-
+import { usePage } from "@inertiajs/react";
 import type { ListParams } from "@/types/api.types";
 
-import { issuesKeys } from "../issues.keys";
-import { issuesService } from "../issues.service";
-
-export function useIssues(params: ListParams) {
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: issuesKeys.list(params),
-    queryFn: () => issuesService.findAll(params),
-    placeholderData: (previousData) => previousData,
-  });
+export function useIssues(_params?: ListParams) {
+  const page = usePage<any>();
+  const issues = page.props?.issues ?? { data: [], meta: { page: 1, limit: 10, total: 0, totalPages: 1 } };
 
   return {
-    items: data?.data ?? [],
-    pagination: data?.meta,
-    isLoading,
-    isError,
-    refetch,
+    items: issues.data ?? [],
+    pagination: issues.meta,
+    isLoading: false,
+    isError: false,
+    refetch: () => {},
   };
 }

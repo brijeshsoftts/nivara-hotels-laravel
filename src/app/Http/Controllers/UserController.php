@@ -142,10 +142,27 @@ class UserController extends Controller
         ]);
 
         if ($request->wantsJson() && !$request->header('X-Inertia')) {
-            return response()->json(['data' => ['id' => $user->id, 'email' => $user->email], 'message' => 'User created successfully'], 201);
+            return response()->json(['data' => ['id' => $user->id, 'email' => $user->email], 'message' => 'User created successfully.'], 200);
         }
 
         return redirect()->back()->with('success', 'User created successfully.');
+    }
+
+    public function show(string $id)
+    {
+        $u = User::with('avatar')->findOrFail($id);
+        return response()->json([
+            'data' => [
+                'id' => $u->id,
+                'name' => $u->name,
+                'fullName' => $u->full_name ?? $u->name,
+                'email' => $u->email,
+                'phone' => $u->phone,
+                'role' => $u->role instanceof \BackedEnum ? $u->role->value : (string) $u->role,
+                'isActive' => (bool) $u->is_active,
+                'createdAt' => $u->created_at?->toIso8601String(),
+            ]
+        ]);
     }
 
     public function update(Request $request, string $id)
@@ -204,3 +221,4 @@ class UserController extends Controller
         return redirect()->back()->with('success', 'User deleted successfully.');
     }
 }
+

@@ -1,19 +1,13 @@
-import { useQuery } from "@tanstack/react-query";
+import { usePage } from "@inertiajs/react";
 
-import { usersKeys } from "../users.keys";
-import { usersService } from "../users.service";
-
-export function useUserDetails(id: string) {
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: usersKeys.detail(id),
-    queryFn: () => usersService.fineOne(id),
-    enabled: !!id,
-  });
-
+export function useUserDetails(userId?: string) {
+  const page = usePage<any>();
+  const users = page.props?.users?.data ?? [];
+  const user = page.props?.user ?? users.find((u: any) => u.id === userId) ?? null;
   return {
-    data,
-    isLoading,
-    isError,
-    refetch,
+    data: user,
+    isLoading: false,
+    isError: false,
+    refetch: () => { },
   };
 }

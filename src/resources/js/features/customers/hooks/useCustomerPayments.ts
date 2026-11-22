@@ -1,18 +1,20 @@
-import { useQuery } from "@tanstack/react-query";
-
+import { usePage } from "@inertiajs/react";
 import type { ListParams } from "@/types/api.types";
 
-import { customersKeys } from "../customers.keys";
-import { customersService } from "../customers.service";
-
 export function useCustomerPayments(
-  customerId: string,
-  params: ListParams,
-  enabled: boolean
+  _customerId: string,
+  _params?: ListParams,
+  _enabled = true
 ) {
-  return useQuery({
-    queryKey: customersKeys.payments(customerId, params),
-    queryFn: () => customersService.findPayments(customerId, params),
-    enabled: Boolean(customerId) && enabled,
-  });
+  const page = usePage<any>();
+  const payments = page.props?.payments ?? { data: [], meta: { page: 1, limit: 10, total: 0, totalPages: 1 } };
+
+  return {
+    data: payments,
+    isLoading: false,
+    isFetching: false,
+    isPending: false,
+    isError: false,
+    refetch: () => {},
+  };
 }

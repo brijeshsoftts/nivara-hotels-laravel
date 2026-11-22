@@ -6,9 +6,9 @@ import {
   Settings,
   UserRound,
 } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "@inertiajs/react";
 
-import { Logo } from "@/app/layout/PublicLayout";
+import { Logo } from "@/layouts/PublicLayout";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -63,10 +63,9 @@ function groupLinks(items: NavItem[]): NavItem[] {
 }
 
 export function AppSidebar() {
-  const navigate = useNavigate();
   const { user } = useAuth();
   const { handleLogout, isLoading: isLoggingOut } = useLogout();
-  const isOnline = navigator.onLine;
+  const isOnline = typeof navigator !== "undefined" ? navigator.onLine : true;
 
   const getLinks = () => {
     switch (user?.role) {
@@ -81,7 +80,7 @@ export function AppSidebar() {
           ? RECEPTIONIST_PAGES
           : HOUSEKEEPER_PAGES;
       default:
-        navigate("/");
+        return [];
     }
   };
   const links = getLinks();
@@ -127,7 +126,7 @@ export function AppSidebar() {
         <div className="relative z-10 border-t border-sidebar-border p-3 group-data-[collapsible=icon]:p-1">
           <div className="flex min-w-0 items-center gap-1 group-data-[collapsible=icon]:justify-center">
             <Link
-              to="/dashboard/profile"
+              href="/dashboard/profile"
               className="group flex min-h-14 min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-lg p-2 transition-colors group-data-[collapsible=icon]:hidden hover:bg-sidebar-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sidebar-ring"
             >
               <Avatar className="size-10 shrink-0 border border-sidebar-border">
@@ -190,7 +189,7 @@ export function AppSidebar() {
               >
                 <DropdownMenuItem className="text-sidebar-foreground/80 focus:bg-sidebar-accent focus:text-sidebar-foreground">
                   <Link
-                    to="/dashboard/profile"
+                    href="/dashboard/profile"
                     className="flex w-full items-center gap-2"
                   >
                     <UserRound className="size-4 text-sidebar-foreground/60" />
@@ -199,7 +198,7 @@ export function AppSidebar() {
                 </DropdownMenuItem>
                 <DropdownMenuItem className="text-sidebar-foreground/80 focus:bg-sidebar-accent focus:text-sidebar-foreground">
                   <Link
-                    to="/dashboard/profile"
+                    href="/dashboard/profile"
                     className="flex w-full items-center gap-2"
                   >
                     <Settings className="size-4 text-sidebar-foreground/60" />
@@ -208,7 +207,7 @@ export function AppSidebar() {
                 </DropdownMenuItem>
                 <DropdownMenuItem className="text-sidebar-foreground/80 focus:bg-sidebar-accent focus:text-sidebar-foreground">
                   <Link
-                    to="/dashboard/profile"
+                    href="/dashboard/profile"
                     className="flex w-full items-center gap-2"
                   >
                     <KeyRound className="size-4 text-sidebar-foreground/60" />

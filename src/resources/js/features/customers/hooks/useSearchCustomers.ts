@@ -1,19 +1,22 @@
-import { useQuery } from "@tanstack/react-query";
-
-import { customersKeys } from "../customers.keys";
-import { customersService } from "../customers.service";
+import { usePage } from "@inertiajs/react";
 
 export function useSearchCustomers(search?: string) {
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: customersKeys.search(search),
-    queryFn: () => customersService.search(search),
-    placeholderData: (previousData) => previousData,
-  });
+  const page = usePage<any>();
+  const customers: any[] = page.props?.customers?.data ?? page.props?.customers ?? [];
+
+  const filtered = search
+    ? customers.filter(
+        (c) =>
+          c.name?.toLowerCase().includes(search.toLowerCase()) ||
+          c.email?.toLowerCase().includes(search.toLowerCase()) ||
+          c.phone?.includes(search)
+      )
+    : customers;
 
   return {
-    items: data ?? [],
-    isLoading,
-    isError,
-    refetch,
+    items: filtered,
+    isLoading: false,
+    isError: false,
+    refetch: () => {},
   };
 }

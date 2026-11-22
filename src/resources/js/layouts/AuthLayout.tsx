@@ -7,35 +7,27 @@ import {
   Tag,
   UsersRound,
 } from "lucide-react";
-import { Link, Navigate, useLocation, useOutlet } from "react-router-dom";
+import { Link, usePage } from "@inertiajs/react";
+import type { SharedProps } from "@/types";
 
-import { Logo } from "@/app/layout/PublicLayout";
+import { Logo } from "@/layouts/PublicLayout";
 import { PageTransition } from "@/components/common/PageTransition";
-import { Button } from "@/components/ui/button";
 import { HERO_IMAGE } from "@/features/public/public.mock";
-import { useAuth } from "@/hooks/useAuth";
 
-import { FullScreenLoader } from "@/components/common/Loader";
-
-export const AuthLayout = () => {
-  const { isLoading, isAuthenticated } = useAuth();
-  const { pathname } = useLocation();
-  const outlet = useOutlet();
+export function AuthLayout({ children }: { children?: React.ReactNode } = {}) {
+  const { auth } = usePage<SharedProps>().props;
+  const { url } = usePage();
+  const pathname = url ? url.split("?")[0] : "";
   const isLoginPage = pathname === "/login";
   const isRegisterPage = pathname === "/register";
   const isBrandedAuthPage = isLoginPage || isRegisterPage;
-
-  if (isLoading) return <FullScreenLoader />;
-
-  if (isAuthenticated) return <Navigate to={"/dashboard"} />;
 
   return (
     <main className="grid min-h-svh bg-background text-foreground lg:grid-cols-2">
       <section
         aria-label="Nivara Hotels"
-        className={`relative isolate hidden min-h-svh flex-col overflow-hidden bg-muted px-8 py-8 text-background lg:flex lg:px-12 lg:py-10 ${
-          isBrandedAuthPage ? "lg:justify-start" : "lg:justify-between"
-        }`}
+        className={`relative isolate hidden min-h-svh flex-col overflow-hidden bg-muted px-8 py-8 text-background lg:flex lg:px-12 lg:py-10 ${isBrandedAuthPage ? "lg:justify-start" : "lg:justify-between"
+          }`}
       >
         <img
           alt="A Nivara hotel and resort"
@@ -117,53 +109,22 @@ export const AuthLayout = () => {
               ))}
             </ul>
           </div>
-        ) : (
-          <div className="relative z-10 max-w-xl pb-2">
-            <h1 className="font-heading text-4xl leading-tight font-medium text-background xl:text-5xl">
-              Find Your Perfect Stay
-            </h1>
-            <p className="mt-4 max-w-lg text-base leading-6 text-background/85">
-              Discover comfortable rooms and helpful service in Lucknow, India.
-            </p>
-          </div>
-        )}
+        ) : null}
       </section>
 
-      <section
-        className={`flex min-h-svh min-w-0 flex-col px-5 py-5 sm:px-8 sm:py-7 lg:px-12 lg:py-8 ${
-          isBrandedAuthPage ? "bg-brand-ivory" : ""
-        }`}
-      >
-        {!isBrandedAuthPage ? (
-          <header className="flex min-h-11 items-center justify-between lg:justify-end">
-            <div className="lg:hidden">
-              <Logo />
-            </div>
-            <Button
-              className="h-10 rounded-md px-4"
-              nativeButton={false}
-              render={<Link to="/rooms" />}
-              variant="default"
-            >
-              Book Now
-            </Button>
-          </header>
-        ) : null}
-
-        <div className="flex flex-1 items-center justify-center py-8 sm:py-10 lg:py-12">
-          <PageTransition
-            className={
-              isLoginPage
-                ? "w-full max-w-lg"
-                : isRegisterPage
-                  ? "w-full max-w-xl"
-                  : "w-full max-w-md"
-            }
-          >
-            {outlet}
-          </PageTransition>
+      <section className="flex min-h-svh flex-col justify-between px-6 py-8 sm:px-10 lg:px-12">
+        <div className="flex items-center justify-between lg:hidden">
+          <Logo />
         </div>
+        <div className="mx-auto flex w-full max-w-md flex-1 items-center justify-center py-8">
+          <PageTransition>{children}</PageTransition>
+        </div>
+        <footer className="text-center text-xs text-muted-foreground">
+          &copy; {new Date().getFullYear()} Nivara Hotels &amp; Resorts. All rights reserved.
+        </footer>
       </section>
     </main>
   );
-};
+}
+
+export default AuthLayout;

@@ -1,14 +1,9 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { router } from "@inertiajs/react";
 import { useRef, useState } from "react";
 import { type RazorpayOrderOptions, useRazorpay } from "react-razorpay";
 import { toast } from "sonner";
 
-import { bookingsKeys } from "@/features/bookings/bookings.keys";
-import { roomsKeys } from "@/features/rooms/rooms/rooms.keys";
 import { notifyError } from "@/lib/notification";
-
-import { paymentsKeys } from "../payments.keys";
-import { paymentsService } from "../payments.service";
 import type { PaymentItem, PublicPaymentStatus } from "../payments.types";
 
 type PaymentCheckoutContext = {
@@ -23,31 +18,31 @@ type PaymentCheckoutContext = {
 export type { PaymentCheckoutContext };
 
 export function useRazorpayPayment() {
-  const queryClient = useQueryClient();
   const { error: scriptError, isLoading, Razorpay } = useRazorpay();
   const isRazorpayAvailable =
     typeof window !== "undefined" && "Razorpay" in window;
   const isScriptLoading = isLoading && !isRazorpayAvailable;
   const [isVerifying, setIsVerifying] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [isOrdering, setIsOrdering] = useState(false);
   const paymentLock = useRef(false);
-  const createOrder = useMutation({ mutationFn: paymentsService.createOrder });
-  const createPublicOrder = useMutation({
-    mutationFn: paymentsService.createPublicOrder,
-  });
-  const verifyPayment = useMutation({
-    mutationFn: paymentsService.verifyPayment,
-  });
-  const verifyPublicPayment = useMutation({
-    mutationFn: paymentsService.verifyPublicPayment,
-  });
 
-  const invalidatePaymentData = async () => {
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: paymentsKeys.all }),
-      queryClient.invalidateQueries({ queryKey: bookingsKeys.all }),
-      queryClient.invalidateQueries({ queryKey: roomsKeys.all }),
-    ]);
+  const postJson = async (url: string, data: any) => {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "X-Requested-With": "XMLHttpRequest",
+      },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Request failed" }));
+      throw err;
+    }
+    const json = await res.json();
+    return json.data ?? json;
   };
 
   const reconcile = async (
@@ -56,13 +51,21 @@ export function useRazorpayPayment() {
     quietPending = false
   ) => {
     try {
-      const payment = context?.checkoutToken
-        ? await paymentsService.getPublicPaymentStatus(
-            paymentId,
-            context.checkoutToken
-          )
-        : await paymentsService.findOne(paymentId);
-      await invalidatePaymentData();
+      let payment: any;
+      if (context?.checkoutToken) {
+        payment = await postJson("/payments/public/status", {
+          paymentId,
+          checkoutToken: context.checkoutToken,
+        });
+      } else {
+        const res = await fetch(`/payments/${paymentId}`, {
+          headers: { Accept: "application/json" },
+        });
+        const json = await res.json();
+        payment = json.data ?? json;
+      }
+
+      router.reload();
       context?.onStatus?.(payment);
 
       const status = payment.paymentStatus;
@@ -101,17 +104,19 @@ export function useRazorpayPayment() {
     if (isScriptLoading) return;
     if (paymentLock.current) return;
     paymentLock.current = true;
+    setIsOrdering(true);
 
     try {
       const order = context?.checkoutToken
-        ? await createPublicOrder.mutateAsync({
+        ? await postJson("/payments/public/orders", {
             bookingId,
             checkoutToken: context.checkoutToken,
           })
-        : await createOrder.mutateAsync({
+        : await postJson("/payments/orders", {
             bookingId,
             paymentId: context?.paymentId,
           });
+
       let verificationStarted = false;
       let failureHandled = false;
 
@@ -148,13 +153,15 @@ export function useRazorpayPayment() {
               razorpayOrderId: response.razorpay_order_id,
               razorpaySignature: response.razorpay_signature,
             };
+
             const payment = context?.checkoutToken
-              ? await verifyPublicPayment.mutateAsync({
+              ? await postJson("/payments/public/verify", {
                   ...verificationInput,
                   checkoutToken: context.checkoutToken,
                 })
-              : await verifyPayment.mutateAsync(verificationInput);
-            await invalidatePaymentData();
+              : await postJson("/payments/verify", verificationInput);
+
+            router.reload();
             context?.onStatus?.(payment);
 
             const status = payment.paymentStatus;
@@ -199,17 +206,14 @@ export function useRazorpayPayment() {
       paymentLock.current = false;
       setIsCheckoutOpen(false);
       notifyError(error);
+    } finally {
+      setIsOrdering(false);
     }
   };
 
   return {
     startPayment,
-    isPending:
-      isScriptLoading ||
-      createOrder.isPending ||
-      createPublicOrder.isPending ||
-      verifyPublicPayment.isPending ||
-      isVerifying,
+    isPending: isScriptLoading || isOrdering || isVerifying,
     isCheckoutOpen,
   };
 }

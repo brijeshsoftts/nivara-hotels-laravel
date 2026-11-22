@@ -1,5 +1,6 @@
 import { formatDate } from "date-fns/format";
 import { useState } from "react";
+import { usePage } from "@inertiajs/react";
 
 import { type ColumnDef, DataTable } from "@/components/common/DataTable";
 import {
@@ -9,10 +10,6 @@ import {
 import { BookingDetailsSheet } from "@/features/bookings/components/BookingDetailsSheet";
 
 import type { ArrivalItem, DepartureItem, Stays } from "../dashboard.types";
-import { useDashbaordRevenueTrend } from "../hooks/useDashbaordRevenueTrend";
-import { useDashbaordStays } from "../hooks/useDashbaordStays";
-import { useDashbaordBookingStatus } from "../hooks/useDashboardBookingStatus";
-
 import { DashboardStats } from "./DashboardStats";
 import { type BookingStatusRange, DonutChart } from "./DonutChart";
 import { type Range, TrendChart } from "./TrendChart";
@@ -54,8 +51,8 @@ function Arrivals({ arrivals }: { arrivals: Stays["arrivals"] }) {
     <>
       <DataTable
         title="Today's Arrivals"
-        description={`Guests scheduled to check in today - ${arrivals.total} total`}
-        data={arrivals.items}
+        description={`Guests scheduled to check in today - ${arrivals?.total ?? 0} total`}
+        data={arrivals?.items ?? []}
         columns={columns}
         showSearch={false}
         showPagination={false}
@@ -115,8 +112,8 @@ function Departures({ departures }: { departures: Stays["departures"] }) {
   return (
     <DataTable
       title="Today's departures"
-      description={`Guests scheduled to check out today - ${departures.total} total`}
-      data={departures.items}
+      description={`Guests scheduled to check out today - ${departures?.total ?? 0} total`}
+      data={departures?.items ?? []}
       columns={columns}
       showSearch={false}
       showPagination={false}
@@ -134,18 +131,18 @@ function Departures({ departures }: { departures: Stays["departures"] }) {
   );
 }
 
-function RevenueTrend() {
+function RevenueTrend({ data: initialData }: { data?: any[] }) {
   const [range, setRange] = useState<Range>("7d");
-  const { data, isLoading, isError, refetch } = useDashbaordRevenueTrend(range);
+  const data = initialData ?? [];
 
   return (
     <TrendChart
-      data={data ?? []}
+      data={data}
       range={range}
       onRangeChange={setRange}
-      isLoading={isLoading}
-      isError={isError || (!isLoading && !data)}
-      onRetry={refetch}
+      isLoading={false}
+      isError={false}
+      onRetry={() => { }}
       title="Revenue trend"
       description="Successful payments collected per day."
       options={[
@@ -166,19 +163,18 @@ function RevenueTrend() {
   );
 }
 
-function BookingStatus() {
+function BookingStatus({ data: initialData }: { data?: any }) {
   const [range, setRange] = useState<BookingStatusRange>("all");
-  const { data, isLoading, isError, refetch } =
-    useDashbaordBookingStatus(range);
+  const data = initialData ?? [];
 
   return (
     <DonutChart
-      data={data ?? []}
+      data={data}
       range={range}
       onRangeChange={setRange}
-      isLoading={isLoading}
-      isError={isError || (!isLoading && !data)}
-      onRetry={refetch}
+      isLoading={false}
+      isError={false}
+      onRetry={() => { }}
       title="Booking status distribution"
       description="Booking counts grouped by current status."
       centerLabel="Total"
@@ -186,33 +182,33 @@ function BookingStatus() {
   );
 }
 
-function Stays() {
-  const { data, isLoading, isError } = useDashbaordStays();
-
-  if (isLoading) {
-    return <>Loading</>;
-  }
-  if (isError || !data) {
-    return null;
-  }
+export function ManagementDashboard({
+  stats,
+  stays: propStays,
+  revenueTrend: propRevenueTrend,
+  bookingStatus: propBookingStatus,
+}: {
+  stats?: any[];
+  stays?: any;
+  revenueTrend?: any[];
+  bookingStatus?: any;
+} = {}) {
+  const page = usePage<any>();
+  const stays = propStays ?? page.props?.stays ?? { arrivals: { total: 0, items: [] }, departures: { total: 0, items: [] } };
+  const revenueTrend = propRevenueTrend ?? page.props?.revenueTrend ?? [];
+  const bookingStatus = propBookingStatus ?? page.props?.bookingStatus ?? [];
 
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
-      <Arrivals arrivals={data.arrivals} />
-      <Departures departures={data.departures} />
-    </div>
-  );
-}
-
-export function ManagementDashboard() {
-  return (
-    <>
-      <DashboardStats />
+    <div className="space-y-6">
+      <DashboardStats stats={stats} />
       <div className="grid items-start gap-6 lg:grid-cols-2">
-        <RevenueTrend />
-        <BookingStatus />
+        <RevenueTrend data={revenueTrend} />
+        <BookingStatus data={bookingStatus} />
       </div>
-      <Stays />
-    </>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Arrivals arrivals={stays.arrivals} />
+        <Departures departures={stays.departures} />
+      </div>
+    </div>
   );
 }

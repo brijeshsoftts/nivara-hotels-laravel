@@ -1,14 +1,18 @@
-import { useQuery } from "@tanstack/react-query";
-
+import { usePage } from "@inertiajs/react";
 import type { ListParams } from "@/types/api.types";
 
-import { invoicesKeys } from "../invoices.keys";
-import { invoicesService } from "../invoices.service";
+export function useInvoices<T = any>(_params?: any) {
+  const page = usePage<any>();
+  const invoices = page.props?.invoices ?? { data: [], meta: { page: 1, limit: 10, total: 0, totalPages: 1 } };
 
-export function useInvoices(params: ListParams) {
-  return useQuery({
-    queryKey: invoicesKeys.list(params),
-    queryFn: () => invoicesService.findAll(params),
-    placeholderData: (previousData) => previousData,
-  });
+  return {
+    data: invoices,
+    items: (invoices.data ?? []) as T[],
+    pagination: invoices.meta,
+    isLoading: false,
+    isFetching: false,
+    isPending: false,
+    isError: false,
+    refetch: () => {},
+  };
 }

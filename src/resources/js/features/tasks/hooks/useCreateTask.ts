@@ -1,36 +1,18 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { router } from "@inertiajs/react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 import { notifyError } from "@/lib/notification";
-
 import {
   type CreateTask,
   CreateTaskSchema,
 } from "../schemas/createTask.schema";
-import { tasksKeys, tasksMutationKeys } from "../tasks.keys";
-import { tasksService } from "../tasks.service";
-
-function useCreateTask() {
-  const queryClient = useQueryClient();
-
-  const mutation = useMutation({
-    mutationKey: tasksMutationKeys.create,
-    mutationFn: tasksService.create,
-    onSuccess: (res) => {
-      toast.success(res?.message || "Task created successfully.");
-      queryClient.invalidateQueries({
-        queryKey: tasksKeys.all,
-      });
-    },
-    onError: notifyError,
-  });
-  return mutation;
-}
 
 export function useCreateTaskFacade() {
-  const { mutate, isPending, isSuccess } = useCreateTask();
+  const [isPending, setIsPending] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const {
     handleSubmit,
@@ -38,12 +20,28 @@ export function useCreateTaskFacade() {
     control,
     formState: { errors },
     getValues,
+    reset,
   } = useForm({
     resolver: zodResolver(CreateTaskSchema),
   });
 
+  const submit = (data: CreateTask) => {
+    setIsPending(true);
+    router.post("/dashboard/tasks", data as any, {
+      onSuccess: () => {
+        setIsSuccess(true);
+        toast.success("Task created successfully.");
+        reset();
+      },
+      onError: (err) => {
+        notifyError(err);
+      },
+      onFinish: () => setIsPending(false),
+    });
+  };
+
   return {
-    submit: (data: CreateTask) => mutate(data),
+    submit,
     isPending,
     isSuccess,
     register,
@@ -51,5 +49,6 @@ export function useCreateTaskFacade() {
     handleSubmit,
     errors,
     getValues,
+    reset,
   };
 }

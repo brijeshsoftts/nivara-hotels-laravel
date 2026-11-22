@@ -1,12 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
+import { usePage } from "@inertiajs/react";
 
-import { dashbaordKeys } from "../dashboard.keys";
-import { dashboardService } from "../dashboard.service";
-
-export const useDashbaordRevenueTrend = (range: string) => {
-  return useQuery({
-    queryKey: [...dashbaordKeys.revenueTrend, range],
-    queryFn: () => dashboardService.getRevenueTrend(range),
-    refetchInterval: 1000 * 60 * 5,
-  });
+export const useDashbaordRevenueTrend = (_range?: string) => {
+  const page = usePage<any>();
+  return {
+    data: page.props?.revenueTrend ?? [],
+    isLoading: false,
+    isError: false,
+    refetch: () => {},
+  };
 };

@@ -1,32 +1,15 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
+import { router } from "@inertiajs/react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { notifyError } from "@/lib/notification";
-
 import { type CreateUser, CreateUserSchema } from "../schema/createUser.schema";
-import { usersKeys, usersMutationKeys } from "../users.keys";
-import { usersService } from "../users.service";
 
-function useCreateUser() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationKey: usersMutationKeys.create,
-    mutationFn: usersService.create,
-    onSuccess: (res) => {
-      toast.success(res?.message || "User created successfully.");
-      queryClient.invalidateQueries({
-        queryKey: usersKeys.all,
-      });
-    },
-    onError: notifyError,
-  });
-}
-
-export function useCreateUserFacade() {
-  const { mutate, isPending, isSuccess } = useCreateUser();
+export function useCreateUserFacade(onSuccess?: () => void) {
+  const [isPending, setIsPending] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const {
     handleSubmit,
@@ -38,8 +21,24 @@ export function useCreateUserFacade() {
     resolver: zodResolver(CreateUserSchema),
   });
 
+  const submit = (data: CreateUser) => {
+    setIsPending(true);
+    router.post("/dashboard/users", data as any, {
+      onSuccess: () => {
+        setIsSuccess(true);
+        toast.success("User created successfully.");
+        reset();
+        onSuccess?.();
+      },
+      onError: (err) => {
+        notifyError(err);
+      },
+      onFinish: () => setIsPending(false),
+    });
+  };
+
   return {
-    submit: (data: CreateUser) => mutate(data),
+    submit,
     isPending,
     isSuccess,
     register,

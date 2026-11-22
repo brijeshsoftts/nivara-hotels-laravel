@@ -212,10 +212,27 @@ class RoomController extends Controller
         ]);
 
         if ($request->wantsJson() && !$request->header('X-Inertia')) {
-            return response()->json(['data' => ['id' => $room->id], 'message' => 'Room created successfully'], 201);
+            return response()->json(['data' => ['id' => $room->id], 'message' => 'Room created successfully.'], 200);
         }
 
         return redirect()->back()->with('success', 'Room added successfully.');
+    }
+
+    public function show(string $id)
+    {
+        $r = Room::with('roomType')->findOrFail($id);
+        return response()->json([
+            'data' => [
+                'id' => $r->id,
+                'roomNumber' => $r->room_number,
+                'name' => $r->name,
+                'floor' => (string) $r->floor,
+                'roomTypeId' => $r->room_type_id,
+                'occupancyStatus' => $r->occupancy_status instanceof \BackedEnum ? $r->occupancy_status->value : (string) $r->occupancy_status,
+                'housekeepingStatus' => $r->housekeeping_status instanceof \BackedEnum ? $r->housekeeping_status->value : (string) $r->housekeeping_status,
+                'isActive' => (bool) $r->is_active,
+            ]
+        ]);
     }
 
     public function update(Request $request, string $id)
@@ -269,3 +286,4 @@ class RoomController extends Controller
         return redirect()->back()->with('success', 'Room deleted successfully.');
     }
 }
+

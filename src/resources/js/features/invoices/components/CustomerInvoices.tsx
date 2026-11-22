@@ -15,7 +15,7 @@ import { useListParams } from "@/hooks/useListParams";
 import { formatPrice } from "@/lib/format";
 
 import { useInvoicesStats } from "../hooks/useInvoicesStats";
-import { useInvoices } from "../invoices.crud";
+import { useInvoices } from "../hooks/useInvoices";
 import type { CustomerInvoice } from "../invoices.types";
 
 import { InvoiceDownload } from "./InvoiceDownload";

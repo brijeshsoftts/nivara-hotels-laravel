@@ -36,7 +36,8 @@ export function TaskRowActions({ task }: { task: TaskItem }) {
   const isAssignedHousekeeper =
     user?.role === "STAFF" &&
     user.category === "HOUSEKEEPER" &&
-    task.assignee.id === user.id;
+    task.assignee?.id &&
+    String(task.assignee.id) === String(user.id);
   const canUpdate = canManage || isAssignedHousekeeper;
   const nextStatus =
     task.status === "PENDING"

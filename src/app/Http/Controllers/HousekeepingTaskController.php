@@ -211,3 +211,4 @@ class HousekeepingTaskController extends Controller
         return redirect()->back()->with('success', 'Task deleted successfully.');
     }
 }
+

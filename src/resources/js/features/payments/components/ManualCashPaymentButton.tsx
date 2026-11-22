@@ -1,17 +1,12 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { router } from "@inertiajs/react";
+import { useState } from "react";
 import { Banknote } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { bookingsKeys } from "@/features/bookings/bookings.keys";
-import { invoicesKeys } from "@/features/invoices/invoices.keys";
-import { roomsKeys } from "@/features/rooms/rooms/rooms.keys";
 import { formatPrice } from "@/lib/format";
 import { notifyError } from "@/lib/notification";
-
-import { paymentsKeys } from "../payments.keys";
-import { paymentsService } from "../payments.service";
 
 export function ManualCashPaymentButton({
   invoiceId,
@@ -22,41 +17,32 @@ export function ManualCashPaymentButton({
   amount: number;
   onRecorded: () => void;
 }) {
-  const queryClient = useQueryClient();
-  const payment = useMutation({
-    mutationFn: paymentsService.createCashPayment,
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: paymentsKeys.all }),
-        queryClient.invalidateQueries({ queryKey: bookingsKeys.all }),
-        queryClient.invalidateQueries({ queryKey: roomsKeys.all }),
-        queryClient.invalidateQueries({ queryKey: invoicesKeys.all }),
-      ]);
-      toast.success("Cash payment recorded.");
-      onRecorded();
-    },
-    onError: notifyError,
-  });
+  const [isPending, setIsPending] = useState(false);
 
-  const recordPayment = () => {
-    const confirmed = window.confirm(
-      `Record cash payment of ${formatPrice(amount)}?`
-    );
-
-    if (!confirmed) return;
-    payment.mutate({ invoiceId, amount });
+  const handlePayment = () => {
+    setIsPending(true);
+    router.post("/dashboard/payments/cash", { invoiceId, amount }, {
+      onSuccess: () => {
+        toast.success("Cash payment recorded.");
+        onRecorded();
+      },
+      onError: (err) => {
+        notifyError(err);
+      },
+      onFinish: () => setIsPending(false),
+    });
   };
 
   return (
     <Button
+      className="w-full justify-center gap-2"
+      disabled={isPending}
+      onClick={handlePayment}
       type="button"
-      variant="outline"
-      className=""
-      disabled={payment.isPending || amount <= 0}
-      onClick={recordPayment}
+      variant="secondary"
     >
-      {payment.isPending ? <Spinner /> : <Banknote />}
-      Record cash payment
+      {isPending ? <Spinner className="size-4" /> : <Banknote className="size-4" />}
+      <span>Record Cash Payment ({formatPrice(amount)})</span>
     </Button>
   );
 }

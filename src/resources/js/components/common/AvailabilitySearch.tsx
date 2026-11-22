@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { type FormEvent, useId, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { router } from "@inertiajs/react";
 
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -158,8 +158,9 @@ export function AvailabilitySearch({
 }) {
   const id = useId();
   const reduceMotion = useReducedMotion() ?? false;
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const searchParams = new URLSearchParams(
+    typeof window !== "undefined" ? window.location.search : ""
+  );
   const today = startOfToday();
   const initialCheckIn = validQueryDate(
     searchParams.get("checkInDate") ??
@@ -213,7 +214,7 @@ export function AvailabilitySearch({
       page: "1",
     });
     if (roomType !== "all") params.set("roomType", roomType);
-    navigate(`/rooms?${params.toString()}`);
+    router.visit(`/rooms?${params.toString()}`);
   };
 
   const gridColumns = roomTypeOptions

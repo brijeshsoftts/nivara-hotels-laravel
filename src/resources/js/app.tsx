@@ -1,4 +1,3 @@
-import "../css/app.css";
 import { createInertiaApp, usePage } from "@inertiajs/react";
 import { createRoot } from "react-dom/client";
 import { useEffect } from "react";
@@ -36,20 +35,33 @@ function FlashMessages() {
 createInertiaApp({
   title: (title) => (title ? `${title} — Nivara Hotels` : "Nivara Hotels"),
   resolve: (name) => {
-    const pages = import.meta.glob("./Pages/**/*.tsx", { eager: true });
-    let page = pages[`./Pages/${name}.tsx`] as any;
+    const pages = import.meta.glob("./pages/**/*.tsx", { eager: true });
+    let page = pages[`./pages/${name}.tsx`] as any;
     if (!page) {
-      page = pages[`./Pages/${name}/index.tsx`] as any;
+      page = pages[`./pages/${name}/index.tsx`] as any;
     }
     if (!page) {
-      throw new Error(`Inertia page not found: ./Pages/${name}.tsx`);
+      const lowerName = name.toLowerCase();
+      for (const path in pages) {
+        const cleanPath = path.replace(/^\.\/pages\//, "").replace(/\.tsx$/, "");
+        if (
+          cleanPath.toLowerCase() === lowerName ||
+          cleanPath.toLowerCase() === `${lowerName}/index`
+        ) {
+          page = pages[path];
+          break;
+        }
+      }
+    }
+    if (!page) {
+      throw new Error(`Inertia page not found: ./pages/${name}.tsx`);
     }
     return page;
   },
   setup({ el, App, props }) {
     createRoot(el).render(
       <ThemeProvider defaultTheme="light">
-        <FlashMessages />
+        {/* <FlashMessages /> */}
         <App {...props} />
         <Toaster position="top-right" richColors />
       </ThemeProvider>

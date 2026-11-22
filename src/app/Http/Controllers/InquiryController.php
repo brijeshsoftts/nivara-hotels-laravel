@@ -72,3 +72,4 @@ class InquiryController extends Controller
         return redirect()->back()->with('success', 'Inquiry deleted successfully.');
     }
 }
+

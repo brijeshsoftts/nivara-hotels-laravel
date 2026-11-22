@@ -1,22 +1,15 @@
-import { useQuery } from "@tanstack/react-query";
-
+import { usePage } from "@inertiajs/react";
 import type { ListParams } from "@/types/api.types";
 
-import { amenitiesKeys } from "../amenities.keys";
-import { amenitiesService } from "../amenities.service";
-
-export function useAmenities(params?: ListParams) {
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: amenitiesKeys.list(params),
-    queryFn: () => amenitiesService.findAll(params),
-    placeholderData: (previousData) => previousData,
-  });
+export function useAmenities(_params?: ListParams) {
+  const page = usePage<any>();
+  const amenities = page.props?.amenities ?? { data: [], meta: { page: 1, limit: 10, total: 0, totalPages: 1 } };
 
   return {
-    items: data?.data ?? [],
-    pagination: data?.meta,
-    isLoading,
-    isError,
-    refetch,
+    items: amenities.data ?? [],
+    pagination: amenities.meta,
+    isLoading: false,
+    isError: false,
+    refetch: () => {},
   };
 }

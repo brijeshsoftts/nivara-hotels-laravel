@@ -1,14 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
+import { usePage } from "@inertiajs/react";
 
-import { bookingsKeys } from "../bookings.keys";
-import { bookingsService } from "../bookings.service";
+export function useBooking(id?: string, _enabled = true) {
+  const page = usePage<any>();
+  const bookings = page.props?.bookings?.data ?? [];
+  const found = id ? bookings.find((b: any) => String(b.id) === String(id)) ?? page.props?.booking ?? null : null;
 
-export function useBooking(id: string, enabled = true) {
-  const { data, isLoading, isFetching, isError, refetch } = useQuery({
-    queryKey: bookingsKeys.detail(id),
-    queryFn: () => bookingsService.findOne(id),
-    enabled: Boolean(id) && enabled,
-  });
-
-  return { booking: data, isLoading, isFetching, isError, refetch };
+  return { booking: found, data: found, isLoading: false, isFetching: false, isError: false, refetch: () => {} };
 }
+
+export const useBookingDetails = useBooking;

@@ -1,80 +1,71 @@
-import { useQuery } from "@tanstack/react-query";
-
+import { usePage } from "@inertiajs/react";
 import type { DashboardStat } from "@/components/common/Stat";
-import { apiClient } from "@/lib/apiClient";
-import { createCrud } from "@/lib/crud/createCrud";
-import type { ApiListResponse, ApiResponse } from "@/types/api.types";
-
-import { toDashboardStats } from "../shared/stat-response";
-
 import type { BrowseRoom } from "./components/BrowseRoomCard";
 import type { HousekeeperRoom, HousekeeperRoomDetails } from "./room.types";
 
-export const roomsCrud = createCrud()({
-  resource: "rooms",
-  endpoint: "/rooms",
-  label: "Room",
-});
-
-export const tasksKeys = roomsCrud.keys;
-export const tasksService = roomsCrud.service;
-
-export const {
-  useList: useRooms,
-  useDetail: useRoom,
-  useDelete: useDeleteRoom,
-  useCreate: useCreateRoom,
-  useUpdate: useUpdateRoom,
-} = roomsCrud;
+export function useRooms<T = any>(_params?: any) {
+  const page = usePage<any>();
+  const rooms = page.props?.rooms ?? { data: [], meta: { page: 1, limit: 10, total: 0, totalPages: 1 } };
+  return {
+    items: (rooms.data ?? []) as T[],
+    data: (rooms.data ?? []) as T[],
+    pagination: rooms.meta,
+    isLoading: false,
+    isPending: false,
+    isError: false,
+    refetch: () => {},
+  };
+}
 
 export function useRoomsStats() {
-  return useQuery({
-    queryKey: roomsCrud.keys.stats(),
-    queryFn: (): Promise<DashboardStat[]> =>
-      apiClient
-        .get("/rooms/stats")
-        .then((response) => toDashboardStats(response.data?.data, "rooms")),
-  });
+  const page = usePage<any>();
+  return {
+    data: (page.props?.stats ?? []) as DashboardStat[],
+    isLoading: false,
+    isError: false,
+    refetch: () => {},
+  };
 }
 
 export function useHousekeeperRoomDetails(roomId?: string) {
-  return useQuery({
-    queryKey: [...roomsCrud.keys.all, "housekeeper-detail", roomId],
-    queryFn: async () => {
-      if (!roomId) {
-        throw new Error("Room ID is required.");
-      }
+  const page = usePage<any>();
+  const rooms = page.props?.rooms?.data ?? [];
+  const found = rooms.find((r: any) => String(r.id) === String(roomId)) ?? null;
 
-      const response = await apiClient.get<ApiResponse<HousekeeperRoomDetails>>(
-        `/rooms/${roomId}`
-      );
-
-      return response.data.data;
-    },
-    enabled: !!roomId,
-  });
+  return {
+    data: found as HousekeeperRoomDetails | null,
+    isLoading: false,
+    isError: false,
+    refetch: () => {},
+  };
 }
 
 export function useHousekeeperCleaningRooms() {
-  return useQuery({
-    queryKey: roomsCrud.keys.custom("housekeeper-dashboard", "dirty-rooms", 5),
-    queryFn: async () => {
-      const response = await apiClient.get<ApiListResponse<HousekeeperRoom>>(
-        "/rooms",
-        { params: { page: 1, limit: 5, housekeepingStatus: "DIRTY" } }
-      );
+  const page = usePage<any>();
+  const rooms: any[] = page.props?.rooms?.data ?? [];
+  const dirty = rooms.filter((r) => r.housekeepingStatus === "DIRTY").slice(0, 5);
 
-      return response.data.data;
-    },
-  });
+  return {
+    data: dirty as HousekeeperRoom[],
+    isLoading: false,
+    refetch: () => {},
+  };
 }
 
-export function useBrowseRooms(params: unknown) {
-  return useQuery({
-    queryKey: roomsCrud.keys.custom("browse-rooms", params),
-    queryFn: () =>
-      apiClient
-        .get<ApiListResponse<BrowseRoom>>("/room-types", { params })
-        .then((res) => res.data),
-  });
+export function useBrowseRooms(_params?: unknown) {
+  const page = usePage<any>();
+  const roomTypes = page.props?.roomTypes ?? { data: [], meta: { page: 1, limit: 10, total: 0, totalPages: 1 } };
+
+  return {
+    data: roomTypes as { data: BrowseRoom[]; meta?: any },
+    items: roomTypes.data ?? [],
+    pagination: roomTypes.meta,
+    isLoading: false,
+    refetch: () => {},
+  };
 }
+
+export const roomsCrud = {
+  useList: useRooms,
+  useStats: useRoomsStats,
+};

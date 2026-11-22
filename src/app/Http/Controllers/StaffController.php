@@ -9,6 +9,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class StaffController extends Controller
@@ -146,25 +147,48 @@ class StaffController extends Controller
                 'phone' => $validated['phone'],
                 'role' => UserRole::STAFF->value,
                 'password' => Hash::make($validated['password'] ?? 'Secret123!'),
+                'password_hash' => Hash::make($validated['password'] ?? 'Secret123!'),
                 'is_active' => true,
             ]);
 
             $staff = Staff::create([
                 'user_id' => $user->id,
                 'category' => $validated['category'],
-                'employment_status' => 'ACTIVE',
-                'joining_date' => now(),
-                'salary' => $validated['salary'] ?? 25000,
                 'father_name' => $validated['fatherName'] ?? 'N/A',
                 'mother_name' => $validated['motherName'] ?? 'N/A',
+                'id_proof_number' => $validated['idProofNumber'] ?? ('ID_' . strtoupper(Str::random(8))),
+                'qualification' => $validated['qualification'] ?? 'Graduate',
+                'experience' => $validated['experience'] ?? '1 year',
+                'emergency_contact' => $validated['emergencyContact'] ?? $validated['phone'],
+                'address' => $validated['address'] ?? 'Staff Quarters',
             ]);
 
             if ($request->wantsJson() && !$request->header('X-Inertia')) {
-                return response()->json(['data' => ['id' => $staff->id], 'message' => 'Staff created successfully'], 201);
+                return response()->json(['data' => ['id' => $staff->id], 'message' => 'Staff created successfully.'], 200);
             }
 
             return redirect()->back()->with('success', 'Staff member created successfully.');
         });
+    }
+
+    public function show(string $id)
+    {
+        $st = Staff::with(['user', 'user.avatar'])->findOrFail($id);
+        return response()->json([
+            'data' => [
+                'id' => $st->id,
+                'userId' => $st->user_id,
+                'name' => $st->user?->name ?? 'Staff',
+                'fullName' => $st->user?->full_name ?? $st->user?->name ?? 'Staff',
+                'email' => $st->user?->email,
+                'phone' => $st->user?->phone,
+                'category' => $st->category instanceof \BackedEnum ? $st->category->value : (string) $st->category,
+                'employmentStatus' => $st->employment_status,
+                'joiningDate' => $st->joining_date?->toIso8601String(),
+                'salary' => $st->salary,
+                'isActive' => (bool) ($st->user?->is_active ?? true),
+            ]
+        ]);
     }
 
     public function update(Request $request, string $id)
@@ -227,3 +251,4 @@ class StaffController extends Controller
         return redirect()->back()->with('success', 'Staff member deleted successfully.');
     }
 }
+

@@ -1,20 +1,33 @@
-import { useMutation } from "@tanstack/react-query";
+import { router } from "@inertiajs/react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { notifyError } from "@/lib/notification";
 
-import { publicKeys } from "../public.keys";
-import { publicService } from "../public.service";
-
 export function useSendContactMessage() {
-  return useMutation({
-    mutationKey: publicKeys.contactMessage,
-    mutationFn: publicService.sendContactMessage,
-    onSuccess: (response) => {
-      toast.success(
-        response.data.message ?? "Your message has been sent successfully."
-      );
-    },
-    onError: notifyError,
-  });
+  const [isPending, setIsPending] = useState(false);
+
+  const mutate = (data: any, options?: { onSuccess?: () => void; onError?: (err: any) => void }) => {
+    setIsPending(true);
+    router.post("/contact", data, {
+      onSuccess: () => {
+        toast.success("Your message has been sent successfully.");
+        options?.onSuccess?.();
+      },
+      onError: (err) => {
+        notifyError(err);
+        options?.onError?.(err);
+      },
+      onFinish: () => setIsPending(false),
+    });
+  };
+
+  return {
+    mutate,
+    mutateAsync: mutate,
+    isPending,
+    isError: false,
+    error: null,
+    reset: () => {},
+  };
 }

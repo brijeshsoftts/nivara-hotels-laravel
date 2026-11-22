@@ -1,9 +1,9 @@
 import { StatGrid } from "@/components/common/Stat";
+import { usePage } from "@inertiajs/react";
 
-import { useDashboardStats } from "../dashboard.crud";
+export function DashboardStats({ stats: propStats }: { stats?: any[] } = {}) {
+  const page = usePage<any>();
+  const stats = propStats ?? page.props?.stats ?? [];
 
-export function DashboardStats() {
-  const { data: stats, isLoading, isError } = useDashboardStats();
-
-  return <StatGrid stats={stats} isLoading={isLoading} isError={isError} />;
+  return <StatGrid stats={stats} isLoading={false} isError={false} />;
 }

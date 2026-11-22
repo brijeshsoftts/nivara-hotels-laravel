@@ -4,7 +4,8 @@ import { bunny } from "laravel-vite-plugin/fonts";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import inertia from "@inertiajs/vite";
-import path from "path";
+import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers'
+
 
 export default defineConfig({
     plugins: [
@@ -21,19 +22,7 @@ export default defineConfig({
         react(),
         tailwindcss(),
     ],
-    resolve: {
-        alias: {
-            "@": path.resolve(__dirname, "./resources/js"),
-            "react-router-dom": path.resolve(
-                __dirname,
-                "./resources/js/lib/router-shim.tsx"
-            ),
-            "@tanstack/react-query": path.resolve(
-                __dirname,
-                "./resources/js/lib/query-shim.tsx"
-            ),
-        },
-    },
+    resolve: name => resolvePageComponent(`./pages/${name}.tsx`, import.meta.glob('./pages/**/*.tsx')),
     server: {
         watch: {
             ignored: ["**/storage/framework/views/**"],

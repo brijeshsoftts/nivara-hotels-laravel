@@ -1,81 +1,74 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { router } from "@inertiajs/react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 import { notifyError } from "@/lib/notification";
-
 import {
   type UpdateStaff,
   UpdateStaffSchema,
 } from "../schemas/updateStaff.schema";
-import { staffKeys, staffMutationKeys } from "../staff.keys";
-import { staffService } from "../staff.service";
 
-function useUpdateStaff(id: string) {
-  const queryClient = useQueryClient();
-
-  const mutation = useMutation({
-    mutationKey: staffMutationKeys.update,
-    mutationFn: (data: UpdateStaff) => staffService.update(id, data),
-    onSuccess: (res) => {
-      toast.success(res?.message || "Staff member updated successfully.");
-      queryClient.invalidateQueries({
-        queryKey: staffKeys.all,
-      });
-    },
-    onError: notifyError,
-  });
-  return mutation;
-}
-
-export function useUpdateStaffFacade(id: string) {
-  const { mutate, isPending, isSuccess } = useUpdateStaff(id);
+export function useUpdateStaffFacade(id: string, onSuccess?: () => void) {
+  const [isPending, setIsPending] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const {
     handleSubmit,
     register,
     control,
-    formState: { errors },
-    getValues,
     reset,
+    formState: { errors },
   } = useForm<UpdateStaff>({
     resolver: zodResolver(UpdateStaffSchema),
   });
 
+  const submit = (data: UpdateStaff) => {
+    setIsPending(true);
+    router.put(`/dashboard/staff/${id}`, data as any, {
+      onSuccess: () => {
+        setIsSuccess(true);
+        toast.success("Staff member updated successfully.");
+        onSuccess?.();
+      },
+      onError: (err) => {
+        notifyError(err);
+      },
+      onFinish: () => setIsPending(false),
+    });
+  };
+
   return {
-    submit: (data: UpdateStaff) => mutate(data),
+    submit,
     isPending,
     isSuccess,
     register,
     control,
     handleSubmit,
     errors,
-    getValues,
     reset,
   };
 }
 
-export const useUpdateStaffStatus = (staffId: string, isActive: boolean) => {
-  const queryClient = useQueryClient();
-  const { mutate, isPending } = useMutation({
-    mutationKey: staffMutationKeys.update,
-    mutationFn: () => staffService.updateStatus(staffId, !isActive),
-    onSuccess: (res) => {
-      toast.success(
-        res?.message || "Staff member status updated successfully."
-      );
-      queryClient.invalidateQueries({ queryKey: staffKeys.all });
-    },
-    onError: notifyError,
-  });
+export function useUpdateStaffStatus(id: string, isActive: boolean) {
+  const [isPending, setIsPending] = useState(false);
 
   const handleToggleStatus = () => {
-    mutate();
+    setIsPending(true);
+    router.patch(`/dashboard/staff/${id}/status`, { isActive: !isActive }, {
+      onSuccess: () => {
+        toast.success("Staff status updated successfully.");
+      },
+      onError: (err) => {
+        notifyError(err);
+      },
+      onFinish: () => setIsPending(false),
+    });
   };
 
   return {
     isPending,
     handleToggleStatus,
   };
-};
+}

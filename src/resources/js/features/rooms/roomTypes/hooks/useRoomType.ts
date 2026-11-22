@@ -1,19 +1,15 @@
-import { useQuery } from "@tanstack/react-query";
-
-import { roomTypesKeys } from "../roomTypes.keys";
-import { roomTypesService } from "../roomTypes.service";
+import { usePage } from "@inertiajs/react";
+import type { RoomTypeDetails } from "../roomTypes.types";
 
 export function useRoomType(slug: string) {
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: roomTypesKeys.detail(slug),
-    queryFn: () => roomTypesService.findOne(slug),
-    enabled: !!slug,
-  });
+  const page = usePage<any>();
+  const roomTypes = page.props?.roomTypes?.data ?? [];
+  const found = roomTypes.find((rt: any) => rt.slug === slug || String(rt.id) === String(slug)) ?? null;
 
   return {
-    roomType: data,
-    isLoading,
-    isError,
-    refetch,
+    roomType: found as RoomTypeDetails | null,
+    isLoading: false,
+    isError: false,
+    refetch: () => {},
   };
 }

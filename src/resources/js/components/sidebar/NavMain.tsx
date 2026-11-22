@@ -2,7 +2,7 @@
 
 import { ChevronRight, type LucideIcon } from "lucide-react";
 import * as React from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, usePage } from "@inertiajs/react";
 
 import {
   Collapsible,
@@ -100,9 +100,10 @@ function NavSection({ item }: { item: NavItem }) {
 }
 
 function NavMainItem({ item }: { item: NavItem; id: number }) {
-  const location = useLocation();
+  const { url } = usePage();
+  const pathname = url ? url.split("?")[0] : "/";
   const hasChildren = !!item.children?.length;
-  const isCurrent = matchesPath(item, location.pathname);
+  const isCurrent = matchesPath(item, pathname);
   const [isOpen, setIsOpen] = React.useState(false);
 
   if (item.isSection && item.label) {
@@ -146,7 +147,7 @@ function NavMainItem({ item }: { item: NavItem; id: number }) {
                   className={cn(
                     "ml-auto transition-transform duration-200",
                     (isOpen || isCurrent) &&
-                      "rotate-90 text-sidebar-primary-foreground",
+                      "rotate-90 text-sidebar-accent-foreground",
                     !isCurrent && "text-sidebar-foreground/60"
                   )}
                 />
@@ -179,7 +180,7 @@ function NavMainItem({ item }: { item: NavItem; id: number }) {
             "h-11 cursor-pointer rounded-lg border-l-2 border-transparent px-3 text-sm text-sidebar-foreground/80 transition-colors duration-150 hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring data-active:bg-sidebar-primary data-active:text-sidebar-primary-foreground",
             isCurrent && "border-sidebar-ring font-semibold"
           )}
-          render={<Link to={item.href!} />}
+          render={<Link href={item.href || "#"} />}
         >
           {item.icon && (
             <item.icon
@@ -199,9 +200,10 @@ function NavMainItem({ item }: { item: NavItem; id: number }) {
 }
 
 function NavMainSubItem({ item }: { item: NavItem }) {
-  const location = useLocation();
+  const { url } = usePage();
+  const pathname = url ? url.split("?")[0] : "/";
   const hasChildren = !!item.children?.length;
-  const isCurrent = matchesPath(item, location.pathname);
+  const isCurrent = matchesPath(item, pathname);
   const [isOpen, setIsOpen] = React.useState(false);
 
   if (hasChildren && item.title) {
@@ -264,7 +266,7 @@ function NavMainSubItem({ item }: { item: NavItem }) {
           )}
           isActive={isCurrent}
           render={
-            <Link to={item.href!}>
+            <Link href={item.href || "#"}>
               {item.icon && (
                 <item.icon
                   className={cn(

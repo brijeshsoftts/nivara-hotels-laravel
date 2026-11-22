@@ -12,15 +12,9 @@ import {
 } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { type FormEvent, useEffect, useState } from "react";
-import {
-  Link,
-  NavLink,
-  useLocation,
-  useNavigate,
-  useOutlet,
-} from "react-router-dom";
+import { Link, usePage } from "@inertiajs/react";
 
-import { PageTransition } from "@/components/common/PageTransition";
+// import { PageTransition } from "@/components/common/PageTransition";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
@@ -41,18 +35,20 @@ const navLinks = [
 
 export function Logo({
   to = "/",
+  href,
   className,
   inverse = false,
   compact = false,
 }: {
   to?: string;
+  href?: string;
   className?: string;
   inverse?: boolean;
   compact?: boolean;
 }) {
   return (
     <Link
-      to={to}
+      href={href ?? to}
       className={cn("flex items-center gap-3", compact && "gap-2", className)}
     >
       {/* Logo Mark - Arched Background matching screenshot */}
@@ -93,7 +89,7 @@ export function Logo({
               inverse ? "text-background/80" : "text-primary/80"
             )}
           >
-            Hotel & Resort
+            Hotel &amp; Resort
           </span>
         )}
       </div>
@@ -105,6 +101,8 @@ function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const reduceMotion = useReducedMotion() ?? false;
   const { isAuthenticated, isLoading } = useAuth();
+  const { url } = usePage();
+  const pathname = url ? url.split("?")[0] : "/";
   const closeMenu = () => setIsMenuOpen(false);
 
   useEffect(() => {
@@ -125,24 +123,24 @@ function Navbar() {
         <Logo />
         <div className="hidden items-center gap-7 lg:flex xl:gap-9">
           <nav className="hidden items-center gap-9 lg:flex">
-            {navLinks.map((item) => (
-              <NavLink
-                key={item.href}
-                to={item.href}
-                end={item.href === "/"}
-                className={({ isActive }) =>
-                  cn(
+            {navLinks.map((item) => {
+              const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
                     "relative py-2 text-[13px] font-medium tracking-wide transition-colors duration-200",
                     "after:absolute after:inset-x-0 after:-bottom-0.5 after:h-px after:origin-left after:bg-primary after:transition-transform after:duration-300",
                     isActive
                       ? "text-foreground after:scale-x-100"
                       : "text-muted-foreground after:scale-x-0 hover:text-foreground hover:after:scale-x-100"
-                  )
-                }
-              >
-                {item.name}
-              </NavLink>
-            ))}
+                  )}
+                >
+                  {item.name}
+                </Link>
+              );
+            })}
           </nav>
         </div>
         <div className="hidden items-center gap-4 lg:flex">
@@ -150,7 +148,7 @@ function Navbar() {
             (isAuthenticated ? (
               <Button
                 nativeButton={false}
-                render={<Link to="/dashboard" />}
+                render={<Link href="/dashboard" />}
                 className="h-11 rounded-lg px-5 font-semibold"
                 variant="outline"
               >
@@ -160,14 +158,14 @@ function Navbar() {
             ) : (
               <Link
                 className="min-h-11 content-center px-2 text-sm font-medium text-foreground transition-colors hover:text-primary focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
-                to="/login"
+                href="/login"
               >
                 Log in
               </Link>
             ))}
           <Button
             nativeButton={false}
-            render={<Link to="/rooms" />}
+            render={<Link href="/rooms" />}
             className="h-11 rounded-lg px-5 font-semibold"
             variant="default"
           >
@@ -206,32 +204,32 @@ function Navbar() {
           >
             <div className="container mx-auto max-w-7xl px-4 py-4 sm:px-6">
               <div className="flex flex-col">
-                {navLinks.map((item) => (
-                  <NavLink
-                    end={item.href === "/"}
-                    key={item.name}
-                    onClick={closeMenu}
-                    to={item.href}
-                    className={({ isActive }) =>
-                      cn(
+                {navLinks.map((item) => {
+                  const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+                  return (
+                    <Link
+                      key={item.name}
+                      onClick={closeMenu}
+                      href={item.href}
+                      className={cn(
                         "flex min-h-12 items-center justify-between border-b border-border px-1 text-base font-medium transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
                         isActive ? "text-primary" : "text-foreground"
-                      )
-                    }
-                  >
-                    {item.name}
-                    <ArrowUpRight
-                      aria-hidden="true"
-                      className="size-4 text-muted-foreground"
-                    />
-                  </NavLink>
-                ))}
+                      )}
+                    >
+                      {item.name}
+                      <ArrowUpRight
+                        aria-hidden="true"
+                        className="size-4 text-muted-foreground"
+                      />
+                    </Link>
+                  );
+                })}
               </div>
               {!isLoading &&
                 (isAuthenticated ? (
                   <Button
                     nativeButton={false}
-                    render={<Link to="/dashboard" onClick={closeMenu} />}
+                    render={<Link href="/dashboard" onClick={closeMenu} />}
                     className="mt-4 h-11 w-full font-semibold"
                     variant="default"
                   >
@@ -242,7 +240,7 @@ function Navbar() {
                   <div className="grid grid-cols-2 gap-3 pt-4">
                     <Button
                       nativeButton={false}
-                      render={<Link to="/login" onClick={closeMenu} />}
+                      render={<Link href="/login" onClick={closeMenu} />}
                       className="h-11 w-full rounded-lg font-semibold"
                       variant="outline"
                     >
@@ -250,7 +248,7 @@ function Navbar() {
                     </Button>
                     <Button
                       nativeButton={false}
-                      render={<Link to="/rooms" onClick={closeMenu} />}
+                      render={<Link href="/rooms" onClick={closeMenu} />}
                       className="h-11 w-full rounded-lg font-semibold"
                       variant="default"
                     >
@@ -290,9 +288,7 @@ function Footer() {
         <div className="grid grid-cols-1 gap-12 pb-14 md:grid-cols-2 lg:grid-cols-4 lg:gap-8">
           {/* Column 1: Brand Identifier & Intro */}
           <div className="flex flex-col space-y-5">
-            {/* Logo Mark - Arched Background */}
             <Logo />
-
             <p className="max-w-70 text-[14px] leading-relaxed text-foreground/70">
               A comfortable hotel stay in Lucknow, with helpful service for
               business and leisure guests.
@@ -308,7 +304,7 @@ function Footer() {
               {navLinks.map((link) => (
                 <li key={link.href}>
                   <Link
-                    to={link.href}
+                    href={link.href}
                     onClick={() =>
                       window.scrollTo({ top: 0, behavior: "smooth" })
                     }
@@ -418,7 +414,7 @@ function Footer() {
         {/* Bottom Section: Rights, Legal, Accessibility */}
         <div className="flex flex-col items-center justify-between gap-4 pt-6 text-[12px] text-foreground/60 sm:flex-row md:text-[13px]">
           <span>
-            © {currentYear} {HOTEL_DETAILS.name}. All rights reserved.
+            &copy; {currentYear} {HOTEL_DETAILS.name}. All rights reserved.
           </span>
         </div>
       </div>
@@ -427,39 +423,26 @@ function Footer() {
 }
 
 export function PublicLayout({ children }: { children?: React.ReactNode } = {}) {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const outlet = useOutlet();
+  const { url } = usePage();
 
   useEffect(() => {
-    const searchParams = new URLSearchParams(location.search);
-    const preferences = getBookingPreferences(searchParams);
-    saveBookingPreferences(preferences);
-
-    Object.entries(preferences).forEach(([key, value]) => {
-      searchParams.set(key, String(value));
-    });
-
-    const search = searchParams.toString();
-    if (search !== location.search.slice(1)) {
-      navigate(
-        {
-          pathname: location.pathname,
-          search: search ? `?${search}` : "",
-          hash: location.hash,
-        },
-        { replace: true }
-      );
+    if (typeof window !== "undefined") {
+      const searchParams = new URLSearchParams(window.location.search);
+      const preferences = getBookingPreferences(searchParams);
+      saveBookingPreferences(preferences);
     }
-  }, [location, navigate]);
+  }, [url]);
 
   return (
     <>
       <Navbar />
       <main className="min-w-0 flex-1" id="main-content" tabIndex={-1}>
-        <PageTransition>{children ?? outlet}</PageTransition>
+        {/* <PageTransition>{children}</PageTransition> */}
+        {children}
       </main>
       <Footer />
     </>
   );
 }
+
+export default PublicLayout;

@@ -1,22 +1,16 @@
-import { useQuery } from "@tanstack/react-query";
-
-import { bookingsKeys } from "../bookings.keys";
-import { bookingsService } from "../bookings.service";
+import { usePage } from "@inertiajs/react";
 import type { BookingAvailabilityParams } from "../bookings.types";
 
 export function useAvailableBookingRooms(
-  params: BookingAvailabilityParams | undefined
+  _params?: BookingAvailabilityParams
 ) {
-  const query = useQuery({
-    queryKey: bookingsKeys.availability(params),
-    queryFn: () => bookingsService.findAvailableRooms(params!),
-    enabled: !!params,
-  });
+  const page = usePage<any>();
+  const rooms = page.props?.availableRooms ?? [];
 
   return {
-    rooms: query.data ?? [],
-    isLoading: query.isLoading,
-    isError: query.isError,
-    refetch: query.refetch,
+    rooms,
+    isLoading: false,
+    isError: false,
+    refetch: () => {},
   };
 }

@@ -1,27 +1,27 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { router } from "@inertiajs/react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { notifyError } from "@/lib/notification";
 
-import { publicKeys, publicMutationKeys } from "../public.keys";
-import { publicService } from "../public.service";
-
 export function useDeleteInquiry(id: string) {
-  const queryClient = useQueryClient();
-  const { isPending, mutate } = useMutation({
-    mutationKey: publicMutationKeys.deleteInquiry,
-    mutationFn: () => publicService.deleteInquiry(id),
-    onSuccess: (response) => {
-      toast.success(response.message || "Inquiry deleted successfully.");
-      queryClient.invalidateQueries({
-        queryKey: publicKeys.inquiryLists(),
-      });
-    },
-    onError: notifyError,
-  });
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDelete = () => {
+    setIsDeleting(true);
+    router.delete(`/dashboard/inquiries/${id}`, {
+      onSuccess: () => {
+        toast.success("Inquiry deleted successfully.");
+      },
+      onError: (err) => {
+        notifyError(err);
+      },
+      onFinish: () => setIsDeleting(false),
+    });
+  };
 
   return {
-    isDeleting: isPending,
-    handleDelete: () => mutate(),
+    isDeleting,
+    handleDelete,
   };
 }

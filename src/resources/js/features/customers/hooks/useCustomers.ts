@@ -1,24 +1,15 @@
-import { useQuery } from "@tanstack/react-query";
-
+import { usePage } from "@inertiajs/react";
 import type { ListParams } from "@/types/api.types";
 
-import { customersKeys } from "../customers.keys";
-import { customersService } from "../customers.service";
-
-
-
-export function useCustomers(params: ListParams) {
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: customersKeys.list(params),
-    queryFn: () => customersService.findAll(params),
-    placeholderData: (previousData) => previousData,
-  });
+export function useCustomers(_params?: ListParams) {
+  const page = usePage<any>();
+  const customers = page.props?.customers ?? { data: [], meta: { page: 1, limit: 10, total: 0, totalPages: 1 } };
 
   return {
-    items: data?.data ?? [],
-    pagination: data?.meta,
-    isLoading,
-    isError,
-    refetch,
+    items: customers.data ?? [],
+    pagination: customers.meta,
+    isLoading: false,
+    isError: false,
+    refetch: () => {},
   };
 }
