@@ -20,6 +20,8 @@ class Issue extends Model
             'priority' => IssuePriority::class,
             'status' => IssueStatus::class,
             'reported_at' => 'datetime',
+            'started_at' => 'datetime',
+            'completed_at' => 'datetime',
             'resolved_at' => 'datetime',
         ];
     }
@@ -42,6 +44,11 @@ class Issue extends Model
     public function assignedTo(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_to_id');
+    }
+
+    public function image(): BelongsTo
+    {
+        return $this->belongsTo(Image::class, 'image_id');
     }
 
     public function assignedToStaff(): BelongsTo

@@ -1,7 +1,11 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { router, usePage } from "@inertiajs/react";
-import { useState } from "react";
-import { type DefaultValues, useForm, type UseFormReturn } from "react-hook-form";
+import { useEffect, useState } from "react";
+import {
+  type DefaultValues,
+  useForm,
+  type UseFormReturn,
+} from "react-hook-form";
 import { toast } from "sonner";
 import type { z } from "zod";
 
@@ -14,7 +18,10 @@ import type { IssueDetails } from "./issues.types";
 
 export function useIssues(_params?: any) {
   const page = usePage<any>();
-  const issues = page.props?.issues ?? { data: [], meta: { page: 1, limit: 10, total: 0, totalPages: 1 } };
+  const issues = page.props?.issues ?? {
+    data: [],
+    meta: { page: 1, limit: 10, total: 0, totalPages: 1 },
+  };
   return {
     items: (issues.data ?? []) as IssueDetails[],
     pagination: issues.meta,
@@ -24,15 +31,57 @@ export function useIssues(_params?: any) {
   };
 }
 
-export function useIssue(id: string | undefined) {
-  const page = usePage<any>();
-  const issues = page.props?.issues?.data ?? [];
-  const found = issues.find((i: any) => String(i.id) === String(id)) ?? null;
+export function useIssue(id: string | undefined, enabled = true) {
+  const [data, setData] = useState<IssueDetails | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isError, setIsError] = useState(false);
+  const [retry, setRetry] = useState(0);
+
+  useEffect(() => {
+    if (!enabled || !id) {
+      setIsLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    setIsLoading(true);
+    setIsError(false);
+
+    fetch(`/issues/${encodeURIComponent(id)}`, {
+      headers: { Accept: "application/json" },
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok)
+          throw new Error("Could not load issue details");
+        const result = await response.json();
+        setData(result.data as IssueDetails);
+      })
+      .catch((error: unknown) => {
+        if (
+          !(
+            error instanceof DOMException &&
+            error.name === "AbortError"
+          )
+        ) {
+          setData(null);
+          setIsError(true);
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [enabled, id, retry]);
+
+  const refetch = () => setRetry((current) => current + 1);
+
   return {
-    data: found as IssueDetails | null,
-    isLoading: false,
-    isError: false,
-    refetch: () => {},
+    data,
+    isLoading,
+    isError,
+    refetch,
   };
 }
 
@@ -89,7 +138,11 @@ export function useCreateIssue(options?: {
   };
 
   return {
-    form: form as unknown as UseFormReturn<CustomerCreateIssueInput, unknown, CustomerCreateIssueOutput>,
+    form: form as unknown as UseFormReturn<
+      CustomerCreateIssueInput,
+      unknown,
+      CustomerCreateIssueOutput
+    >,
     submit,
     mutation: {
       isPending,
@@ -105,7 +158,7 @@ export function useUpdateIssue(
   options?: {
     defaultValues?: any;
     onSuccess?: () => void;
-  }
+  },
 ) {
   const [isPending, setIsPending] = useState(false);
 

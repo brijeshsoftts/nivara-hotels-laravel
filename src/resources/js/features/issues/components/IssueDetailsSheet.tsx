@@ -37,7 +37,12 @@ export function IssueDetailsSheet({
   onOpenChange,
   issueId,
 }: IssueDetailsSheetProps) {
-  const { data: issue, isLoading, isError, refetch } = useIssue(issueId);
+  const {
+    data: issue,
+    isLoading,
+    isError,
+    refetch,
+  } = useIssue(issueId, open);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -46,9 +51,12 @@ export function IssueDetailsSheet({
         className="flex w-full flex-col gap-0 p-0 sm:max-w-xl"
       >
         <SheetHeader className="border-b px-5 py-4 sm:px-6">
-          <SheetTitle>{issue?.reference ?? "Issue details"}</SheetTitle>
+          <SheetTitle>
+            {issue?.reference ?? "Issue details"}
+          </SheetTitle>
           <SheetDescription>
-            {issue?.title ?? "View the reported issue and current status."}
+            {issue?.title ??
+              "View the reported issue and current status."}
           </SheetDescription>
         </SheetHeader>
 
@@ -81,7 +89,10 @@ export function IssueDetailsSheet({
           )}
 
           {!isLoading && !isError && !issue && (
-            <p role="status" className="text-sm text-muted-foreground">
+            <p
+              role="status"
+              className="text-sm text-muted-foreground"
+            >
               Issue not found.
             </p>
           )}
@@ -96,10 +107,16 @@ export function IssueDetailsSheet({
                 </span>
               </div>
 
-              <section aria-label="Issue description" className="space-y-2">
-                <h3 className="text-sm font-semibold">Description</h3>
+              <section
+                aria-label="Issue description"
+                className="space-y-2"
+              >
+                <h3 className="text-sm font-semibold">
+                  Description
+                </h3>
                 <p className="rounded-md border bg-muted/20 p-3 text-sm leading-relaxed whitespace-pre-wrap">
-                  {issue.description || "No description provided."}
+                  {issue.description ||
+                    "No description provided."}
                 </p>
               </section>
 
@@ -112,7 +129,10 @@ export function IssueDetailsSheet({
                 >
                   <img
                     src={issue.image.url}
-                    alt={issue.image.altText ?? "Issue attachment"}
+                    alt={
+                      issue.image.altText ??
+                      "Issue attachment"
+                    }
                     className="max-h-64 w-full rounded-sm object-contain"
                   />
                 </a>
@@ -128,18 +148,32 @@ export function IssueDetailsSheet({
                   <MapPin className="size-4 text-muted-foreground" />
                   Location and reporter
                 </h3>
-                <Detail label="Room" value={`Room ${issue.room.roomNumber}`} />
-                <Detail label="Floor" value={String(issue.room.floor)} />
-                <Detail label="Reported by" value={issue.reporter.fullName} />
+                <Detail
+                  label="Room"
+                  value={`Room ${issue.room.roomNumber}`}
+                />
+                <Detail
+                  label="Floor"
+                  value={String(issue.room.floor)}
+                />
+                <Detail
+                  label="Reported by"
+                  value={issue.reporter.fullName}
+                />
                 <Detail
                   label="Assigned to"
-                  value={issue.assignee?.fullName ?? "Unassigned"}
+                  value={
+                    issue.assignee?.fullName ?? "Unassigned"
+                  }
                 />
               </section>
 
               <Separator />
 
-              <section aria-label="Issue timeline" className="space-y-3">
+              <section
+                aria-label="Issue timeline"
+                className="space-y-3"
+              >
                 <h3 className="flex items-center gap-2 text-sm font-semibold">
                   <CalendarDays className="size-4 text-muted-foreground" />
                   Timeline
@@ -182,7 +216,9 @@ function Detail({ label, value }: { label: string; value: string }) {
         )}
         {label}
       </span>
-      <span className="text-right text-sm font-medium break-all">{value}</span>
+      <span className="text-right text-sm font-medium break-all">
+        {value}
+      </span>
     </div>
   );
 }

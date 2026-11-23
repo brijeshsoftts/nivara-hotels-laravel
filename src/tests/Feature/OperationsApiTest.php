@@ -134,12 +134,93 @@ class OperationsApiTest extends TestCase
 
         $this->assertNotNull($task->fresh()->completed_at);
         $this->assertSame(HousekeepingStatus::CLEAN, $room->fresh()->housekeeping_status);
-
         $this->actingAs($this->admin)
             ->patchJson("/dashboard/tasks/{$task->id}/status", [
                 'status' => 'PENDING',
             ])
             ->assertStatus(422);
+    }
+
+    public function test_issue_api_returns_reference_list_and_detail_contracts(): void
+    {
+        $room = Room::firstOrFail();
+        $response = $this->actingAs($this->admin)->postJson('/issues', [
+            'title' => 'Bathroom tap is leaking',
+            'description' => 'Water continues to drip from the sink tap.',
+            'category' => 'PLUMBING',
+            'priority' => 'HIGH',
+            'roomId' => $room->id,
+        ]);
+
+        $response->assertCreated()->assertJsonStructure([
+            'data' => [
+                'id',
+                'reference',
+                'title',
+                'category',
+                'priority',
+                'status',
+                'room' => ['id', 'roomNumber'],
+                'reporter' => ['id', 'fullName'],
+                'reportedAt',
+            ],
+            'message',
+        ]);
+
+        $issueId = $response->json('data.id');
+        $this->actingAs($this->admin)->getJson('/issues')
+            ->assertOk()
+            ->assertJsonStructure([
+                'data' => ['*' => [
+                    'id',
+                    'reference',
+                    'title',
+                    'category',
+                    'priority',
+                    'status',
+                    'room' => ['id', 'roomNumber'],
+                    'reporter' => ['id', 'fullName'],
+                    'assignee',
+                    'reportedAt',
+                ]],
+                'meta' => ['total', 'page', 'limit', 'totalPages'],
+            ])
+            ->assertJsonPath('data.0.id', $issueId);
+
+        $this->actingAs($this->admin)->getJson("/issues/{$issueId}")
+            ->assertOk()
+            ->assertJsonStructure([
+                'data' => [
+                    'id',
+                    'reference',
+                    'description',
+                    'reportedAt',
+                    'startedAt',
+                    'completedAt',
+                    'resolvedAt',
+                    'createdAt',
+                    'updatedAt',
+                    'room' => ['id', 'roomNumber', 'name', 'floor'],
+                    'reporter' => ['id', 'fullName'],
+                    'assignee',
+                    'image',
+                ],
+            ])
+            ->assertJsonPath('data.id', $issueId);
+
+        $updateResponse = $this->actingAs($this->admin)->patchJson("/issues/{$issueId}", [
+            'title' => 'Updated leaking bathroom tap',
+            'status' => 'IN_PROGRESS',
+        ]);
+        $updateResponse->assertOk()
+            ->assertJsonPath('data.title', 'Updated leaking bathroom tap')
+            ->assertJsonPath('data.status', 'IN_PROGRESS');
+        $this->assertNotNull($updateResponse->json('data.startedAt'));
+
+        $this->actingAs($this->admin)->getJson('/issues/stats')
+            ->assertOk()
+            ->assertJsonCount(4, 'data')
+            ->assertJsonPath('data.0.value', number_format(Issue::count()));
     }
 
     public function test_customers_search_and_crud(): void
