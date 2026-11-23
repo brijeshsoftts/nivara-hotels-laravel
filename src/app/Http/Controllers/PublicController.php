@@ -35,6 +35,7 @@ class PublicController extends Controller
             ->get()
             ->map(function ($rt) {
                 $primaryImg = $rt->images->firstWhere('is_primary', true) ?? $rt->images->first();
+
                 return [
                     'id' => $rt->id,
                     'name' => $rt->name,
@@ -53,7 +54,7 @@ class PublicController extends Controller
                         'url' => $primaryImg?->url ?? 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304',
                         'altText' => $primaryImg?->alt_text ?? $rt->name,
                     ],
-                    'amenities' => $rt->amenities->map(fn($a) => [
+                    'amenities' => $rt->amenities->map(fn ($a) => [
                         'id' => $a->id,
                         'name' => $a->name,
                         'icon' => $a->icon,
@@ -61,7 +62,7 @@ class PublicController extends Controller
                 ];
             });
 
-        $amenities = Amenity::where('is_active', true)->get()->map(fn($a) => [
+        $amenities = Amenity::where('is_active', true)->get()->map(fn ($a) => [
             'id' => $a->id,
             'name' => $a->name,
             'description' => $a->description,
@@ -87,7 +88,7 @@ class PublicController extends Controller
 
     public function about(Request $request): Response
     {
-        $amenities = Amenity::where('is_active', true)->get()->map(fn($a) => [
+        $amenities = Amenity::where('is_active', true)->get()->map(fn ($a) => [
             'id' => $a->id,
             'name' => $a->name,
             'description' => $a->description,
@@ -128,7 +129,7 @@ class PublicController extends Controller
             'message' => $validated['message'],
         ]);
 
-        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+        if ($request->wantsJson() && ! $request->header('X-Inertia')) {
             return response()->json(['message' => 'Your message has been sent successfully.']);
         }
 
@@ -152,6 +153,7 @@ class PublicController extends Controller
 
         $allRoomTypes = $query->get()->map(function ($rt) {
             $primaryImg = $rt->images->firstWhere('is_primary', true) ?? $rt->images->first();
+
             return [
                 'id' => $rt->id,
                 'name' => $rt->name,
@@ -170,7 +172,7 @@ class PublicController extends Controller
                     'url' => $primaryImg?->url ?? 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304',
                     'altText' => $primaryImg?->alt_text ?? $rt->name,
                 ],
-                'amenities' => $rt->amenities->map(fn($a) => [
+                'amenities' => $rt->amenities->map(fn ($a) => [
                     'id' => $a->id,
                     'name' => $a->name,
                     'icon' => $a->icon,
@@ -178,13 +180,13 @@ class PublicController extends Controller
             ];
         });
 
-        $amenities = Amenity::where('is_active', true)->get()->map(fn($a) => [
+        $amenities = Amenity::where('is_active', true)->get()->map(fn ($a) => [
             'id' => $a->id,
             'name' => $a->name,
             'icon' => $a->icon,
         ]);
 
-        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+        if ($request->wantsJson() && ! $request->header('X-Inertia')) {
             return response()->json([
                 'data' => $allRoomTypes,
                 'meta' => [
@@ -220,7 +222,7 @@ class PublicController extends Controller
             ->with(['amenities', 'images', 'rooms'])
             ->first();
 
-        if (!$roomType) {
+        if (! $roomType) {
             if ($request->wantsJson()) {
                 $physicalRoom = Room::find($slug);
                 if ($physicalRoom) {
@@ -237,6 +239,7 @@ class PublicController extends Controller
             ->get()
             ->map(function ($rt) {
                 $pImg = $rt->images->firstWhere('is_primary', true) ?? $rt->images->first();
+
                 return [
                     'id' => $rt->id,
                     'name' => $rt->name,
@@ -248,6 +251,11 @@ class PublicController extends Controller
                     ],
                 ];
             });
+
+        $availableRooms = $roomType->rooms
+            ->where('is_active', true)
+            ->where('occupancy_status', OccupancyStatus::VACANT)
+            ->count();
 
         $details = [
             'id' => $roomType->id,
@@ -262,21 +270,22 @@ class PublicController extends Controller
             'currency' => $roomType->currency ?? 'INR',
             'bedType' => $roomType->bed_type instanceof \BackedEnum ? $roomType->bed_type->value : (string) $roomType->bed_type,
             'bedCount' => $roomType->bed_count,
-            'availableRooms' => $roomType->rooms->where('is_active', true)->where('occupancy_status', OccupancyStatus::VACANT)->count(),
-            'images' => $roomType->images->map(fn($img) => [
+            'availableRooms' => $availableRooms,
+            'availability' => ['isAvailable' => $availableRooms > 0],
+            'images' => $roomType->images->map(fn ($img) => [
                 'id' => $img->id,
                 'url' => $img->url,
                 'altText' => $img->alt_text ?? $roomType->name,
                 'isPrimary' => (bool) $img->is_primary,
             ]),
-            'amenities' => $roomType->amenities->map(fn($a) => [
+            'amenities' => $roomType->amenities->map(fn ($a) => [
                 'id' => $a->id,
                 'name' => $a->name,
                 'icon' => $a->icon,
             ]),
         ];
 
-        return Inertia::render('public/room-details', [
+        return Inertia::render('public/RoomDetails', [
             'room' => $details,
             'slug' => $slug,
             'similarRooms' => $similarRooms,
@@ -285,19 +294,43 @@ class PublicController extends Controller
 
     public function checkout(Request $request)
     {
-        $roomTypes = RoomType::where('is_active', true)->with(['amenities', 'images'])->get()->map(function ($rt) {
+        $roomTypes = RoomType::where('is_active', true)->with(['amenities', 'images', 'rooms'])->get()->map(function ($rt) {
             $primaryImg = $rt->images->firstWhere('is_primary', true) ?? $rt->images->first();
+            $availableRooms = $rt->rooms
+                ->where('is_active', true)
+                ->where('occupancy_status', OccupancyStatus::VACANT)
+                ->count();
+
             return [
                 'id' => $rt->id,
                 'name' => $rt->name,
                 'slug' => $rt->slug,
+                'description' => $rt->description,
+                'sizeSqFt' => $rt->size_sq_ft,
                 'basePrice' => $rt->base_price,
                 'currency' => $rt->currency ?? 'INR',
                 'maxGuests' => $rt->max_guests,
+                'adults' => $rt->adults,
+                'children' => $rt->children,
+                'bedType' => $rt->bed_type instanceof \BackedEnum ? $rt->bed_type->value : (string) $rt->bed_type,
+                'bedCount' => $rt->bed_count,
+                'availableRooms' => $availableRooms,
+                'availability' => ['isAvailable' => $availableRooms > 0],
                 'image' => [
                     'url' => $primaryImg?->url ?? 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304',
                     'altText' => $primaryImg?->alt_text ?? $rt->name,
                 ],
+                'images' => $rt->images->map(fn ($image) => [
+                    'id' => $image->id,
+                    'url' => $image->url,
+                    'altText' => $image->alt_text ?? $rt->name,
+                    'isPrimary' => (bool) $image->is_primary,
+                ])->values(),
+                'amenities' => $rt->amenities->map(fn ($amenity) => [
+                    'id' => $amenity->id,
+                    'name' => $amenity->name,
+                    'icon' => $amenity->icon,
+                ])->values(),
             ];
         });
 
@@ -307,7 +340,8 @@ class PublicController extends Controller
             $selectedRoom = $roomTypes->firstWhere('slug', $slug) ?? $roomTypes->firstWhere('id', $slug);
         }
 
-        return Inertia::render('public/checkout', [
+        return Inertia::render('public/Checkout', [
+            'slug' => $slug,
             'selectedRoom' => $selectedRoom,
             'roomTypes' => $roomTypes,
         ]);
@@ -325,10 +359,10 @@ class PublicController extends Controller
             'fullName' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
             'phone' => ['required', 'string', 'max:50'],
-            'checkIn' => ['required', 'date'],
-            'checkOut' => ['required', 'date', 'after:checkIn'],
-            'adults' => ['nullable', 'integer', 'min:1'],
-            'children' => ['nullable', 'integer', 'min:0'],
+            'checkIn' => ['required', 'date_format:Y-m-d', 'after_or_equal:today'],
+            'checkOut' => ['required', 'date_format:Y-m-d', 'after:checkIn'],
+            'adults' => ['nullable', 'integer', 'min:1', 'max:20'],
+            'children' => ['nullable', 'integer', 'min:0', 'max:20'],
             'notes' => ['nullable', 'string'],
         ]);
 
@@ -349,22 +383,22 @@ class PublicController extends Controller
                 ['user_id' => $user->id],
                 [
                     'id_proof_type' => 'PASSPORT',
-                    'id_proof_number' => 'ONLINE_' . strtoupper(Str::random(8)),
+                    'id_proof_number' => 'ONLINE_'.strtoupper(Str::random(8)),
                     'status' => 'ACTIVE',
                 ]
             );
 
             $room = null;
-            if (!empty($validated['roomId'])) {
+            if (! empty($validated['roomId'])) {
                 $room = Room::find($validated['roomId']);
-            } elseif (!empty($validated['roomTypeId'])) {
+            } elseif (! empty($validated['roomTypeId'])) {
                 $room = Room::where('room_type_id', $validated['roomTypeId'])
                     ->where('occupancy_status', OccupancyStatus::VACANT)
                     ->where('is_active', true)
                     ->first();
             }
 
-            if (!$room) {
+            if (! $room) {
                 $room = Room::where('occupancy_status', OccupancyStatus::VACANT)->where('is_active', true)->first();
             }
 
@@ -378,7 +412,7 @@ class PublicController extends Controller
             $totalAmount = $subtotal + $tax;
 
             $booking = Booking::create([
-                'booking_reference' => 'BK-' . strtoupper(Str::random(8)),
+                'booking_reference' => 'BK-'.strtoupper(Str::random(8)),
                 'customer_id' => $user->id,
                 'check_in' => $checkIn->toDateString(),
                 'check_out' => $checkOut->toDateString(),
@@ -407,7 +441,7 @@ class PublicController extends Controller
             ]);
 
             Invoice::create([
-                'invoice_number' => 'INV-' . strtoupper(Str::random(8)),
+                'invoice_number' => 'INV-'.strtoupper(Str::random(8)),
                 'booking_id' => $booking->id,
                 'customer_id' => $user->id,
                 'subtotal' => $subtotal,
@@ -418,7 +452,7 @@ class PublicController extends Controller
                 'due_date' => Carbon::now()->addDays(2)->toDateString(),
             ]);
 
-            if ($request->wantsJson() && !$request->header('X-Inertia')) {
+            if ($request->wantsJson() && ! $request->header('X-Inertia')) {
                 return response()->json([
                     'bookingId' => $booking->id,
                     'bookingReference' => $booking->booking_reference,
@@ -438,25 +472,60 @@ class PublicController extends Controller
             'guestEmail' => ['required', 'email', 'max:255'],
             'guestPhone' => ['required', 'string', 'max:50'],
             'roomId' => ['required', 'string'],
-            'checkInDate' => ['required', 'date', 'after_or_equal:today'],
-            'checkOutDate' => ['required', 'date', 'after:checkInDate'],
-            'adults' => ['required', 'integer', 'min:1'],
-            'children' => ['required', 'integer', 'min:0'],
+            'checkInDate' => ['required', 'date_format:Y-m-d', 'after_or_equal:today'],
+            'checkOutDate' => ['required', 'date_format:Y-m-d', 'after:checkInDate'],
+            'adults' => ['required', 'integer', 'min:1', 'max:20'],
+            'children' => ['required', 'integer', 'min:0', 'max:20'],
             'guests' => ['required', 'array', 'min:1'],
             'guests.*.fullName' => ['required', 'string', 'max:255'],
             'specialRequest' => ['nullable', 'string', 'max:2000'],
             'paymentMethod' => ['required', 'in:ONLINE'],
         ]);
+        abort_unless(
+            count($validated['guests']) === $validated['adults'] + $validated['children'],
+            422,
+            'Guest count must match the requested adults and children count.'
+        );
 
         $bookingResult = DB::transaction(function () use ($validated) {
+            $checkIn = Carbon::parse($validated['checkInDate'])->startOfDay();
+            $checkOut = Carbon::parse($validated['checkOutDate'])->startOfDay();
             $room = Room::query()
                 ->with('roomType')
                 ->lockForUpdate()
                 ->where('is_active', true)
-                ->where('occupancy_status', OccupancyStatus::VACANT->value)
+                ->where(function ($statuses) use ($checkIn) {
+                    $statuses->whereIn('occupancy_status', [
+                        OccupancyStatus::VACANT->value,
+                        OccupancyStatus::RESERVED->value,
+                    ])->orWhere(function ($occupied) use ($checkIn) {
+                        $occupied
+                            ->where('occupancy_status', OccupancyStatus::OCCUPIED->value)
+                            ->whereHas('bookingRooms.booking', fn ($bookings) => $bookings
+                                ->whereNotIn('status', [
+                                    BookingStatus::CANCELLED->value,
+                                    BookingStatus::NO_SHOW->value,
+                                    BookingStatus::CHECKED_OUT->value,
+                                ])
+                                ->where('check_out_date', '<=', $checkIn));
+                    });
+                })
                 ->findOrFail($validated['roomId']);
             $roomType = $room->roomType;
             abort_unless($roomType, 422, 'The selected room type is unavailable.');
+
+            $hasOverlappingBooking = BookingRoom::query()
+                ->where('assigned_room_id', $room->id)
+                ->whereHas('booking', fn ($bookings) => $bookings
+                    ->whereNotIn('status', [
+                        BookingStatus::CANCELLED->value,
+                        BookingStatus::NO_SHOW->value,
+                        BookingStatus::CHECKED_OUT->value,
+                    ])
+                    ->where('check_in_date', '<', $checkOut)
+                    ->where('check_out_date', '>', $checkIn))
+                ->exists();
+            abort_unless(! $hasOverlappingBooking, 422, 'The selected room is no longer available for these dates.');
 
             $guest = User::firstOrCreate(
                 ['email' => $validated['guestEmail']],
@@ -474,13 +543,11 @@ class PublicController extends Controller
             Customer::firstOrCreate(
                 ['user_id' => $guest->id],
                 [
-                    'id_proof_number' => 'ONLINE_' . strtoupper(Str::random(8)),
+                    'id_proof_number' => 'ONLINE_'.strtoupper(Str::random(8)),
                     'address' => '',
                 ]
             );
 
-            $checkIn = Carbon::parse($validated['checkInDate'])->startOfDay();
-            $checkOut = Carbon::parse($validated['checkOutDate'])->startOfDay();
             $nights = max(1, $checkIn->diffInDays($checkOut));
             $subtotal = (int) $roomType->base_price * $nights;
             $tax = (int) round($subtotal * 0.12);
@@ -488,7 +555,7 @@ class PublicController extends Controller
             $checkoutExpiresAt = now()->addMinutes(30);
 
             $booking = Booking::create([
-                'booking_reference' => 'BK-' . strtoupper(Str::random(8)),
+                'booking_reference' => 'BK-'.strtoupper(Str::random(8)),
                 'customer_id' => $guest->id,
                 'guest_name' => $validated['guestName'],
                 'guest_email' => $validated['guestEmail'],
@@ -523,7 +590,7 @@ class PublicController extends Controller
             }
 
             Invoice::create([
-                'invoice_number' => 'INV-' . strtoupper(Str::random(8)),
+                'invoice_number' => 'INV-'.strtoupper(Str::random(8)),
                 'booking_id' => $booking->id,
                 'customer_id' => $guest->id,
                 'subtotal' => $subtotal,
@@ -545,7 +612,7 @@ class PublicController extends Controller
             ];
         });
 
-        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+        if ($request->wantsJson() && ! $request->header('X-Inertia')) {
             return response()->json(['data' => $bookingResult], 201);
         }
 
@@ -561,7 +628,7 @@ class PublicController extends Controller
 
     public function amenitiesApi(Request $request)
     {
-        $amenities = Amenity::where('is_active', true)->get()->map(fn($a) => [
+        $amenities = Amenity::where('is_active', true)->get()->map(fn ($a) => [
             'id' => $a->id,
             'name' => $a->name,
             'icon' => $a->icon,

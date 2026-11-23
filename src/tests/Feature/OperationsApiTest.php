@@ -234,7 +234,7 @@ class OperationsApiTest extends TestCase
         $cust = Customer::with('user')->firstOrFail();
 
         // Search
-        $this->actingAs($this->admin)->getJson('/customers/search?q=' . substr($cust->user->email, 0, 5))
+        $this->actingAs($this->admin)->getJson('/customers/search?q='.substr($cust->user->email, 0, 5))
             ->assertOk()
             ->assertJsonFragment(['email' => $cust->user->email]);
 
@@ -331,12 +331,12 @@ class OperationsApiTest extends TestCase
     {
         $room = Room::with('roomType')
             ->where('occupancy_status', OccupancyStatus::VACANT->value)
-            ->whereHas('roomType', fn($query) => $query->where('max_guests', '>=', 1))
+            ->whereHas('roomType', fn ($query) => $query->where('max_guests', '>=', 1))
             ->firstOrFail();
         $customer = Customer::firstOrFail();
 
         $this->actingAs($this->admin)
-            ->getJson('/customers/search?q=' . urlencode($customer->user->full_name))
+            ->getJson('/customers/search?q='.urlencode($customer->user->full_name))
             ->assertOk()
             ->assertJsonFragment([
                 'id' => $customer->id,
@@ -352,12 +352,33 @@ class OperationsApiTest extends TestCase
             'children' => 0,
         ];
 
-        $this->getJson('/public/bookings/available-rooms?' . http_build_query($availabilityParams))
+        $this->getJson('/public/bookings/available-rooms?'.http_build_query($availabilityParams))
             ->assertOk()
             ->assertJsonFragment(['id' => $room->id]);
 
+        $sameDayParams = [
+            ...$availabilityParams,
+            'checkOutDate' => $checkIn,
+        ];
+        $this->getJson('/public/bookings/available-rooms?'.http_build_query($sameDayParams))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('checkOutDate');
+
+        $this->actingAs($this->admin)->postJson('/dashboard/bookings', [
+            ...$sameDayParams,
+            'customerId' => $customer->id,
+            'roomId' => $room->id,
+            'guests' => [[
+                'fullName' => 'Same Day Guest',
+                'age' => 30,
+                'gender' => 'MALE',
+            ]],
+            'paymentMethod' => PaymentMethod::CASH->value,
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors('checkOutDate');
+
         $this->actingAs($this->admin)
-            ->getJson('/bookings/available-rooms?' . http_build_query($availabilityParams))
+            ->getJson('/bookings/available-rooms?'.http_build_query($availabilityParams))
             ->assertOk()
             ->assertJsonStructure(['data' => ['*' => [
                 'id',
@@ -395,6 +416,8 @@ class OperationsApiTest extends TestCase
         $this->assertSame(OccupancyStatus::RESERVED, $room->fresh()->occupancy_status);
         $this->assertSame((int) round($booking->invoices->first()->subtotal * 0.18), $booking->invoices->first()->tax_amount);
 
+        $room->update(['occupancy_status' => OccupancyStatus::OCCUPIED->value]);
+
         $this->actingAs($this->admin)
             ->getJson("/bookings/{$booking->id}")
             ->assertOk()
@@ -403,10 +426,31 @@ class OperationsApiTest extends TestCase
             ->assertJsonPath('data.invoice.totalAmount', $booking->invoices->first()->total_amount);
 
         $remainingRoomIds = collect($this->actingAs($this->admin)
-            ->getJson('/bookings/available-rooms?' . http_build_query($availabilityParams))
+            ->getJson('/bookings/available-rooms?'.http_build_query($availabilityParams))
             ->assertOk()
             ->json('data'))->pluck('id');
         $this->assertFalse($remainingRoomIds->contains($room->id));
+
+        $afterCheckoutParams = [
+            ...$availabilityParams,
+            'checkInDate' => $checkOut,
+            'checkOutDate' => now()->addYears(2)->addDays(3)->toDateString(),
+        ];
+        $this->getJson('/public/bookings/available-rooms?'.http_build_query($afterCheckoutParams))
+            ->assertOk()
+            ->assertJsonFragment(['id' => $room->id]);
+
+        $this->actingAs($this->admin)->postJson('/dashboard/bookings', [
+            ...$afterCheckoutParams,
+            'customerId' => $customer->id,
+            'roomId' => $room->id,
+            'guests' => [[
+                'fullName' => 'Next Stay Guest',
+                'age' => 30,
+                'gender' => 'MALE',
+            ]],
+            'paymentMethod' => PaymentMethod::CASH->value,
+        ])->assertOk();
     }
 
     public function test_in_person_and_public_booking_flow(): void
@@ -450,12 +494,12 @@ class OperationsApiTest extends TestCase
         $this->actingAs($this->admin)
             ->get(route('dashboard.bookings'))
             ->assertOk()
-            ->assertInertia(fn(Assert $page) => $page
+            ->assertInertia(fn (Assert $page) => $page
                 ->has('stats', 4)
                 ->where('stats.0.value', number_format(Booking::count()))
                 ->where('stats.1.value', number_format(Booking::where('status', 'CONFIRMED')->count()))
                 ->where('stats.2.value', number_format(Booking::where('status', 'PENDING')->count()))
-                ->where('stats.3.value', '₹' . number_format(Booking::where('status', '!=', 'CANCELLED')->sum('total_amount')))
+                ->where('stats.3.value', '₹'.number_format(Booking::where('status', '!=', 'CANCELLED')->sum('total_amount')))
                 ->where('stats.1.link', '/dashboard/bookings?status=CONFIRMED'));
 
         $this->actingAs($this->admin)

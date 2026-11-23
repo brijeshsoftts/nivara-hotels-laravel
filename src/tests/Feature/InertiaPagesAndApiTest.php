@@ -2,16 +2,15 @@
 
 namespace Tests\Feature;
 
-use App\Enums\UserRole;
-use App\Enums\Category;
 use App\Enums\BookingStatus;
-use App\Enums\TaskStatus;
+use App\Enums\Category;
 use App\Enums\OccupancyStatus;
 use App\Enums\PaymentMethod;
+use App\Enums\TaskStatus;
+use App\Enums\UserRole;
 use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\HousekeepingTask;
-use App\Models\Invoice;
 use App\Models\Room;
 use App\Models\Staff;
 use App\Models\User;
@@ -35,27 +34,38 @@ class InertiaPagesAndApiTest extends TestCase
     {
         $this->get(route('home'))
             ->assertOk()
-            ->assertInertia(fn(Assert $page) => $page->component('public/Home'));
+            ->assertInertia(fn (Assert $page) => $page->component('public/Home'));
 
         $this->get(route('about'))
             ->assertOk()
-            ->assertInertia(fn(Assert $page) => $page->component('public/About'));
+            ->assertInertia(fn (Assert $page) => $page->component('public/About'));
 
         $this->get(route('rooms.index'))
             ->assertOk()
-            ->assertInertia(fn(Assert $page) => $page->component('public/Rooms'));
+            ->assertInertia(fn (Assert $page) => $page->component('public/Rooms'));
 
         $this->get(route('contact'))
             ->assertOk()
-            ->assertInertia(fn(Assert $page) => $page->component('public/Contact'));
+            ->assertInertia(fn (Assert $page) => $page->component('public/Contact'));
 
         $this->get(route('rooms.show', ['slug' => 'deluxe-room']))
             ->assertOk()
-            ->assertInertia(fn(Assert $page) => $page->component('public/room-details')->where('slug', 'deluxe-room'));
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('public/RoomDetails')
+                ->where('slug', 'deluxe-room')
+                ->has('room.availability'));
 
         $this->get(route('checkout'))
             ->assertOk()
-            ->assertInertia(fn(Assert $page) => $page->component('public/checkout'));
+            ->assertInertia(fn (Assert $page) => $page->component('public/Checkout'));
+
+        $this->get(route('rooms.book', ['slug' => 'deluxe-room']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('public/Checkout')
+                ->where('slug', 'deluxe-room')
+                ->where('selectedRoom.slug', 'deluxe-room')
+                ->has('selectedRoom.images'));
     }
 
     public function test_public_online_checkout_returns_booking_and_stores_only_token_hash(): void
@@ -75,7 +85,10 @@ class InertiaPagesAndApiTest extends TestCase
             'checkOutDate' => $checkOutDate,
             'adults' => 2,
             'children' => 0,
-            'guests' => [['fullName' => 'Public Checkout Guest']],
+            'guests' => [
+                ['fullName' => 'Public Checkout Guest'],
+                ['fullName' => 'Public Checkout Companion'],
+            ],
             'paymentMethod' => 'ONLINE',
         ])->assertRedirect(route('checkout'));
 
@@ -90,10 +103,51 @@ class InertiaPagesAndApiTest extends TestCase
 
         $this->get(route('checkout'))
             ->assertOk()
-            ->assertInertia(fn(Assert $page) => $page
+            ->assertInertia(fn (Assert $page) => $page
                 ->where('booking.id', $booking->id)
                 ->where('booking.bookingReference', $booking->booking_reference)
                 ->where('booking.checkoutToken', $checkoutToken));
+
+        $nextCheckoutToken = (string) Str::uuid();
+        $this->postJson(route('checkout.store'), [
+            'checkoutToken' => $nextCheckoutToken,
+            'guestName' => 'Next Stay Guest',
+            'guestEmail' => 'next-stay@example.com',
+            'guestPhone' => '+91 9888877777',
+            'roomId' => $room->id,
+            'checkInDate' => $checkOutDate,
+            'checkOutDate' => now()->addDays(4)->toDateString(),
+            'adults' => 1,
+            'children' => 0,
+            'guests' => [['fullName' => 'Next Stay Guest']],
+            'paymentMethod' => 'ONLINE',
+        ])->assertCreated();
+    }
+
+    public function test_public_online_checkout_rejects_same_day_stays(): void
+    {
+        $room = Room::where('occupancy_status', OccupancyStatus::VACANT->value)->firstOrFail();
+        $checkoutToken = (string) Str::uuid();
+        $sameDay = now()->addDay()->toDateString();
+
+        $this->postJson(route('checkout.store'), [
+            'checkoutToken' => $checkoutToken,
+            'guestName' => 'Same Day Guest',
+            'guestEmail' => 'same-day@example.com',
+            'guestPhone' => '+91 9888877777',
+            'roomId' => $room->id,
+            'checkInDate' => $sameDay,
+            'checkOutDate' => $sameDay,
+            'adults' => 1,
+            'children' => 0,
+            'guests' => [['fullName' => 'Same Day Guest']],
+            'paymentMethod' => 'ONLINE',
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors('checkOutDate');
+
+        $this->assertDatabaseMissing('bookings', [
+            'public_checkout_token_hash' => hash('sha256', $checkoutToken),
+        ]);
     }
 
     public function test_public_api_endpoints_return_seeded_data(): void
@@ -169,7 +223,7 @@ class InertiaPagesAndApiTest extends TestCase
             $this->actingAs($admin)
                 ->get(route($routeName))
                 ->assertOk()
-                ->assertInertia(fn(Assert $page) => $page->component(
+                ->assertInertia(fn (Assert $page) => $page->component(
                     $componentName,
                     $routeName !== 'dashboard.users'
                 ));
@@ -199,7 +253,7 @@ class InertiaPagesAndApiTest extends TestCase
         $this->actingAs($admin)
             ->get(route('dashboard.users'))
             ->assertOk()
-            ->assertInertia(fn(Assert $page) => $page
+            ->assertInertia(fn (Assert $page) => $page
                 ->component('protect/users', false)
                 ->has('stats', 4)
                 ->where('stats.0.label', 'Total Accounts')
@@ -216,10 +270,10 @@ class InertiaPagesAndApiTest extends TestCase
     public function test_staff_page_displays_live_stats_and_excludes_soft_deleted_staff(): void
     {
         $admin = User::where('role', UserRole::ADMIN->value)->firstOrFail();
-        $visibleStaff = Staff::whereHas('user', fn($query) => $query->whereNull('soft_deleted_at'));
+        $visibleStaff = Staff::whereHas('user', fn ($query) => $query->whereNull('soft_deleted_at'));
         $baselineTotal = (clone $visibleStaff)->count();
-        $baselineActive = (clone $visibleStaff)->whereHas('user', fn($query) => $query->where('is_active', true))->count();
-        $baselineInactive = (clone $visibleStaff)->whereHas('user', fn($query) => $query->where('is_active', false))->count();
+        $baselineActive = (clone $visibleStaff)->whereHas('user', fn ($query) => $query->where('is_active', true))->count();
+        $baselineInactive = (clone $visibleStaff)->whereHas('user', fn ($query) => $query->where('is_active', false))->count();
 
         $createStaff = function (Category $category, bool $isActive = true, bool $isDeleted = false): void {
             $user = User::factory()->create([
@@ -232,7 +286,7 @@ class InertiaPagesAndApiTest extends TestCase
                 'user_id' => $user->id,
                 'father_name' => 'Test Father',
                 'mother_name' => 'Test Mother',
-                'id_proof_number' => 'TEST-' . $user->id,
+                'id_proof_number' => 'TEST-'.$user->id,
                 'qualification' => 'Test qualification',
                 'experience' => '1 year',
                 'category' => $category->value,
@@ -245,13 +299,13 @@ class InertiaPagesAndApiTest extends TestCase
         $createStaff(Category::HOUSEKEEPER, false);
         $createStaff(Category::SECURITY_GUARD, false, true);
         $housekeeperTotal = Staff::where('category', Category::HOUSEKEEPER->value)
-            ->whereHas('user', fn($query) => $query->whereNull('soft_deleted_at'))
+            ->whereHas('user', fn ($query) => $query->whereNull('soft_deleted_at'))
             ->count();
 
         $this->actingAs($admin)
             ->get(route('dashboard.staff'))
             ->assertOk()
-            ->assertInertia(fn(Assert $page) => $page
+            ->assertInertia(fn (Assert $page) => $page
                 ->component('protect/staff/index')
                 ->has('stats', 4)
                 ->where('stats.0.label', 'Total Staff')
@@ -267,12 +321,12 @@ class InertiaPagesAndApiTest extends TestCase
 
         $this->actingAs($admin)
             ->get(route('dashboard.staff', ['isActive' => '0']))
-            ->assertInertia(fn(Assert $page) => $page
+            ->assertInertia(fn (Assert $page) => $page
                 ->where('staff.meta.total', $baselineInactive + 1));
 
         $this->actingAs($admin)
             ->get(route('dashboard.staff', ['category' => Category::HOUSEKEEPER->value]))
-            ->assertInertia(fn(Assert $page) => $page
+            ->assertInertia(fn (Assert $page) => $page
                 ->where('staff.meta.total', $housekeeperTotal));
 
         $this->actingAs($admin)
@@ -296,7 +350,7 @@ class InertiaPagesAndApiTest extends TestCase
         $this->actingAs($admin)
             ->get(route('dashboard.tasks'))
             ->assertOk()
-            ->assertInertia(fn(Assert $page) => $page
+            ->assertInertia(fn (Assert $page) => $page
                 ->component('protect/tasks/index')
                 ->has('stats', 4)
                 ->where('stats.0.value', number_format($pending + $inProgress + $completed))
@@ -337,7 +391,7 @@ class InertiaPagesAndApiTest extends TestCase
         $total = (clone $customerUsers)->count();
         $active = (clone $customerUsers)->where('is_active', true)->count();
         $withActiveBooking = (clone $customerUsers)
-            ->whereHas('bookings', fn($query) => $query->whereIn('status', $activeBookingStatuses))
+            ->whereHas('bookings', fn ($query) => $query->whereIn('status', $activeBookingStatuses))
             ->count();
         $newCustomers = (clone $customerUsers)
             ->where('created_at', '>=', now()->subDays(30))
@@ -346,7 +400,7 @@ class InertiaPagesAndApiTest extends TestCase
         $this->actingAs($admin)
             ->get(route('dashboard.customers'))
             ->assertOk()
-            ->assertInertia(fn(Assert $page) => $page
+            ->assertInertia(fn (Assert $page) => $page
                 ->component('protect/customers/index')
                 ->has('stats', 4)
                 ->where('stats.0.label', 'Total Customers')
@@ -366,8 +420,8 @@ class InertiaPagesAndApiTest extends TestCase
 
         $this->actingAs($admin)
             ->get(route('dashboard.customers', ['isActive' => '1']))
-            ->assertInertia(fn(Assert $page) => $page
-                ->where('customers.meta.total', Customer::whereHas('user', fn($query) => $query
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('customers.meta.total', Customer::whereHas('user', fn ($query) => $query
                     ->where('role', UserRole::CUSTOMER->value)
                     ->whereNull('soft_deleted_at')
                     ->where('is_active', true))
@@ -375,13 +429,13 @@ class InertiaPagesAndApiTest extends TestCase
 
         $this->actingAs($admin)
             ->get(route('dashboard.customers', ['hasActiveBooking' => '1']))
-            ->assertInertia(fn(Assert $page) => $page
+            ->assertInertia(fn (Assert $page) => $page
                 ->where('customers.meta.total', $withActiveBooking));
 
         $this->actingAs($admin)
             ->get(route('dashboard.customers', ['createdWithinDays' => '30']))
-            ->assertInertia(fn(Assert $page) => $page
-                ->where('customers.meta.total', Customer::whereHas('user', fn($query) => $query
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('customers.meta.total', Customer::whereHas('user', fn ($query) => $query
                     ->where('role', UserRole::CUSTOMER->value)
                     ->whereNull('soft_deleted_at')
                     ->where('created_at', '>=', now()->subDays(30)))

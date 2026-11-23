@@ -41,6 +41,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { HOTEL_DETAILS } from "@/constants/hotel";
+import { publicPageUrl } from "@/features/public/bookingPreferences";
 import { BookingBar } from "@/features/public/components/BookingBar";
 import { HoverText } from "@/features/public/components/hoverText";
 import { ImageMotion } from "@/features/public/components/ImageMotion";
@@ -52,7 +53,7 @@ import {
 import { testimonials } from "@/features/public/public.mock";
 import { Link, usePage } from "@inertiajs/react";
 
-import { ContactForm, LocationPanel } from "./Contact";
+import { ContactForm, LocationPanel } from "@/pages/public/Contact";
 
 export const sectionPaddingClassName = "py-16 md:py-24 lg:py-28";
 const heroImages = [
@@ -390,7 +391,7 @@ function FeaturedRoomsSection({ rooms: propRooms }: { rooms?: any[] } = {}) {
                     </div>
                     <Button
                         nativeButton={false}
-                        render={<Link href="/rooms" />}
+                        render={<Link href={publicPageUrl("/rooms")} />}
                         className="h-11"
                         variant="link"
                     >

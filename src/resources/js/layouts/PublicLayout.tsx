@@ -21,6 +21,7 @@ import { Separator } from "@/components/ui/separator";
 import { HOTEL_DETAILS } from "@/constants/hotel";
 import {
     getBookingPreferences,
+    publicPageUrl,
     saveBookingPreferences,
 } from "@/features/public/bookingPreferences";
 import { useAuth } from "@/hooks/useAuth";
@@ -48,7 +49,7 @@ export function Logo({
 }) {
     return (
         <Link
-            href={href ?? to}
+            href={publicPageUrl(href ?? to)}
             className={cn(
                 "flex items-center gap-3",
                 compact && "gap-2",
@@ -138,7 +139,7 @@ function Navbar() {
                             return (
                                 <Link
                                     key={item.href}
-                                    href={item.href}
+                                    href={publicPageUrl(item.href)}
                                     className={cn(
                                         "relative py-2 text-[13px] font-medium tracking-wide transition-colors duration-200",
                                         "after:absolute after:inset-x-0 after:-bottom-0.5 after:h-px after:origin-left after:bg-primary after:transition-transform after:duration-300",
@@ -178,7 +179,7 @@ function Navbar() {
                         ))}
                     <Button
                         nativeButton={false}
-                        render={<Link href="/rooms" />}
+                        render={<Link href={publicPageUrl("/rooms")} />}
                         className="h-11 rounded-lg px-5 font-semibold"
                         variant="default"
                     >
@@ -233,7 +234,7 @@ function Navbar() {
                                         <Link
                                             key={item.name}
                                             onClick={closeMenu}
-                                            href={item.href}
+                                            href={publicPageUrl(item.href)}
                                             className={cn(
                                                 "flex min-h-12 items-center justify-between border-b border-border px-1 text-base font-medium transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
                                                 isActive
@@ -301,7 +302,9 @@ function Navbar() {
                                             nativeButton={false}
                                             render={
                                                 <Link
-                                                    href="/rooms"
+                                                    href={publicPageUrl(
+                                                        "/rooms",
+                                                    )}
                                                     onClick={closeMenu}
                                                 />
                                             }
@@ -363,7 +366,7 @@ function Footer() {
                             {navLinks.map((link) => (
                                 <li key={link.href}>
                                     <Link
-                                        href={link.href}
+                                        href={publicPageUrl(link.href)}
                                         onClick={() =>
                                             window.scrollTo({
                                                 top: 0,
