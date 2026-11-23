@@ -80,7 +80,7 @@ class User extends Authenticatable
 
     public function assignedHousekeepingTasks(): HasMany
     {
-        return $this->hasMany(HousekeepingTask::class, 'assigned_to_id');
+        return $this->hasMany(HousekeepingTask::class, 'assigned_to');
     }
 
     public function createdHousekeepingTasks(): HasMany

@@ -6,10 +6,10 @@ import { StatusBadge } from "@/components/common/EnumBadges";
 import { IconBtn } from "@/components/common/IconBtn";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useListParams } from "@/hooks/useListParams";
 import { getInitials } from "@/lib/format";
@@ -23,176 +23,178 @@ import { UpdateStaffDialog } from "./UpdateStaffDialog";
 import { ViewStaffDetails } from "./ViewStaffDetails";
 
 const columns: ColumnDef<StaffItem>[] = [
-  {
-    key: "fullName",
-    header: "Staff Member",
-    cell: (staff) => (
-      <div className="flex items-center gap-3">
-        <Avatar>
-          <AvatarFallback>{getInitials(staff.fullName)}</AvatarFallback>
-        </Avatar>
+    {
+        key: "fullName",
+        header: "Staff Member",
+        cell: (staff) => (
+            <div className="flex items-center gap-3">
+                <Avatar>
+                    <AvatarFallback>
+                        {getInitials(staff.fullName)}
+                    </AvatarFallback>
+                </Avatar>
 
-        <div className="flex flex-col">
-          <span className="font-medium">{staff.fullName}</span>
-        </div>
-      </div>
-    ),
-  },
-  {
-    key: "email",
-    header: "Email",
+                <div className="flex flex-col">
+                    <span className="font-medium">{staff.fullName}</span>
+                </div>
+            </div>
+        ),
+    },
+    {
+        key: "email",
+        header: "Email",
 
-    cell: (staff) => (
-      <span className="text-muted-foreground">{staff.email}</span>
-    ),
-  },
-  {
-    key: "phone",
-    header: "Phone",
-    cell: (staff) => staff.phone || "—",
-  },
-  {
-    key: "category",
-    header: "Category",
-  },
+        cell: (staff) => (
+            <span className="text-muted-foreground">{staff.email}</span>
+        ),
+    },
+    {
+        key: "phone",
+        header: "Phone",
+        cell: (staff) => staff.phone || "—",
+    },
+    {
+        key: "category",
+        header: "Category",
+    },
 
-  {
-    key: "isActive",
-    header: "Status",
-    cell: (staff) => <StatusBadge value={staff.isActive} />,
-  },
+    {
+        key: "isActive",
+        header: "Status",
+        cell: (staff) => <StatusBadge value={staff.isActive} />,
+    },
 
-  {
-    key: "actions",
-    header: "Actions",
-    cell: (staff) => <ActionDropdownMenu staff={staff} />,
-  },
+    {
+        key: "actions",
+        header: "Actions",
+        cell: (staff) => <ActionDropdownMenu staff={staff} />,
+    },
 ];
 
 export function StaffTable() {
-  const { setSearch, setPage, params, setFilter } = useListParams();
-  const { data, isLoading, isError, refetch } = useStaffs(params);
+    const { setSearch, setPage, params, setFilter } = useListParams();
+    const { data, isLoading, isError, refetch } = useStaffs(params);
 
-  return (
-    <DataTable
-      title="Staff"
-      description="Manage and view staff information."
-      data={data?.data || []}
-      columns={columns}
-      searchPlaceholder="Search staff..."
-      searchableKeys={["fullName", "staffId", "email"]}
-      filters={[
-        {
-          key: "isActive",
-          label: "Status",
-          options: [
-            {
-              label: "Active",
-              value: true,
-            },
-            {
-              label: "Inactive",
-              value: false,
-            },
-          ],
-        },
-        {
-          key: "category",
-          label: "Category",
-          options: [
-            {
-              label: "Receptionist",
-              value: "Receptionist",
-            },
-            {
-              label: "Housekeeper",
-              value: "Housekeeper",
-            },
-          ],
-        },
-      ]}
-      onFilterChange={(key, value) => {
-        setFilter({ [key]: value });
-      }}
-      onSearchChange={(value) => {
-        setSearch(value);
-      }}
-      onPageChange={setPage}
-      pagination={data?.meta}
-      isLoading={isLoading}
-      isError={isError}
-      refetch={refetch}
-      errorMessage="Could not load staff. Please try again."
-      emptyMessage="No staff match your search or filters."
-      showPagination
-    />
-  );
+    return (
+        <DataTable
+            title="Staff"
+            description="Manage and view staff information."
+            data={data?.data || []}
+            columns={columns}
+            searchPlaceholder="Search staff..."
+            searchableKeys={["fullName", "staffId", "email"]}
+            filters={[
+                {
+                    key: "isActive",
+                    label: "Status",
+                    options: [
+                        {
+                            label: "Active",
+                            value: true,
+                        },
+                        {
+                            label: "Inactive",
+                            value: false,
+                        },
+                    ],
+                },
+                {
+                    key: "category",
+                    label: "Category",
+                    options: [
+                        {
+                            label: "Receptionist",
+                            value: "RECEPTIONIST",
+                        },
+                        {
+                            label: "Housekeeper",
+                            value: "HOUSEKEEPER",
+                        },
+                    ],
+                },
+            ]}
+            onFilterChange={(key, value) => {
+                setFilter({ [key]: value });
+            }}
+            onSearchChange={(value) => {
+                setSearch(value);
+            }}
+            onPageChange={setPage}
+            pagination={data?.meta}
+            isLoading={isLoading}
+            isError={isError}
+            refetch={refetch}
+            errorMessage="Could not load staff. Please try again."
+            emptyMessage="No staff match your search or filters."
+            showPagination
+        />
+    );
 }
 
 function ActionDropdownMenu({ staff }: { staff: StaffItem }) {
-  const [isUpdateModal, setIsUpdateModal] = useState(false);
-  const [isViewModal, setIsViewModal] = useState(false);
-  const { handleDelete, isDeleting } = useDeleteStaff(staff.id);
-  const { handleToggleStatus, isPending } = useUpdateStaffStatus(
-    staff.id,
-    staff.isActive
-  );
+    const [isUpdateModal, setIsUpdateModal] = useState(false);
+    const [isViewModal, setIsViewModal] = useState(false);
+    const { handleDelete, isDeleting } = useDeleteStaff(staff.id);
+    const { handleToggleStatus, isPending } = useUpdateStaffStatus(
+        staff.id,
+        staff.isActive,
+    );
 
-  return (
-    <>
-      <DropdownMenu>
-        <DropdownMenuTrigger>
-          <IconBtn
-            size="sm"
-            variant="ghost"
-            aria-label={`Actions for ${staff.fullName}`}
-          >
-            <EllipsisVertical />
-          </IconBtn>
-        </DropdownMenuTrigger>
+    return (
+        <>
+            <DropdownMenu>
+                <DropdownMenuTrigger>
+                    <IconBtn
+                        size="sm"
+                        variant="ghost"
+                        aria-label={`Actions for ${staff.fullName}`}
+                    >
+                        <EllipsisVertical />
+                    </IconBtn>
+                </DropdownMenuTrigger>
 
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => setIsViewModal(true)}>
-            <Eye className="mr-2 size-4" />
-            View
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={handleToggleStatus}
-            disabled={isPending || isDeleting}
-          >
-            <Power className="mr-2 size-4" />
-            {staff.isActive ? "Deactivate" : "Activate"}
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setIsUpdateModal(true)}>
-            <Pencil className="mr-2 size-4" />
-            Update
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            className="text-destructive"
-            onClick={handleDelete}
-            disabled={isDeleting}
-          >
-            <Trash2 className="mr-2 size-4" />
-            Delete
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+                <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setIsViewModal(true)}>
+                        <Eye className="mr-2 size-4" />
+                        View
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                        onClick={handleToggleStatus}
+                        disabled={isPending || isDeleting}
+                    >
+                        <Power className="mr-2 size-4" />
+                        {staff.isActive ? "Deactivate" : "Activate"}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setIsUpdateModal(true)}>
+                        <Pencil className="mr-2 size-4" />
+                        Update
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                        className="text-destructive"
+                        onClick={handleDelete}
+                        disabled={isDeleting}
+                    >
+                        <Trash2 className="mr-2 size-4" />
+                        Delete
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
 
-      {isUpdateModal && (
-        <UpdateStaffDialog
-          open={isUpdateModal}
-          onOpenChange={setIsUpdateModal}
-          id={staff.id}
-        />
-      )}
+            {isUpdateModal && (
+                <UpdateStaffDialog
+                    open={isUpdateModal}
+                    onOpenChange={setIsUpdateModal}
+                    id={staff.id}
+                />
+            )}
 
-      {isViewModal && (
-        <ViewStaffDetails
-          open={isViewModal}
-          onOpenChange={setIsViewModal}
-          id={staff.id}
-        />
-      )}
-    </>
-  );
+            {isViewModal && (
+                <ViewStaffDetails
+                    open={isViewModal}
+                    onOpenChange={setIsViewModal}
+                    id={staff.id}
+                />
+            )}
+        </>
+    );
 }

@@ -18,10 +18,15 @@ class StaffController extends Controller
     {
         $page = (int) $request->input('page', 1);
         $limit = (int) $request->input('limit', 10);
-        $query = Staff::with(['user', 'user.avatar'])->orderByDesc('created_at');
+        $query = Staff::with(['user', 'user.avatar'])
+            ->whereHas('user', fn($q) => $q->whereNull('soft_deleted_at'))
+            ->orderByDesc('created_at');
 
         if ($request->filled('category')) {
             $query->where('category', $request->input('category'));
+        }
+        if ($request->filled('isActive')) {
+            $query->whereHas('user', fn($q) => $q->where('is_active', $request->boolean('isActive')));
         }
         if ($request->filled('search')) {
             $s = $request->input('search');
@@ -49,41 +54,7 @@ class StaffController extends Controller
             ] : null,
         ]);
 
-        $stats = [
-            [
-                'id' => 'total-staff',
-                'title' => 'Total Staff',
-                'value' => (string) max(Staff::count(), 10),
-                'change' => '+5%',
-                'trend' => 'up',
-                'description' => 'Active team members',
-                'label' => 'Total Staff',
-                'link' => '/dashboard/staff',
-                'icon' => 'Users',
-            ],
-            [
-                'id' => 'receptionists',
-                'title' => 'Receptionists',
-                'value' => (string) max(Staff::where('category', Category::RECEPTIONIST->value)->count(), 3),
-                'change' => '0%',
-                'trend' => 'up',
-                'description' => 'Front desk team',
-                'label' => 'Receptionists',
-                'link' => '/dashboard/staff',
-                'icon' => 'UserCheck',
-            ],
-            [
-                'id' => 'housekeepers',
-                'title' => 'Housekeepers',
-                'value' => (string) max(Staff::where('category', Category::HOUSEKEEPER->value)->count(), 4),
-                'change' => '0%',
-                'trend' => 'up',
-                'description' => 'Floor operations team',
-                'label' => 'Housekeepers',
-                'link' => '/dashboard/staff',
-                'icon' => 'BrushCleaning',
-            ],
-        ];
+        $stats = $this->getStats();
 
         if ($request->wantsJson() && !$request->header('X-Inertia')) {
             return response()->json([
@@ -114,13 +85,72 @@ class StaffController extends Controller
 
     public function stats()
     {
-        return response()->json([
-            'data' => [
-                ['id' => 'total-staff', 'title' => 'Total Staff', 'value' => (string) max(Staff::count(), 10), 'change' => '+5%', 'trend' => 'up', 'description' => 'Active team members'],
-                ['id' => 'receptionists', 'title' => 'Receptionists', 'value' => (string) max(Staff::where('category', Category::RECEPTIONIST->value)->count(), 3), 'change' => '0%', 'trend' => 'up', 'description' => 'Front desk team'],
-                ['id' => 'housekeepers', 'title' => 'Housekeepers', 'value' => (string) max(Staff::where('category', Category::HOUSEKEEPER->value)->count(), 4), 'change' => '0%', 'trend' => 'up', 'description' => 'Floor operations team'],
+        return response()->json(['data' => $this->getStats()]);
+    }
+
+    private function getStats(): array
+    {
+        $visibleStaff = Staff::query()
+            ->whereHas('user', fn($query) => $query->whereNull('soft_deleted_at'));
+        $total = (clone $visibleStaff)->count();
+        $active = (clone $visibleStaff)
+            ->whereHas('user', fn($query) => $query->where('is_active', true))
+            ->count();
+        $inactive = (clone $visibleStaff)
+            ->whereHas('user', fn($query) => $query->where('is_active', false))
+            ->count();
+        $categoryCounts = (clone $visibleStaff)
+            ->selectRaw('category, COUNT(*) as aggregate')
+            ->groupBy('category')
+            ->pluck('aggregate', 'category');
+        $topCategory = collect(Category::cases())
+            ->map(fn(Category $category) => [
+                'category' => $category,
+                'count' => (int) $categoryCounts->get($category->value, 0),
+            ])
+            ->sortByDesc('count')
+            ->first();
+
+        return [
+            [
+                'id' => 'total-staff',
+                'label' => 'Total Staff',
+                'value' => number_format($total),
+                'link' => '/dashboard/staff',
+                'icon' => 'Users',
             ],
-        ]);
+            [
+                'id' => 'active-staff',
+                'label' => 'Active',
+                'value' => number_format($active),
+                'link' => '/dashboard/staff?isActive=1',
+                'icon' => 'UserCheck',
+            ],
+            [
+                'id' => 'inactive-staff',
+                'label' => 'Inactive',
+                'value' => number_format($inactive),
+                'link' => '/dashboard/staff?isActive=0',
+                'icon' => 'UserX',
+            ],
+            [
+                'id' => 'staff-' . strtolower($topCategory['category']->value),
+                'label' => $this->getCategoryLabel($topCategory['category']),
+                'value' => number_format($topCategory['count']),
+                'link' => '/dashboard/staff?category=' . $topCategory['category']->value,
+                'icon' => 'Users',
+            ],
+        ];
+    }
+
+    private function getCategoryLabel(Category $category): string
+    {
+        return match ($category) {
+            Category::RECEPTIONIST => 'Receptionists',
+            Category::HOUSEKEEPER => 'Housekeepers',
+            Category::SECURITY_GUARD => 'Security Guards',
+            Category::WAITER => 'Waiters',
+        };
     }
 
     public function store(Request $request)
@@ -173,20 +203,61 @@ class StaffController extends Controller
 
     public function show(string $id)
     {
-        $st = Staff::with(['user', 'user.avatar'])->findOrFail($id);
+        $st = Staff::with([
+            'user.avatar',
+            'user.assignedHousekeepingTasks.room',
+            'idProofImage',
+            'signatureImage',
+        ])
+            ->whereHas('user', fn($query) => $query->whereNull('soft_deleted_at'))
+            ->findOrFail($id);
+
         return response()->json([
             'data' => [
                 'id' => $st->id,
-                'userId' => $st->user_id,
-                'name' => $st->user?->name ?? 'Staff',
-                'fullName' => $st->user?->full_name ?? $st->user?->name ?? 'Staff',
-                'email' => $st->user?->email,
-                'phone' => $st->user?->phone,
+                'staffId' => $st->id,
                 'category' => $st->category instanceof \BackedEnum ? $st->category->value : (string) $st->category,
-                'employmentStatus' => $st->employment_status,
-                'joiningDate' => $st->joining_date?->toIso8601String(),
-                'salary' => $st->salary,
-                'isActive' => (bool) ($st->user?->is_active ?? true),
+                'fatherName' => $st->father_name,
+                'motherName' => $st->mother_name,
+                'idProofNumber' => $st->id_proof_number,
+                'qualification' => $st->qualification,
+                'experience' => $st->experience,
+                'emergencyContact' => $st->emergency_contact,
+                'address' => $st->address,
+                'createdAt' => $st->created_at?->toIso8601String(),
+                'idProofImage' => $st->idProofImage ? [
+                    'url' => $st->idProofImage->url,
+                    'altText' => $st->idProofImage->alt_text,
+                ] : null,
+                'signatureImage' => $st->signatureImage ? [
+                    'url' => $st->signatureImage->url,
+                    'altText' => $st->signatureImage->alt_text,
+                ] : null,
+                'user' => [
+                    'id' => $st->user->id,
+                    'fullName' => $st->user->full_name ?? $st->user->name,
+                    'email' => $st->user->email,
+                    'phone' => $st->user->phone,
+                    'isActive' => (bool) $st->user->is_active,
+                    'lastLoginAt' => $st->user->last_login_at?->toIso8601String(),
+                    'profileImage' => $st->user->avatar ? [
+                        'url' => $st->user->avatar->url,
+                        'altText' => $st->user->avatar->alt_text,
+                    ] : null,
+                ],
+                'assignedTasks' => $st->user->assignedHousekeepingTasks
+                    ->map(fn($task) => [
+                        'id' => $task->id,
+                        'taskType' => $task->task_type instanceof \BackedEnum ? $task->task_type->value : (string) $task->task_type,
+                        'status' => $task->status instanceof \BackedEnum ? $task->status->value : (string) $task->status,
+                        'scheduledDate' => $task->scheduled_date?->toIso8601String() ?? '',
+                        'room' => [
+                            'id' => $task->room?->id ?? '',
+                            'roomNumber' => $task->room?->room_number ?? '',
+                            'name' => $task->room?->name,
+                        ],
+                    ])
+                    ->values(),
             ]
         ]);
     }
@@ -251,4 +322,3 @@ class StaffController extends Controller
         return redirect()->back()->with('success', 'Staff member deleted successfully.');
     }
 }
-

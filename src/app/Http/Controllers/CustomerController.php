@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\BookingStatus;
 use App\Enums\UserRole;
 use App\Models\Customer;
 use App\Models\User;
@@ -13,11 +14,34 @@ use Inertia\Inertia;
 
 class CustomerController extends Controller
 {
+    private const ACTIVE_BOOKING_STATUSES = ['PENDING', 'CONFIRMED', 'CHECKED_IN'];
+
     public function index(Request $request)
     {
         $page = (int) $request->input('page', 1);
         $limit = (int) $request->input('limit', 10);
-        $query = Customer::with(['user', 'bookings'])->orderByDesc('created_at');
+        $query = Customer::with(['user.avatar', 'bookings'])
+            ->whereHas('user', fn($q) => $q
+                ->where('role', UserRole::CUSTOMER->value)
+                ->whereNull('soft_deleted_at'))
+            ->orderByDesc('created_at');
+
+        if ($request->filled('isActive')) {
+            $query->whereHas('user', fn($q) => $q->where('is_active', $request->boolean('isActive')));
+        }
+        if ($request->filled('hasActiveBooking')) {
+            $bookingFilter = fn($q) => $q->whereIn('status', self::ACTIVE_BOOKING_STATUSES);
+            $request->boolean('hasActiveBooking')
+                ? $query->whereHas('bookings', $bookingFilter)
+                : $query->whereDoesntHave('bookings', $bookingFilter);
+        }
+        if ($request->filled('createdWithinDays')) {
+            $days = filter_var($request->input('createdWithinDays'), FILTER_VALIDATE_INT);
+            if ($days !== false && $days > 0) {
+                $cutoff = now()->subDays(min($days, 3650));
+                $query->whereHas('user', fn($q) => $q->where('created_at', '>=', $cutoff));
+            }
+        }
 
         if ($request->filled('search')) {
             $s = $request->input('search');
@@ -44,33 +68,22 @@ class CustomerController extends Controller
             'country' => $c->country ?? 'India',
             'status' => $c->status,
             'totalBookings' => $c->bookings->count(),
+            'activeBooking' => $c->bookings->contains(fn($booking) => in_array(
+                $booking->status instanceof \BackedEnum ? $booking->status->value : (string) $booking->status,
+                self::ACTIVE_BOOKING_STATUSES,
+                true,
+            )),
+            'totalSpent' => $c->bookings->sum('total_amount'),
+            'lastLogin' => $c->user?->last_login_at?->toIso8601String(),
+            'isActive' => (bool) ($c->user?->is_active ?? false),
+            'profile' => $c->user?->avatar ? [
+                'url' => $c->user->avatar->url,
+                'altText' => $c->user->avatar->alt_text,
+            ] : null,
             'createdAt' => $c->created_at?->toIso8601String(),
         ]);
 
-        $stats = [
-            [
-                'id' => 'total-customers',
-                'title' => 'Registered Guests',
-                'value' => (string) max(Customer::count(), 5),
-                'change' => '+14%',
-                'trend' => 'up',
-                'description' => 'Guest accounts',
-                'label' => 'Registered Guests',
-                'link' => '/dashboard/customers',
-                'icon' => 'UserCheck',
-            ],
-            [
-                'id' => 'active-stays',
-                'title' => 'Active Bookings',
-                'value' => (string) max(Customer::has('bookings')->count(), 3),
-                'change' => '+8%',
-                'trend' => 'up',
-                'description' => 'Current or past bookings',
-                'label' => 'Active Bookings',
-                'link' => '/dashboard/bookings',
-                'icon' => 'CalendarCheck',
-            ],
-        ];
+        $stats = $this->getStats();
 
         if ($request->wantsJson() && !$request->header('X-Inertia')) {
             return response()->json([
@@ -95,18 +108,75 @@ class CustomerController extends Controller
                 ],
             ],
             'stats' => $stats,
-            'filters' => $request->only(['search', 'page', 'limit']),
+            'filters' => $request->only(['search', 'isActive', 'hasActiveBooking', 'createdWithinDays', 'page', 'limit']),
         ]);
     }
 
     public function stats()
     {
-        return response()->json([
-            'data' => [
-                ['id' => 'total-customers', 'title' => 'Registered Guests', 'value' => (string) max(Customer::count(), 5), 'change' => '+14%', 'trend' => 'up', 'description' => 'Guest accounts'],
-                ['id' => 'active-stays', 'title' => 'Active Bookings', 'value' => (string) max(Customer::has('bookings')->count(), 3), 'change' => '+8%', 'trend' => 'up', 'description' => 'Current or past bookings'],
+        return response()->json(['data' => $this->getStats()]);
+    }
+
+    private function getStats(): array
+    {
+        $customerQuery = fn() => User::where('role', UserRole::CUSTOMER->value)
+            ->whereNull('soft_deleted_at');
+        $activeBookingStatuses = [
+            BookingStatus::PENDING->value,
+            BookingStatus::CONFIRMED->value,
+            BookingStatus::CHECKED_IN->value,
+        ];
+        $total = $customerQuery()->count();
+        $active = $customerQuery()->where('is_active', true)->count();
+        $withActiveBooking = $customerQuery()
+            ->whereHas('bookings', fn($query) => $query->whereIn('status', $activeBookingStatuses))
+            ->count();
+        $newCustomers = $customerQuery()
+            ->where('created_at', '>=', now()->subDays(30))
+            ->count();
+
+        return [
+            [
+                'id' => 'total-customer',
+                'title' => 'Total Customers',
+                'label' => 'Total Customers',
+                'value' => number_format($total),
+                'description' => 'Registered customer accounts',
+                'tone' => 'gold',
+                'icon' => 'Users',
+                'link' => '/dashboard/customers',
             ],
-        ]);
+            [
+                'id' => 'active-customer',
+                'title' => 'Active Customers',
+                'label' => 'Active Customers',
+                'value' => number_format($active),
+                'description' => 'Accounts currently active',
+                'tone' => 'emerald',
+                'icon' => 'UserCheck',
+                'link' => '/dashboard/customers?isActive=1',
+            ],
+            [
+                'id' => 'customers-with-active-bookings',
+                'title' => 'With Active Bookings',
+                'label' => 'With Active Bookings',
+                'value' => number_format($withActiveBooking),
+                'description' => 'Pending, confirmed, or checked in',
+                'tone' => 'sky',
+                'icon' => 'CalendarCheck',
+                'link' => '/dashboard/customers?hasActiveBooking=1',
+            ],
+            [
+                'id' => 'new-customer',
+                'title' => 'New This Month',
+                'label' => 'New This Month',
+                'value' => number_format($newCustomers),
+                'description' => 'Joined in the last 30 days',
+                'tone' => 'violet',
+                'icon' => 'UserPlus',
+                'link' => '/dashboard/customers?createdWithinDays=30',
+            ],
+        ];
     }
 
     public function search(Request $request)
@@ -258,4 +328,3 @@ class CustomerController extends Controller
         return redirect()->back()->with('success', 'Customer deleted successfully.');
     }
 }
-

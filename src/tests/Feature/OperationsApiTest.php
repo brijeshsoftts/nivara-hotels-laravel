@@ -96,7 +96,11 @@ class OperationsApiTest extends TestCase
 
         $this->actingAs($this->admin)->getJson("/staff/{$staffId}")
             ->assertOk()
-            ->assertJsonPath('data.category', 'RECEPTIONIST');
+            ->assertJsonPath('data.category', 'RECEPTIONIST')
+            ->assertJsonPath('data.user.fullName', 'Front Desk Executive')
+            ->assertJsonPath('data.user.profileImage', null)
+            ->assertJsonPath('data.fatherName', 'Father Executive')
+            ->assertJsonPath('data.assignedTasks', []);
 
         $this->actingAs($this->admin)->patchJson("/staff/{$staffId}", [
             'experience' => '4 years',

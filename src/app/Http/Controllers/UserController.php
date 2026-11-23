@@ -14,10 +14,17 @@ class UserController extends Controller
     {
         $page = (int) $request->input('page', 1);
         $limit = (int) $request->input('limit', 10);
-        $query = User::with('avatar')->orderByDesc('created_at');
+        $managedRoles = [UserRole::MANAGER->value, UserRole::STAFF->value];
+        $query = User::with('avatar')
+            ->whereIn('role', $managedRoles)
+            ->whereNull('soft_deleted_at')
+            ->orderByDesc('created_at');
 
         if ($request->filled('role')) {
             $query->where('role', $request->input('role'));
+        }
+        if ($request->filled('isActive')) {
+            $query->where('is_active', $request->boolean('isActive'));
         }
         if ($request->filled('search')) {
             $s = $request->input('search');
@@ -43,41 +50,7 @@ class UserController extends Controller
             'createdAt' => $u->created_at?->toIso8601String(),
         ]);
 
-        $stats = [
-            [
-                'id' => 'total-users',
-                'title' => 'Total Users',
-                'value' => (string) User::count(),
-                'change' => '+10%',
-                'trend' => 'up',
-                'description' => 'System accounts',
-                'label' => 'Total Users',
-                'link' => '/dashboard/users',
-                'icon' => 'Users',
-            ],
-            [
-                'id' => 'active-users',
-                'title' => 'Active Users',
-                'value' => (string) User::where('is_active', true)->count(),
-                'change' => '+100%',
-                'trend' => 'up',
-                'description' => 'Operational accounts',
-                'label' => 'Active Users',
-                'link' => '/dashboard/users',
-                'icon' => 'UserCheck',
-            ],
-            [
-                'id' => 'staff-users',
-                'title' => 'Staff Accounts',
-                'value' => (string) User::where('role', UserRole::STAFF->value)->count(),
-                'change' => '0%',
-                'trend' => 'up',
-                'description' => 'Hotel workforce',
-                'label' => 'Staff Accounts',
-                'link' => '/dashboard/staff',
-                'icon' => 'UserRoundCog',
-            ],
-        ];
+        $stats = $this->getStats();
 
         if ($request->wantsJson() && !$request->header('X-Inertia')) {
             return response()->json([
@@ -91,7 +64,7 @@ class UserController extends Controller
             ]);
         }
 
-        return Inertia::render('protect/users/index', [
+        return Inertia::render('protect/users', [
             'users' => [
                 'data' => $users,
                 'meta' => [
@@ -108,13 +81,53 @@ class UserController extends Controller
 
     public function stats()
     {
-        return response()->json([
-            'data' => [
-                ['id' => 'total-users', 'title' => 'Total Users', 'value' => (string) User::count(), 'change' => '+10%', 'trend' => 'up', 'description' => 'System accounts'],
-                ['id' => 'active-users', 'title' => 'Active Users', 'value' => (string) User::where('is_active', true)->count(), 'change' => '+100%', 'trend' => 'up', 'description' => 'Operational accounts'],
-                ['id' => 'staff-users', 'title' => 'Staff Accounts', 'value' => (string) User::where('role', UserRole::STAFF->value)->count(), 'change' => '0%', 'trend' => 'up', 'description' => 'Hotel workforce'],
+        return response()->json(['data' => $this->getStats()]);
+    }
+
+    private function getStats(): array
+    {
+        $managedRoles = [UserRole::MANAGER->value, UserRole::STAFF->value];
+        $managerCount = User::where('role', UserRole::MANAGER->value)
+            ->whereNull('soft_deleted_at')
+            ->count();
+        $staffCount = User::where('role', UserRole::STAFF->value)
+            ->whereNull('soft_deleted_at')
+            ->count();
+        $inactiveCount = User::whereIn('role', $managedRoles)
+            ->where('is_active', false)
+            ->whereNull('soft_deleted_at')
+            ->count();
+
+        return [
+            [
+                'id' => 'total-accounts',
+                'label' => 'Total Accounts',
+                'value' => number_format($managerCount + $staffCount),
+                'link' => '/dashboard/users',
+                'icon' => 'Users',
             ],
-        ]);
+            [
+                'id' => 'manager-accounts',
+                'label' => 'Managers',
+                'value' => number_format($managerCount),
+                'link' => '/dashboard/users',
+                'icon' => 'UserCheck',
+            ],
+            [
+                'id' => 'staff-accounts',
+                'label' => 'Staff Accounts',
+                'value' => number_format($staffCount),
+                'link' => '/dashboard/users',
+                'icon' => 'UserPlus',
+            ],
+            [
+                'id' => 'inactive-accounts',
+                'label' => 'Inactive Accounts',
+                'value' => number_format($inactiveCount),
+                'link' => '/dashboard/users',
+                'icon' => 'UserX',
+            ],
+        ];
     }
 
     public function store(Request $request)
@@ -221,4 +234,3 @@ class UserController extends Controller
         return redirect()->back()->with('success', 'User deleted successfully.');
     }
 }
-
