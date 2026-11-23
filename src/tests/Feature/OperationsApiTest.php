@@ -110,6 +110,38 @@ class OperationsApiTest extends TestCase
         $this->actingAs($this->admin)->deleteJson("/staff/{$staffId}")->assertOk();
     }
 
+    public function test_task_status_transitions_update_timestamps_and_room_state(): void
+    {
+        $task = HousekeepingTask::with('room')->firstOrFail();
+        $room = $task->room;
+
+        $this->actingAs($this->admin)
+            ->patchJson("/dashboard/tasks/{$task->id}/status", [
+                'status' => 'IN_PROGRESS',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'IN_PROGRESS');
+
+        $this->assertNotNull($task->fresh()->started_at);
+        $this->assertSame(HousekeepingStatus::CLEANING, $room->fresh()->housekeeping_status);
+
+        $this->actingAs($this->admin)
+            ->patchJson("/dashboard/tasks/{$task->id}/status", [
+                'status' => 'COMPLETED',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'COMPLETED');
+
+        $this->assertNotNull($task->fresh()->completed_at);
+        $this->assertSame(HousekeepingStatus::CLEAN, $room->fresh()->housekeeping_status);
+
+        $this->actingAs($this->admin)
+            ->patchJson("/dashboard/tasks/{$task->id}/status", [
+                'status' => 'PENDING',
+            ])
+            ->assertStatus(422);
+    }
+
     public function test_customers_search_and_crud(): void
     {
         $cust = Customer::with('user')->firstOrFail();
@@ -210,7 +242,9 @@ class OperationsApiTest extends TestCase
 
     public function test_in_person_and_public_booking_flow(): void
     {
-        $room = Room::where('occupancy_status', OccupancyStatus::VACANT->value)->firstOrFail();
+        $room = Room::where('occupancy_status', OccupancyStatus::VACANT->value)
+            ->whereDoesntHave('housekeepingTasks')
+            ->firstOrFail();
         $customer = Customer::firstOrFail();
 
         // 1. In-person staff booking
@@ -276,7 +310,11 @@ class OperationsApiTest extends TestCase
         $task = HousekeepingTask::where('room_id', $room->id)->latest()->first();
         $this->assertNotNull($task);
 
-        // Complete the task and verify room cleanliness syncs to CLEAN
+        // Start and complete the task to verify room status synchronization.
+        $this->actingAs($this->admin)->patchJson("/tasks/{$task->id}/status", [
+            'status' => 'IN_PROGRESS',
+        ])->assertOk();
+
         $this->actingAs($this->admin)->patchJson("/tasks/{$task->id}/status", [
             'status' => 'COMPLETED',
         ])->assertOk();

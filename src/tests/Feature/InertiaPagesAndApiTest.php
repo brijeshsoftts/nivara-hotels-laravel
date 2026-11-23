@@ -5,7 +5,9 @@ namespace Tests\Feature;
 use App\Enums\UserRole;
 use App\Enums\Category;
 use App\Enums\BookingStatus;
+use App\Enums\TaskStatus;
 use App\Models\Customer;
+use App\Models\HousekeepingTask;
 use App\Models\Staff;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
@@ -237,6 +239,45 @@ class InertiaPagesAndApiTest extends TestCase
             ->assertJsonPath('data.2.value', number_format($baselineInactive + 1))
             ->assertJsonPath('data.3.label', 'Housekeepers')
             ->assertJsonPath('data.3.value', '3');
+    }
+
+    public function test_tasks_page_returns_live_stats_and_filterable_task_items(): void
+    {
+        $admin = User::where('role', UserRole::ADMIN->value)->firstOrFail();
+        $task = HousekeepingTask::with(['room', 'assignedTo'])->firstOrFail();
+        $pending = HousekeepingTask::where('status', TaskStatus::PENDING->value)->count();
+        $inProgress = HousekeepingTask::where('status', TaskStatus::IN_PROGRESS->value)->count();
+        $completed = HousekeepingTask::where('status', TaskStatus::COMPLETED->value)->count();
+
+        $this->actingAs($admin)
+            ->get(route('dashboard.tasks'))
+            ->assertOk()
+            ->assertInertia(fn(Assert $page) => $page
+                ->component('protect/tasks/index')
+                ->has('stats', 4)
+                ->where('stats.0.value', number_format($pending + $inProgress + $completed))
+                ->where('stats.1.value', number_format($pending))
+                ->where('stats.2.value', number_format($inProgress))
+                ->where('stats.3.value', number_format($completed))
+                ->where('stats.1.link', '/dashboard/tasks?status=PENDING')
+                ->where('tasks.data.0.id', $task->id)
+                ->where('tasks.data.0.room.id', $task->room_id)
+                ->where('tasks.data.0.assignee.id', $task->assigned_to)
+                ->has('tasks.data.0.startedAt')
+                ->has('tasks.data.0.completedAt'));
+
+        $this->actingAs($admin)
+            ->getJson('/tasks?status=PENDING&taskType=CLEANING')
+            ->assertOk()
+            ->assertJsonPath('meta.total', HousekeepingTask::where('status', TaskStatus::PENDING->value)
+                ->where('task_type', 'CLEANING')
+                ->count())
+            ->assertJsonPath('data.0.assignee.id', $task->assigned_to);
+
+        $this->actingAs($admin)
+            ->getJson('/tasks/stats')
+            ->assertOk()
+            ->assertJsonPath('data.0.value', number_format($pending + $inProgress + $completed));
     }
 
     public function test_customer_stats_filter_table_and_include_complete_customer_rows(): void
