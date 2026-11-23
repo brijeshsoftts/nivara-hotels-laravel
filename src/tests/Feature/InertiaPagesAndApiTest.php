@@ -6,12 +6,18 @@ use App\Enums\UserRole;
 use App\Enums\Category;
 use App\Enums\BookingStatus;
 use App\Enums\TaskStatus;
+use App\Enums\OccupancyStatus;
+use App\Enums\PaymentMethod;
+use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\HousekeepingTask;
+use App\Models\Invoice;
+use App\Models\Room;
 use App\Models\Staff;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -50,6 +56,44 @@ class InertiaPagesAndApiTest extends TestCase
         $this->get(route('checkout'))
             ->assertOk()
             ->assertInertia(fn(Assert $page) => $page->component('public/checkout'));
+    }
+
+    public function test_public_online_checkout_returns_booking_and_stores_only_token_hash(): void
+    {
+        $room = Room::where('occupancy_status', OccupancyStatus::VACANT->value)->firstOrFail();
+        $checkoutToken = (string) Str::uuid();
+        $checkInDate = now()->addDay()->toDateString();
+        $checkOutDate = now()->addDays(3)->toDateString();
+
+        $this->from(route('checkout'))->post(route('checkout.store'), [
+            'checkoutToken' => $checkoutToken,
+            'guestName' => 'Public Checkout Guest',
+            'guestEmail' => 'public-checkout@example.com',
+            'guestPhone' => '+91 9888877777',
+            'roomId' => $room->id,
+            'checkInDate' => $checkInDate,
+            'checkOutDate' => $checkOutDate,
+            'adults' => 2,
+            'children' => 0,
+            'guests' => [['fullName' => 'Public Checkout Guest']],
+            'paymentMethod' => 'ONLINE',
+        ])->assertRedirect(route('checkout'));
+
+        $booking = Booking::where('public_checkout_token_hash', hash('sha256', $checkoutToken))->firstOrFail();
+        $this->assertSame(PaymentMethod::ONLINE, $booking->payment_method);
+        $this->assertSame(BookingStatus::PENDING, $booking->status);
+        $this->assertNotSame($checkoutToken, $booking->public_checkout_token_hash);
+        $this->assertDatabaseHas('invoices', [
+            'booking_id' => $booking->id,
+            'status' => 'UNPAID',
+        ]);
+
+        $this->get(route('checkout'))
+            ->assertOk()
+            ->assertInertia(fn(Assert $page) => $page
+                ->where('booking.id', $booking->id)
+                ->where('booking.bookingReference', $booking->booking_reference)
+                ->where('booking.checkoutToken', $checkoutToken));
     }
 
     public function test_public_api_endpoints_return_seeded_data(): void

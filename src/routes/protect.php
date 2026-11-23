@@ -128,6 +128,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard/invoices', [InvoiceController::class, 'index'])->name('dashboard.invoices');
     Route::patch('/dashboard/invoices/{id}/cancel', [InvoiceController::class, 'cancel'])->name('dashboard.invoices.cancel');
     Route::get('/invoices/stats', [InvoiceController::class, 'stats'])->name('invoices.stats');
+    Route::post('/invoices/{id}/cancel', [InvoiceController::class, 'cancel'])->name('invoices.cancel.post');
     Route::patch('/invoices/{id}/cancel', [InvoiceController::class, 'cancel'])->name('invoices.cancel');
     Route::resource('invoices', InvoiceController::class);
 
@@ -135,9 +136,12 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard/payments', [PaymentController::class, 'index'])->name('dashboard.payments');
     Route::post('/dashboard/payments/cash', [PaymentController::class, 'storeCash'])->name('dashboard.payments.cash');
     Route::post('/dashboard/payments/qr', [PaymentController::class, 'storeQr'])->name('dashboard.payments.qr');
+    Route::post('/payments/orders', [PaymentController::class, 'createOrder'])->name('payments.orders');
+    Route::post('/payments/verify', [PaymentController::class, 'verifyPayment'])->name('payments.verify');
     Route::get('/payments/stats', [PaymentController::class, 'stats'])->name('payments.stats');
     Route::post('/payments/cash', [PaymentController::class, 'storeCash'])->name('payments.cash');
     Route::post('/payments/qr', [PaymentController::class, 'storeQr'])->name('payments.qr');
+    Route::post('/payments/{id}/refund', [PaymentController::class, 'refund'])->name('payments.refund');
     Route::resource('payments', PaymentController::class);
 
     // 12. Inquiries

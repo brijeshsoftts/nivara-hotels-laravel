@@ -28,17 +28,27 @@ export function useRazorpayPayment() {
   const paymentLock = useRef(false);
 
   const postJson = async (url: string, data: any) => {
+    const xsrfCookie = document.cookie
+      .split("; ")
+      .find((cookie) => cookie.startsWith("XSRF-TOKEN="))
+      ?.slice("XSRF-TOKEN=".length);
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "X-Requested-With": "XMLHttpRequest",
+    };
+    if (xsrfCookie)
+      headers["X-XSRF-TOKEN"] = decodeURIComponent(xsrfCookie);
+
     const res = await fetch(url, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        "X-Requested-With": "XMLHttpRequest",
-      },
+      headers,
       body: JSON.stringify(data),
     });
     if (!res.ok) {
-      const err = await res.json().catch(() => ({ message: "Request failed" }));
+      const err = await res
+        .json()
+        .catch(() => ({ message: "Request failed" }));
       throw err;
     }
     const json = await res.json();
@@ -48,7 +58,7 @@ export function useRazorpayPayment() {
   const reconcile = async (
     paymentId: string,
     context?: PaymentCheckoutContext,
-    quietPending = false
+    quietPending = false,
   ) => {
     try {
       let payment: any;
@@ -70,21 +80,24 @@ export function useRazorpayPayment() {
 
       const status = payment.paymentStatus;
       const bookingConfirmed =
-        !("bookingStatus" in payment) || payment.bookingStatus === "CONFIRMED";
+        !("bookingStatus" in payment) ||
+        payment.bookingStatus === "CONFIRMED";
       if (status === "COMPLETED" && bookingConfirmed) {
         toast.success(
           "bookingStatus" in payment
             ? "Booking Confirmed! Your reservation has been successfully confirmed."
-            : "Payment confirmed."
+            : "Payment confirmed.",
         );
       } else if (status === "COMPLETED") {
         toast.message("Verifying your booking. Please wait...");
       } else if (status === "FAILED") {
         toast.error(
-          "Payment Failed. Your payment could not be completed. Please try again."
+          "Payment Failed. Your payment could not be completed. Please try again.",
         );
       } else if (!quietPending) {
-        toast.message("Payment is still being confirmed. Check back shortly.");
+        toast.message(
+          "Payment is still being confirmed. Check back shortly.",
+        );
       }
     } catch (error) {
       notifyError(error);
@@ -94,7 +107,7 @@ export function useRazorpayPayment() {
   const startPayment = async (
     bookingId: string,
     bookingReference?: string,
-    context?: PaymentCheckoutContext
+    context?: PaymentCheckoutContext,
   ) => {
     if (scriptError) {
       toast.error("Checkout could not be loaded. Please try again.");
@@ -109,13 +122,13 @@ export function useRazorpayPayment() {
     try {
       const order = context?.checkoutToken
         ? await postJson("/payments/public/orders", {
-            bookingId,
-            checkoutToken: context.checkoutToken,
-          })
+          bookingId,
+          checkoutToken: context.checkoutToken,
+        })
         : await postJson("/payments/orders", {
-            bookingId,
-            paymentId: context?.paymentId,
-          });
+          bookingId,
+          paymentId: context?.paymentId,
+        });
 
       let verificationStarted = false;
       let failureHandled = false;
@@ -156,10 +169,13 @@ export function useRazorpayPayment() {
 
             const payment = context?.checkoutToken
               ? await postJson("/payments/public/verify", {
-                  ...verificationInput,
-                  checkoutToken: context.checkoutToken,
-                })
-              : await postJson("/payments/verify", verificationInput);
+                ...verificationInput,
+                checkoutToken: context.checkoutToken,
+              })
+              : await postJson(
+                "/payments/verify",
+                verificationInput,
+              );
 
             router.reload();
             context?.onStatus?.(payment);
@@ -172,17 +188,21 @@ export function useRazorpayPayment() {
               toast.success(
                 "bookingStatus" in payment
                   ? "Booking Confirmed! Your reservation has been successfully confirmed."
-                  : "Payment confirmed."
+                  : "Payment confirmed.",
               );
             } else if (status === "COMPLETED") {
-              toast.message("Verifying your booking. Please wait...");
+              toast.message(
+                "Verifying your booking. Please wait...",
+              );
             } else {
-              toast.message("Verifying your payment. Please wait...");
+              toast.message(
+                "Verifying your payment. Please wait...",
+              );
             }
           } catch {
             context?.onVerificationFailed?.();
             toast.error(
-              "Payment Verification Failed. We couldn't verify your payment. Please contact support if money was deducted."
+              "Payment Verification Failed. We couldn't verify your payment. Please contact support if money was deducted.",
             );
             await reconcile(order.paymentId, context, true);
           } finally {
@@ -196,7 +216,7 @@ export function useRazorpayPayment() {
         failureHandled = true;
         context?.onFailed?.();
         toast.error(
-          "Payment Failed. Your payment could not be completed. Please try again."
+          "Payment Failed. Your payment could not be completed. Please try again.",
         );
         void reconcile(order.paymentId, context, true);
       });

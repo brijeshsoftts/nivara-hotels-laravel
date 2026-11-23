@@ -5,19 +5,24 @@ namespace Tests\Feature;
 use App\Enums\HousekeepingStatus;
 use App\Enums\InvoiceStatus;
 use App\Enums\OccupancyStatus;
+use App\Enums\PaymentMethod;
+use App\Enums\PaymentStatus;
 use App\Enums\UserRole;
 use App\Models\Amenity;
 use App\Models\Booking;
+use App\Models\BookingRoom;
 use App\Models\Customer;
 use App\Models\HousekeepingTask;
 use App\Models\Invoice;
 use App\Models\Issue;
+use App\Models\Payment;
 use App\Models\Room;
 use App\Models\RoomType;
 use App\Models\Staff;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -419,8 +424,15 @@ class OperationsApiTest extends TestCase
             'check_out_date' => now()->addDays(2),
             'total_guests' => 2,
             'total_amount' => 5000,
+            'payment_method' => PaymentMethod::CASH->value,
             'status' => 'CONFIRMED',
             'booked_at' => now(),
+        ]);
+        BookingRoom::create([
+            'booking_id' => $booking->id,
+            'room_type_id' => $room->room_type_id,
+            'assigned_room_id' => $room->id,
+            'price_per_night' => 2500,
         ]);
 
         $inv = Invoice::create([
@@ -438,15 +450,178 @@ class OperationsApiTest extends TestCase
         // Cash payment recording
         $payRes = $this->actingAs($this->admin)->postJson('/payments/cash', [
             'invoiceId' => $inv->id,
-            'amount' => 5600,
         ]);
-        $payRes->assertOk()->assertJsonPath('data.status', 'COMPLETED');
+        $payRes->assertCreated()
+            ->assertJsonPath('data.payment.paymentStatus', 'COMPLETED')
+            ->assertJsonPath('data.payment.paymentMethod', 'CASH')
+            ->assertJsonPath('data.booking.balance', 0);
 
         // Invoice should now be PAID
         $this->assertEquals(InvoiceStatus::PAID, Invoice::find($inv->id)->status);
 
-        // Payment stats
-        $this->actingAs($this->admin)->getJson('/payments/stats')->assertOk();
+        $this->actingAs($this->admin)->getJson('/payments')
+            ->assertOk()
+            ->assertJsonStructure([
+                'data' => ['*' => [
+                    'id',
+                    'bookingId',
+                    'paymentReference',
+                    'transactionId',
+                    'invoiceNumber',
+                    'bookingReference',
+                    'customerName',
+                    'paymentMethod',
+                    'paymentStatus',
+                    'recordedByName',
+                ]],
+                'meta' => ['total', 'page', 'limit', 'totalPages'],
+            ]);
+        $this->actingAs($this->admin)->getJson('/payments/stats')
+            ->assertOk()
+            ->assertJsonCount(4, 'data');
+
+        $qrBooking = Booking::create([
+            'booking_reference' => 'BK-TEST-QR-1',
+            'customer_id' => $customer->user_id,
+            'guest_name' => 'QR Test Guest',
+            'guest_email' => 'qrguest@example.com',
+            'guest_phone' => '+91 9876543210',
+            'check_in_date' => now(),
+            'check_out_date' => now()->addDays(2),
+            'total_guests' => 2,
+            'total_amount' => 3000,
+            'payment_method' => PaymentMethod::ONLINE->value,
+            'status' => 'CONFIRMED',
+            'booked_at' => now(),
+        ]);
+        BookingRoom::create([
+            'booking_id' => $qrBooking->id,
+            'room_type_id' => $room->room_type_id,
+            'assigned_room_id' => $room->id,
+            'price_per_night' => 1500,
+        ]);
+        $qrInvoice = Invoice::create([
+            'invoice_number' => 'INV-TEST-QR-1',
+            'booking_id' => $qrBooking->id,
+            'customer_id' => $customer->user_id,
+            'subtotal' => 3000,
+            'tax_amount' => 0,
+            'discount_amount' => 0,
+            'total_amount' => 3000,
+            'status' => 'UNPAID',
+            'issued_at' => now(),
+        ]);
+        $qrResponse = $this->actingAs($this->admin)->postJson('/payments/qr', [
+            'invoiceId' => $qrInvoice->id,
+            'transactionId' => 'UPI-TEST-REFERENCE-001',
+            'amount' => 3000,
+        ]);
+        $qrResponse->assertCreated()
+            ->assertJsonPath('data.payment.paymentStatus', 'COMPLETED')
+            ->assertJsonPath('data.payment.paymentMethod', 'ONLINE')
+            ->assertJsonPath('data.payment.amount', 3000);
+        $this->assertEquals(InvoiceStatus::PAID, $qrInvoice->fresh()->status);
+    }
+
+    public function test_online_payment_requires_gateway_verification_before_settlement(): void
+    {
+        $customer = Customer::with('user')->firstOrFail();
+        $room = Room::firstOrFail();
+        $booking = Booking::create([
+            'booking_reference' => 'BK-TEST-ONLINE-1',
+            'customer_id' => $customer->user_id,
+            'guest_name' => 'Online Test Guest',
+            'guest_email' => 'onlineguest@example.com',
+            'guest_phone' => '+91 9876543210',
+            'check_in_date' => now(),
+            'check_out_date' => now()->addDays(2),
+            'total_guests' => 2,
+            'total_amount' => 3500,
+            'payment_method' => PaymentMethod::ONLINE->value,
+            'status' => 'CONFIRMED',
+            'booked_at' => now(),
+        ]);
+        BookingRoom::create([
+            'booking_id' => $booking->id,
+            'room_type_id' => $room->room_type_id,
+            'assigned_room_id' => $room->id,
+            'price_per_night' => 1750,
+        ]);
+        $invoice = Invoice::create([
+            'invoice_number' => 'INV-TEST-ONLINE-1',
+            'booking_id' => $booking->id,
+            'customer_id' => $customer->user_id,
+            'subtotal' => 3500,
+            'tax_amount' => 0,
+            'discount_amount' => 0,
+            'total_amount' => 3500,
+            'status' => 'UNPAID',
+            'issued_at' => now(),
+        ]);
+
+        config([
+            'services.razorpay.key_id' => 'rzp_test_key',
+            'services.razorpay.key_secret' => 'test-secret',
+            'services.razorpay.webhook_secret' => 'webhook-secret',
+        ]);
+        Http::fake([
+            'https://api.razorpay.com/v1/orders' => Http::response([
+                'id' => 'order_test_001',
+                'amount' => 350000,
+                'currency' => 'INR',
+            ]),
+            'https://api.razorpay.com/v1/payments/pay_test_001' => Http::response([
+                'id' => 'pay_test_001',
+                'order_id' => 'order_test_001',
+                'amount' => 350000,
+                'currency' => 'INR',
+                'status' => 'captured',
+                'captured' => true,
+                'created_at' => now()->timestamp,
+            ]),
+        ]);
+
+        $order = $this->actingAs($this->admin)->postJson('/payments/orders', [
+            'bookingId' => $booking->id,
+        ]);
+        $order->assertCreated()
+            ->assertJsonPath('data.orderId', 'order_test_001')
+            ->assertJsonPath('data.amount', 350000)
+            ->assertJsonPath('data.currency', 'INR');
+
+        $paymentId = $order->json('data.paymentId');
+        $signature = hash_hmac('sha256', 'order_test_001|pay_test_001', 'test-secret');
+        $this->actingAs($this->admin)->postJson('/payments/verify', [
+            'paymentId' => $paymentId,
+            'razorpayPaymentId' => 'pay_test_001',
+            'razorpayOrderId' => 'order_test_001',
+            'razorpaySignature' => $signature,
+        ])->assertOk()->assertJsonPath('data.paymentStatus', 'COMPLETED');
+
+        $this->assertSame(PaymentStatus::COMPLETED, Payment::findOrFail($paymentId)->payment_status);
+        $this->assertSame(InvoiceStatus::PAID, $invoice->fresh()->status);
+
+        $webhookBody = json_encode([
+            'event' => 'payment.captured',
+            'payload' => [
+                'payment' => [
+                    'entity' => [
+                        'id' => 'pay_test_001',
+                        'order_id' => 'order_test_001',
+                        'amount' => 350000,
+                        'currency' => 'INR',
+                        'status' => 'captured',
+                        'captured' => true,
+                    ],
+                ],
+            ],
+        ], JSON_THROW_ON_ERROR);
+        $this->call('POST', '/payments/webhook', [], [], [], [
+            'CONTENT_TYPE' => 'application/json',
+            'HTTP_X_RAZORPAY_SIGNATURE' => hash_hmac('sha256', $webhookBody, 'webhook-secret'),
+            'HTTP_X_RAZORPAY_EVENT_ID' => 'evt_test_001',
+        ], $webhookBody)->assertOk();
+        $this->assertDatabaseHas('payment_webhook_events', ['event_id' => 'evt_test_001']);
     }
 
     public function test_dashboard_and_analytics_metrics(): void

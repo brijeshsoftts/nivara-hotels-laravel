@@ -1,7 +1,15 @@
 <?php
 
 use App\Http\Controllers\PublicController;
+use App\Http\Controllers\PaymentController;
 use Illuminate\Support\Facades\Route;
+
+Route::post('/payments/public/orders', [PaymentController::class, 'createPublicOrder'])->name('payments.public.orders');
+Route::post('/payments/public/verify', [PaymentController::class, 'verifyPublicPayment'])->name('payments.public.verify');
+Route::post('/payments/public/status', [PaymentController::class, 'publicPaymentStatus'])->name('payments.public.status');
+Route::post('/payments/webhook', [PaymentController::class, 'webhook'])
+    ->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class)
+    ->name('payments.webhook');
 
 Route::controller(PublicController::class)->group(function () {
     Route::get('/', 'home')->name('home');

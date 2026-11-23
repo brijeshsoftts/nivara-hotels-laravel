@@ -1,5 +1,6 @@
 import { formatDate } from "date-fns";
 import { EllipsisVertical, Eye, RefreshCcw } from "lucide-react";
+import { useState } from "react";
 
 import { type ColumnDef, DataTable } from "@/components/common/DataTable";
 import {
@@ -24,6 +25,7 @@ import type { CustomerPayment, PaymentItem } from "../payments.types";
 
 import { filters } from "./ManagementPayments";
 import { PaymentDownload } from "./PaymentDownload";
+import { ViewPaymentDetails } from "./ViewPaymentDetails";
 
 function Stats() {
   const { data, isLoading, isError } = usePaymentsStats();
@@ -101,7 +103,11 @@ function PaymentsTable() {
       data={items}
       columns={columns}
       searchPlaceholder="Search payment, booking, or customer..."
-      searchableKeys={["paymentReference", "bookingReference", "customerName"]}
+      searchableKeys={[
+        "paymentReference",
+        "bookingReference",
+        "customerName",
+      ]}
       filters={filters}
       onFilterChange={(key, value) => setFilter({ [key]: value })}
       onSearchChange={setSearch}
@@ -119,6 +125,7 @@ function PaymentsTable() {
 
 function ActionDropdownMenu({ payment }: { payment: CustomerPayment }) {
   const { startPayment, isPending } = useRazorpayPayment();
+  const [isViewOpen, setIsViewOpen] = useState(false);
   const receipt: PaymentItem = {
     id: payment.id,
     bookingId: payment.bookingId,
@@ -148,11 +155,8 @@ function ActionDropdownMenu({ payment }: { payment: CustomerPayment }) {
             <EllipsisVertical />
           </IconBtn>
         </DropdownMenuTrigger>
-        <DropdownMenuContent
-          align="end"
-          className=" "
-        >
-          <DropdownMenuItem>
+        <DropdownMenuContent align="end" className=" ">
+          <DropdownMenuItem onClick={() => setIsViewOpen(true)}>
             <Eye />
             View
           </DropdownMenuItem>
@@ -160,7 +164,10 @@ function ActionDropdownMenu({ payment }: { payment: CustomerPayment }) {
             <DropdownMenuItem
               disabled={isPending}
               onClick={() =>
-                void startPayment(payment.bookingId, payment.bookingReference)
+                void startPayment(
+                  payment.bookingId,
+                  payment.bookingReference,
+                )
               }
             >
               <RefreshCcw />
@@ -172,6 +179,11 @@ function ActionDropdownMenu({ payment }: { payment: CustomerPayment }) {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      <ViewPaymentDetails
+        payment={receipt}
+        open={isViewOpen}
+        onOpenChange={setIsViewOpen}
+      />
     </>
   );
 }

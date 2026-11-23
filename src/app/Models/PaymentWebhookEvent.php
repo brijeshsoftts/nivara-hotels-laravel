@@ -4,6 +4,8 @@ namespace App\Models;
 
 class PaymentWebhookEvent extends Model
 {
+    public $timestamps = false;
+
     protected $table = 'payment_webhook_events';
 
     protected $guarded = [];

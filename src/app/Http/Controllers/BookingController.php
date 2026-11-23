@@ -6,6 +6,7 @@ use App\Enums\BookingStatus;
 use App\Enums\HousekeepingStatus;
 use App\Enums\InvoiceStatus;
 use App\Enums\OccupancyStatus;
+use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Enums\TaskStatus;
 use App\Enums\TaskType;
@@ -25,6 +26,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class BookingController extends Controller
@@ -261,7 +263,12 @@ class BookingController extends Controller
 
     public function store(Request $request)
     {
-        return DB::transaction(function () use ($request) {
+        $validated = $request->validate([
+            'paymentMethod' => ['sometimes', Rule::enum(PaymentMethod::class)],
+        ]);
+        $paymentMethod = $validated['paymentMethod'] ?? PaymentMethod::CASH->value;
+
+        return DB::transaction(function () use ($request, $paymentMethod) {
             $ref = 'BK-' . strtoupper(Str::random(8));
             $checkInRaw = $request->input('checkInDate') ?? $request->input('checkIn');
             $checkOutRaw = $request->input('checkOutDate') ?? $request->input('checkOut');
@@ -306,7 +313,10 @@ class BookingController extends Controller
                 'check_out_date' => $checkOut,
                 'total_guests' => (int) ($request->input('totalGuests') ?? $request->input('adults', 1)),
                 'total_amount' => 0,
-                'status' => BookingStatus::CONFIRMED->value,
+                'payment_method' => $paymentMethod,
+                'status' => $paymentMethod === PaymentMethod::ONLINE->value
+                    ? BookingStatus::PENDING->value
+                    : BookingStatus::CONFIRMED->value,
                 'booked_at' => Carbon::now(),
             ]);
 

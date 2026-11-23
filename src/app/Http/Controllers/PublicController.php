@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\BookingStatus;
 use App\Enums\InvoiceStatus;
 use App\Enums\OccupancyStatus;
+use App\Enums\PaymentMethod;
 use App\Enums\UserRole;
 use App\Models\Amenity;
 use App\Models\Booking;
@@ -314,6 +315,10 @@ class PublicController extends Controller
 
     public function storeCheckout(Request $request)
     {
+        if ($request->filled('checkoutToken')) {
+            return $this->storePublicPaymentBooking($request);
+        }
+
         $validated = $request->validate([
             'roomTypeId' => ['nullable', 'string'],
             'roomId' => ['nullable', 'string'],
@@ -423,6 +428,130 @@ class PublicController extends Controller
 
             return redirect()->route('rooms')->with('success', "Booking {$booking->booking_reference} confirmed successfully!");
         });
+    }
+
+    private function storePublicPaymentBooking(Request $request)
+    {
+        $validated = $request->validate([
+            'checkoutToken' => ['required', 'uuid'],
+            'guestName' => ['required', 'string', 'max:255'],
+            'guestEmail' => ['required', 'email', 'max:255'],
+            'guestPhone' => ['required', 'string', 'max:50'],
+            'roomId' => ['required', 'string'],
+            'checkInDate' => ['required', 'date', 'after_or_equal:today'],
+            'checkOutDate' => ['required', 'date', 'after:checkInDate'],
+            'adults' => ['required', 'integer', 'min:1'],
+            'children' => ['required', 'integer', 'min:0'],
+            'guests' => ['required', 'array', 'min:1'],
+            'guests.*.fullName' => ['required', 'string', 'max:255'],
+            'specialRequest' => ['nullable', 'string', 'max:2000'],
+            'paymentMethod' => ['required', 'in:ONLINE'],
+        ]);
+
+        $bookingResult = DB::transaction(function () use ($validated) {
+            $room = Room::query()
+                ->with('roomType')
+                ->lockForUpdate()
+                ->where('is_active', true)
+                ->where('occupancy_status', OccupancyStatus::VACANT->value)
+                ->findOrFail($validated['roomId']);
+            $roomType = $room->roomType;
+            abort_unless($roomType, 422, 'The selected room type is unavailable.');
+
+            $guest = User::firstOrCreate(
+                ['email' => $validated['guestEmail']],
+                [
+                    'name' => $validated['guestName'],
+                    'full_name' => $validated['guestName'],
+                    'phone' => $validated['guestPhone'],
+                    'role' => UserRole::CUSTOMER->value,
+                    'password' => Hash::make(Str::random(32)),
+                    'is_active' => true,
+                ]
+            );
+            abort_unless($guest->role === UserRole::CUSTOMER->value, 422, 'This email address cannot be used for a guest booking.');
+
+            Customer::firstOrCreate(
+                ['user_id' => $guest->id],
+                [
+                    'id_proof_number' => 'ONLINE_' . strtoupper(Str::random(8)),
+                    'address' => '',
+                ]
+            );
+
+            $checkIn = Carbon::parse($validated['checkInDate'])->startOfDay();
+            $checkOut = Carbon::parse($validated['checkOutDate'])->startOfDay();
+            $nights = max(1, $checkIn->diffInDays($checkOut));
+            $subtotal = (int) $roomType->base_price * $nights;
+            $tax = (int) round($subtotal * 0.12);
+            $totalAmount = $subtotal + $tax;
+            $checkoutExpiresAt = now()->addMinutes(30);
+
+            $booking = Booking::create([
+                'booking_reference' => 'BK-' . strtoupper(Str::random(8)),
+                'customer_id' => $guest->id,
+                'guest_name' => $validated['guestName'],
+                'guest_email' => $validated['guestEmail'],
+                'guest_phone' => $validated['guestPhone'],
+                'check_in_date' => $checkIn,
+                'check_out_date' => $checkOut,
+                'total_guests' => $validated['adults'] + $validated['children'],
+                'total_amount' => $totalAmount,
+                'payment_method' => PaymentMethod::ONLINE->value,
+                'special_request' => $validated['specialRequest'] ?? null,
+                'status' => BookingStatus::PENDING->value,
+                'booked_at' => now(),
+                'public_checkout_token_hash' => hash('sha256', $validated['checkoutToken']),
+                'checkout_expires_at' => $checkoutExpiresAt,
+            ]);
+
+            BookingRoom::create([
+                'booking_id' => $booking->id,
+                'room_type_id' => $roomType->id,
+                'assigned_room_id' => $room->id,
+                'price_per_night' => (int) $roomType->base_price,
+            ]);
+
+            foreach ($validated['guests'] as $index => $bookingGuest) {
+                BookingGuest::create([
+                    'booking_id' => $booking->id,
+                    'full_name' => $bookingGuest['fullName'],
+                    'age' => null,
+                    'gender' => null,
+                    'id_proof_number' => null,
+                ]);
+            }
+
+            Invoice::create([
+                'invoice_number' => 'INV-' . strtoupper(Str::random(8)),
+                'booking_id' => $booking->id,
+                'customer_id' => $guest->id,
+                'subtotal' => $subtotal,
+                'tax_amount' => $tax,
+                'discount_amount' => 0,
+                'total_amount' => $totalAmount,
+                'status' => InvoiceStatus::UNPAID->value,
+                'issued_at' => now(),
+            ]);
+
+            $room->update(['occupancy_status' => OccupancyStatus::OCCUPIED->value]);
+
+            return [
+                'id' => $booking->id,
+                'bookingReference' => $booking->booking_reference,
+                'totalAmount' => $totalAmount,
+                'checkoutExpiresAt' => $checkoutExpiresAt->toIso8601String(),
+                'checkoutToken' => $validated['checkoutToken'],
+            ];
+        });
+
+        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+            return response()->json(['data' => $bookingResult], 201);
+        }
+
+        return redirect()->back()
+            ->with('booking', $bookingResult)
+            ->with('success', 'Reservation created. Complete payment to confirm your booking.');
     }
 
     public function roomsApi(Request $request)

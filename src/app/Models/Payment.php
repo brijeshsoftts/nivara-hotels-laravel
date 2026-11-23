@@ -17,12 +17,14 @@ class Payment extends Model
     protected function casts(): array
     {
         return [
-            'method' => PaymentMethod::class,
-            'status' => PaymentStatus::class,
+            'payment_method' => PaymentMethod::class,
+            'payment_status' => PaymentStatus::class,
             'amount' => 'integer',
+            'amount_paise' => 'integer',
             'refunded_amount' => 'integer',
             'paid_at' => 'datetime',
             'refunded_at' => 'datetime',
+            'order_creation_started_at' => 'datetime',
             'gateway_response' => 'array',
         ];
     }
@@ -32,8 +34,18 @@ class Payment extends Model
         return $this->belongsTo(Invoice::class, 'invoice_id');
     }
 
+    public function booking(): BelongsTo
+    {
+        return $this->belongsTo(Booking::class, 'booking_id');
+    }
+
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'customer_id');
+    }
+
     public function receivedBy(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'received_by');
+        return $this->belongsTo(User::class, 'recorded_by');
     }
 }
