@@ -67,8 +67,8 @@ class RoomController extends Controller
                 'bedType' => $rt->bed_type instanceof \BackedEnum ? $rt->bed_type->value : (string) $rt->bed_type,
                 'bedCount' => $rt->bed_count,
                 'isActive' => (bool) $rt->is_active,
-                'roomsCount' => $rt->rooms_count,
-                'image' => [
+                'numberOfRooms' => $rt->rooms_count,
+                'primaryImage' => [
                     'url' => $primaryImg?->url ?? 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304',
                     'altText' => $primaryImg?->alt_text ?? $rt->name,
                 ],
@@ -286,4 +286,3 @@ class RoomController extends Controller
         return redirect()->back()->with('success', 'Room deleted successfully.');
     }
 }
-

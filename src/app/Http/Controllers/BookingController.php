@@ -6,6 +6,7 @@ use App\Enums\BookingStatus;
 use App\Enums\HousekeepingStatus;
 use App\Enums\InvoiceStatus;
 use App\Enums\OccupancyStatus;
+use App\Enums\PaymentStatus;
 use App\Enums\TaskStatus;
 use App\Enums\TaskType;
 use App\Enums\UserRole;
@@ -32,88 +33,94 @@ class BookingController extends Controller
     {
         $page = (int) $request->input('page', 1);
         $limit = (int) $request->input('limit', 10);
-        $query = Booking::with(['customer.user', 'rooms.room.roomType', 'invoices'])->orderByDesc('created_at');
+        $query = Booking::with([
+            'customer.avatar',
+            'bookingRooms.room.roomType',
+            'bookingRooms.room.housekeepingTasks' => fn($query) => $query->whereIn('status', [
+                TaskStatus::PENDING->value,
+                TaskStatus::IN_PROGRESS->value,
+            ]),
+            'bookingRooms.roomType',
+            'invoices.payments' => fn($query) => $query->where('payment_status', PaymentStatus::COMPLETED->value),
+        ])->orderByDesc('booked_at');
 
         if ($request->filled('status')) {
             $query->where('status', $request->input('status'));
+        }
+        if ($request->filled('invoiceStatus')) {
+            $query->whereHas('invoices', fn($invoiceQuery) => $invoiceQuery->where('status', $request->input('invoiceStatus')));
+        }
+        if ($request->filled('paymentMethod')) {
+            $query->where('payment_method', $request->input('paymentMethod'));
         }
         if ($request->filled('search')) {
             $s = $request->input('search');
             $query->where(function ($q) use ($s) {
                 $q->where('booking_reference', 'like', "%{$s}%")
-                    ->orWhereHas('customer.user', fn($uq) => $uq->where('name', 'like', "%{$s}%")->orWhere('email', 'like', "%{$s}%"));
+                    ->orWhere('guest_name', 'like', "%{$s}%")
+                    ->orWhere('guest_email', 'like', "%{$s}%")
+                    ->orWhere('guest_phone', 'like', "%{$s}%")
+                    ->orWhereHas('customer', fn($customerQuery) => $customerQuery
+                        ->where('full_name', 'like', "%{$s}%")
+                        ->orWhere('email', 'like', "%{$s}%")
+                        ->orWhere('phone', 'like', "%{$s}%"))
+                    ->orWhereHas('bookingRooms.room', fn($roomQuery) => $roomQuery->where('room_number', 'like', "%{$s}%"));
             });
         }
 
         $total = $query->count();
-        $bookings = $query->skip(($page - 1) * $limit)->take($limit)->get()->map(function ($b) {
-            $firstRoom = $b->rooms->first()?->room;
-            $customerName = $b->customer?->user?->name ?? 'Guest';
-            $customerEmail = $b->customer?->user?->email ?? '';
-            $customerPhone = $b->customer?->user?->phone ?? '';
+        $today = Carbon::today(config('app.timezone'))->toDateString();
+        $bookings = $query->skip(($page - 1) * $limit)->take($limit)->get()->map(function ($booking) use ($today) {
+            $bookingRoom = $booking->bookingRooms->first();
+            $room = $bookingRoom?->room;
+            $invoice = $booking->invoices->first();
+            $completedPayments = $invoice?->payments->sum('amount') ?? 0;
+            $status = $booking->status instanceof \BackedEnum ? $booking->status->value : (string) $booking->status;
+            $roomOccupancy = $room?->occupancy_status instanceof \BackedEnum ? $room->occupancy_status->value : $room?->occupancy_status;
+            $housekeepingStatus = $room?->housekeeping_status instanceof \BackedEnum ? $room->housekeeping_status->value : $room?->housekeeping_status;
+            $invoiceStatus = $invoice?->status instanceof \BackedEnum ? $invoice->status->value : $invoice?->status;
+            $canCheckIn = $status === BookingStatus::CONFIRMED->value
+                && $invoiceStatus === InvoiceStatus::PAID->value
+                && (int) ($invoice?->total_amount ?? 0) > 0
+                && $completedPayments >= (int) ($invoice?->total_amount ?? 0)
+                && $booking->check_in_date?->toDateString() === $today
+                && $room?->is_active === true
+                && in_array($roomOccupancy, [OccupancyStatus::VACANT->value, OccupancyStatus::RESERVED->value], true)
+                && $housekeepingStatus === HousekeepingStatus::CLEAN->value
+                && ($room?->housekeepingTasks->isEmpty() ?? false);
 
             return [
-                'id' => $b->id,
-                'bookingReference' => $b->booking_reference,
-                'status' => $b->status instanceof \BackedEnum ? $b->status->value : (string) $b->status,
-                'checkIn' => $b->check_in?->toIso8601String() ?? (string) $b->check_in,
-                'checkOut' => $b->check_out?->toIso8601String() ?? (string) $b->check_out,
-                'totalAmount' => (float) $b->total_amount,
-                'adults' => $b->adults,
-                'children' => $b->children,
+                'id' => $booking->id,
+                'bookingReference' => $booking->booking_reference,
+                'status' => $status,
+                'paymentMethod' => $booking->payment_method instanceof \BackedEnum ? $booking->payment_method->value : $booking->payment_method,
+                'checkInDate' => $booking->check_in_date?->toIso8601String(),
+                'checkOutDate' => $booking->check_out_date?->toIso8601String(),
+                'totalGuests' => (int) $booking->total_guests,
+                'totalAmount' => (int) $booking->total_amount,
+                'bookedAt' => $booking->booked_at?->toIso8601String(),
                 'customer' => [
-                    'id' => $b->customer_id,
-                    'name' => $customerName,
-                    'fullName' => $customerName,
-                    'email' => $customerEmail,
-                    'phone' => $customerPhone,
+                    'id' => $booking->customer?->id ?? $booking->id,
+                    'fullName' => $booking->customer?->full_name ?? $booking->guest_name ?? 'Guest',
+                    'email' => $booking->customer?->email ?? $booking->guest_email ?? '',
+                    'phone' => $booking->customer?->phone ?? $booking->guest_phone ?? '',
                 ],
-                'room' => $firstRoom ? [
-                    'id' => $firstRoom->id,
-                    'roomNumber' => $firstRoom->room_number,
-                    'roomType' => [
-                        'name' => $firstRoom->roomType?->name ?? 'Standard Room',
-                    ],
+                'bookingRoom' => $bookingRoom ? [
+                    'id' => $bookingRoom->id,
+                    'assignedRoom' => $room ? ['roomNumber' => $room->room_number] : null,
+                    'roomType' => ['name' => $bookingRoom->roomType?->name ?? ''],
                 ] : null,
-                'createdAt' => $b->created_at?->toIso8601String(),
+                'invoice' => $invoice ? [
+                    'id' => $invoice->id,
+                    'status' => $invoiceStatus,
+                ] : null,
+                'canCheckIn' => $canCheckIn,
+                'canMarkNoShow' => $status === BookingStatus::CONFIRMED->value
+                    && $booking->check_in_date?->toDateString() <= $today,
             ];
         });
 
-        $stats = [
-            [
-                'id' => 'total-bookings',
-                'title' => 'Total Bookings',
-                'value' => (string) max(Booking::count(), 20),
-                'change' => '+12%',
-                'trend' => 'up',
-                'description' => 'System reservations',
-                'label' => 'Total Bookings',
-                'link' => '/dashboard/bookings',
-                'icon' => 'CalendarCheck',
-            ],
-            [
-                'id' => 'confirmed-stays',
-                'title' => 'Confirmed Stays',
-                'value' => (string) max(Booking::where('status', BookingStatus::CONFIRMED->value)->count(), 14),
-                'change' => '+18%',
-                'trend' => 'up',
-                'description' => 'Upcoming arrivals',
-                'label' => 'Confirmed Stays',
-                'link' => '/dashboard/bookings',
-                'icon' => 'CheckCircle',
-            ],
-            [
-                'id' => 'in-house',
-                'title' => 'In-House Guests',
-                'value' => (string) max(Booking::where('status', BookingStatus::CHECKED_IN->value)->count(), 4),
-                'change' => '+6%',
-                'trend' => 'up',
-                'description' => 'Checked in currently',
-                'label' => 'In-House Guests',
-                'link' => '/dashboard/bookings',
-                'icon' => 'UserCheck',
-            ],
-        ];
+        $stats = $this->getStats();
 
         if ($request->wantsJson() && !$request->header('X-Inertia')) {
             return response()->json([
@@ -138,8 +145,59 @@ class BookingController extends Controller
                 ],
             ],
             'stats' => $stats,
-            'filters' => $request->only(['status', 'search', 'page', 'limit']),
+            'filters' => $request->only(['status', 'invoiceStatus', 'paymentMethod', 'search', 'page', 'limit']),
         ]);
+    }
+
+    private function getStats(): array
+    {
+        $total = Booking::count();
+        $confirmed = Booking::where('status', BookingStatus::CONFIRMED->value)->count();
+        $pending = Booking::where('status', BookingStatus::PENDING->value)->count();
+        $revenue = Booking::where('status', '!=', BookingStatus::CANCELLED->value)->sum('total_amount');
+
+        return [
+            [
+                'id' => 'total-bookings',
+                'title' => 'Total Bookings',
+                'label' => 'Total Bookings',
+                'value' => number_format($total),
+                'description' => 'All-time reservations',
+                'icon' => 'CalendarCheck',
+                'link' => '/dashboard/bookings',
+                'tone' => 'sky',
+            ],
+            [
+                'id' => 'confirmed-bookings',
+                'title' => 'Confirmed',
+                'label' => 'Confirmed',
+                'value' => number_format($confirmed),
+                'description' => 'Ready for arrival',
+                'icon' => 'CheckCircle',
+                'link' => '/dashboard/bookings?status=' . BookingStatus::CONFIRMED->value,
+                'tone' => 'emerald',
+            ],
+            [
+                'id' => 'pending-bookings',
+                'title' => 'Pending',
+                'label' => 'Pending',
+                'value' => number_format($pending),
+                'description' => 'Awaiting confirmation',
+                'icon' => 'Clock3',
+                'link' => '/dashboard/bookings?status=' . BookingStatus::PENDING->value,
+                'tone' => 'gold',
+            ],
+            [
+                'id' => 'booking-revenue',
+                'title' => 'Booking Revenue',
+                'label' => 'Booking Revenue',
+                'value' => '₹' . number_format($revenue),
+                'description' => 'Confirmed & active bookings',
+                'icon' => 'IndianRupee',
+                'link' => '/dashboard/bookings',
+                'tone' => 'teal',
+            ],
+        ];
     }
 
     public function create()
@@ -178,13 +236,7 @@ class BookingController extends Controller
 
     public function stats()
     {
-        return response()->json([
-            'data' => [
-                ['id' => 'total-bookings', 'title' => 'Total Bookings', 'value' => (string) max(Booking::count(), 20), 'change' => '+12%', 'trend' => 'up', 'description' => 'System reservations'],
-                ['id' => 'confirmed-stays', 'title' => 'Confirmed Stays', 'value' => (string) max(Booking::where('status', BookingStatus::CONFIRMED->value)->count(), 14), 'change' => '+18%', 'trend' => 'up', 'description' => 'Upcoming arrivals'],
-                ['id' => 'in-house', 'title' => 'In-House Guests', 'value' => (string) max(Booking::where('status', BookingStatus::CHECKED_IN->value)->count(), 4), 'change' => '+6%', 'trend' => 'up', 'description' => 'Checked in currently'],
-            ],
-        ]);
+        return response()->json(['data' => $this->getStats()]);
     }
 
     public function availableRooms(Request $request)

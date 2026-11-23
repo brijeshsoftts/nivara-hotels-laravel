@@ -18,6 +18,7 @@ use App\Models\Staff;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class OperationsApiTest extends TestCase
@@ -222,6 +223,42 @@ class OperationsApiTest extends TestCase
         ]);
         $bookRes->assertOk()->assertJsonStructure(['data' => ['id', 'bookingReference', 'invoiceId']]);
         $bookingId = $bookRes->json('data.id');
+
+        $this->actingAs($this->admin)
+            ->getJson('/bookings?status=CONFIRMED&invoiceStatus=UNPAID')
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $bookingId)
+            ->assertJsonPath('data.0.status', 'CONFIRMED')
+            ->assertJsonPath('data.0.customer.fullName', $customer->user->full_name)
+            ->assertJsonPath('data.0.bookingRoom.roomType.name', $room->roomType->name)
+            ->assertJsonPath('data.0.invoice.status', 'UNPAID')
+            ->assertJsonPath('data.0.canCheckIn', false)
+            ->assertJsonStructure(['data' => ['*' => [
+                'paymentMethod',
+                'checkInDate',
+                'checkOutDate',
+                'totalGuests',
+                'bookedAt',
+                'bookingRoom',
+                'invoice',
+                'canMarkNoShow',
+            ]]]);
+
+        $this->actingAs($this->admin)
+            ->get(route('dashboard.bookings'))
+            ->assertOk()
+            ->assertInertia(fn(Assert $page) => $page
+                ->has('stats', 4)
+                ->where('stats.0.value', number_format(Booking::count()))
+                ->where('stats.1.value', number_format(Booking::where('status', 'CONFIRMED')->count()))
+                ->where('stats.2.value', number_format(Booking::where('status', 'PENDING')->count()))
+                ->where('stats.3.value', '₹' . number_format(Booking::where('status', '!=', 'CANCELLED')->sum('total_amount')))
+                ->where('stats.1.link', '/dashboard/bookings?status=CONFIRMED'));
+
+        $this->actingAs($this->admin)
+            ->getJson('/bookings?paymentMethod=ONLINE')
+            ->assertOk()
+            ->assertJsonPath('meta.total', Booking::where('payment_method', 'ONLINE')->count());
 
         // Verify room became occupied
         $this->assertEquals(OccupancyStatus::OCCUPIED, Room::find($room->id)->occupancy_status);

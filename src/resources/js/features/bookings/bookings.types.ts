@@ -1,330 +1,335 @@
 import type {
-  BookingStatus,
-  Gender,
-  InvoiceStatus,
-  PaymentMethod,
-  PaymentStatus,
+    BookingStatus,
+    Gender,
+    InvoiceStatus,
+    PaymentMethod,
+    PaymentStatus,
 } from "@/types/enum.types";
 
 export interface BookingDetailsCustomer {
-  id: string;
-  fullName: string;
-  email: string;
-  phone: string;
-  profileImage?: {
     id: string;
-    url: string;
-    altText: string;
-  };
-  profile?: {
-    idProofNumber: string;
-    address: string;
-  };
+    fullName: string;
+    email: string;
+    phone: string;
+    profileImage?: {
+        id: string;
+        url: string;
+        altText: string;
+    };
+    profile?: {
+        idProofNumber: string;
+        address: string;
+    };
 }
 
 export interface BookingDetailsRoom {
-  id: string;
-  roomNumber: string;
-  name?: string;
-  floor: number;
-
-  roomType?: {
     id: string;
-    name: string;
-    slug: string;
-    maxGuests: number;
-    basePrice: number;
-    currency: string;
-    bedType: string;
-    bedCount: number;
-  };
+    roomNumber: string;
+    name?: string;
+    floor: number;
 
-  pricePerNight: number;
+    roomType?: {
+        id: string;
+        name: string;
+        slug: string;
+        maxGuests: number;
+        basePrice: number;
+        currency: string;
+        bedType: string;
+        bedCount: number;
+    };
+
+    pricePerNight: number;
 }
 
 export interface BookingDetailsGuest {
-  id: string;
-  fullName: string;
-  age: number;
-  gender: Gender;
-  idProofNumber?: string;
+    id: string;
+    fullName: string;
+    age: number;
+    gender: Gender;
+    idProofNumber?: string;
 }
 
 export interface BookingDetailsPayment {
-  id: string;
-  paymentReference: string;
-  transactionId?: string;
-
-  amount: number;
-  paymentMethod: PaymentMethod;
-  paymentStatus: PaymentStatus;
-
-  paidAt?: string;
-  createdAt: string;
-
-  recordedBy?: {
     id: string;
-    fullName: string;
-  };
+    paymentReference: string;
+    transactionId?: string;
+
+    amount: number;
+    paymentMethod: PaymentMethod;
+    paymentStatus: PaymentStatus;
+
+    paidAt?: string;
+    createdAt: string;
+
+    recordedBy?: {
+        id: string;
+        fullName: string;
+    };
 }
 
 export interface BookingDetailsInvoice {
-  id: string;
-  invoiceNumber: string;
-
-  subtotal: number;
-  taxAmount: number;
-  discountAmount: number;
-  totalAmount: number;
-  paymentMethod: PaymentMethod | null;
-
-  status: InvoiceStatus;
-  issuedAt: string;
-
-  payments: BookingDetailsPayment[];
-}
-
-export type BookingListItem = {
-  id: string;
-  bookingReference: string;
-  status: BookingStatus;
-  paymentMethod: PaymentMethod | null;
-  checkInDate: string;
-  checkOutDate: string;
-  totalGuests: number;
-  totalAmount: number;
-  bookedAt: string;
-  customer: Pick<BookingDetailsCustomer, "id" | "fullName" | "email" | "phone">;
-  bookingRoom: {
-    id: string;
-    assignedRoom: { roomNumber: string } | null;
-    roomType: { name: string };
-  } | null;
-  invoice: { id: string; status: InvoiceStatus } | null;
-  canCheckIn?: boolean;
-  canMarkNoShow?: boolean;
-};
-
-export type BookingDetails = {
-  id: string;
-  bookingReference: string;
-  customerId: string;
-  checkInDate: string;
-  checkOutDate: string;
-  totalGuests: number;
-  totalAmount: number;
-  specialRequest?: string;
-  status: BookingStatus;
-  paymentMethod: PaymentMethod | null;
-  bookedAt: string;
-  checkedInAt?: string;
-  checkedOutAt?: string;
-  cancelledAt?: string;
-  createdBy: string;
-  createdAt: string;
-  updatedAt: string;
-
-  customer: {
-    id: string;
-    fullName: string;
-    email: string;
-    phone: string;
-    profileImage?: {
-      url: string;
-      altText?: string;
-    };
-    profile?: {
-      idProofNumber: string;
-      address: string;
-    };
-  };
-  creator: {
-    id: string;
-    fullName: string;
-    email: string;
-    phone: string;
-    profileImage?: {
-      url: string;
-      altText?: string;
-    };
-  };
-  bookingRoom: {
-    id: string;
-    assignedRoom: {
-      id: string;
-      roomNumber: string;
-      name: string | null;
-      floor: number;
-      housekeepers: {
-        id: string;
-        fullName: string;
-        email: string;
-        phone: string;
-      }[];
-    } | null;
-    roomType?: {
-      id: string;
-      name: string;
-      slug: string;
-      maxGuests: number;
-      basePrice: number;
-      currency: string;
-      bedType: string;
-      bedCount: number;
-    };
-    pricePerNight: number;
-  } | null;
-  bookingGuests: {
-    id: string;
-    fullName: string;
-    age: number | null;
-    gender?: string;
-    idProofNumber?: string;
-  }[];
-
-  invoice: {
     id: string;
     invoiceNumber: string;
+
     subtotal: number;
     taxAmount: number;
     discountAmount: number;
     totalAmount: number;
+    paymentMethod: PaymentMethod | null;
+
     status: InvoiceStatus;
     issuedAt: string;
-    payments?: {
-      id: string;
-      paymentReference: string;
-      transactionId?: string;
-      amount: number;
-      paymentMethod: PaymentMethod;
-      paymentStatus: PaymentStatus;
-      paidAt?: string;
-      createdAt: string;
-      recordedBy?: {
+
+    payments: BookingDetailsPayment[];
+}
+
+export type BookingListItem = {
+    id: string;
+    bookingReference: string;
+    status: BookingStatus;
+    paymentMethod: PaymentMethod | null;
+    checkInDate: string;
+    checkOutDate: string;
+    totalGuests: number;
+    totalAmount: number;
+    bookedAt: string;
+    customer: Pick<
+        BookingDetailsCustomer,
+        "id" | "fullName" | "email" | "phone"
+    >;
+    bookingRoom: {
+        id: string;
+        assignedRoom: { roomNumber: string } | null;
+        roomType: { name: string };
+    } | null;
+    invoice: { id: string; status: InvoiceStatus } | null;
+    canCheckIn?: boolean;
+    canMarkNoShow?: boolean;
+};
+
+export type BookingDetails = {
+    id: string;
+    bookingReference: string;
+    customerId: string;
+    checkInDate: string;
+    checkOutDate: string;
+    totalGuests: number;
+    totalAmount: number;
+    specialRequest?: string;
+    status: BookingStatus;
+    paymentMethod: PaymentMethod | null;
+    bookedAt: string;
+    checkedInAt?: string;
+    checkedOutAt?: string;
+    cancelledAt?: string;
+    createdBy: string;
+    createdAt: string;
+    updatedAt: string;
+
+    customer: {
         id: string;
         fullName: string;
-      };
+        email: string;
+        phone: string;
+        profileImage?: {
+            url: string;
+            altText?: string;
+        };
+        profile?: {
+            idProofNumber: string;
+            address: string;
+        };
+    };
+    creator: {
+        id: string;
+        fullName: string;
+        email: string;
+        phone: string;
+        profileImage?: {
+            url: string;
+            altText?: string;
+        };
+    };
+    bookingRoom: {
+        id: string;
+        assignedRoom: {
+            id: string;
+            roomNumber: string;
+            name: string | null;
+            floor: number;
+            housekeepers: {
+                id: string;
+                fullName: string;
+                email: string;
+                phone: string;
+            }[];
+        } | null;
+        roomType?: {
+            id: string;
+            name: string;
+            slug: string;
+            maxGuests: number;
+            basePrice: number;
+            currency: string;
+            bedType: string;
+            bedCount: number;
+        };
+        pricePerNight: number;
+    } | null;
+    bookingGuests: {
+        id: string;
+        fullName: string;
+        age: number | null;
+        gender?: string;
+        idProofNumber?: string;
     }[];
-  } | null;
+
+    invoice: {
+        id: string;
+        invoiceNumber: string;
+        subtotal: number;
+        taxAmount: number;
+        discountAmount: number;
+        totalAmount: number;
+        status: InvoiceStatus;
+        issuedAt: string;
+        payments?: {
+            id: string;
+            paymentReference: string;
+            transactionId?: string;
+            amount: number;
+            paymentMethod: PaymentMethod;
+            paymentStatus: PaymentStatus;
+            paidAt?: string;
+            createdAt: string;
+            recordedBy?: {
+                id: string;
+                fullName: string;
+            };
+        }[];
+    } | null;
 };
 
 export type BookingListParams = {
-  page: number;
-  limit: number;
-  search?: string;
-  status?: BookingStatus;
+    page: number;
+    limit: number;
+    search?: string;
+    status?: BookingStatus;
+    invoiceStatus?: InvoiceStatus;
+    paymentMethod?: PaymentMethod;
 };
 
 export type UpdateBookingStatusInput = {
-  id: string;
-  status: BookingStatus;
+    id: string;
+    status: BookingStatus;
 };
 
 export type BookingGuestInput = {
-  fullName: string;
-  age: number;
-  gender: Gender;
-  idProofNumber?: string;
+    fullName: string;
+    age: number;
+    gender: Gender;
+    idProofNumber?: string;
 };
 
 export type PublicBookingGuestInput = {
-  fullName: string;
+    fullName: string;
 };
 
 export type AvailableBookingRoom = {
-  id: string;
-  roomNumber: string;
-  floor: number;
-  roomName: string | null;
-  roomType: {
     id: string;
-    name: string;
-    maxGuests: number;
-    basePrice: number;
-    currency: string;
-    bedType: string;
-    bedCount: number;
-    sizeSqFt: number | null;
-    image: { url: string; altText: string | null } | null;
-    amenities: { id: string; name: string; icon: string | null }[];
-  };
+    roomNumber: string;
+    floor: number;
+    roomName: string | null;
+    roomType: {
+        id: string;
+        name: string;
+        maxGuests: number;
+        basePrice: number;
+        currency: string;
+        bedType: string;
+        bedCount: number;
+        sizeSqFt: number | null;
+        image: { url: string; altText: string | null } | null;
+        amenities: { id: string; name: string; icon: string | null }[];
+    };
 };
 
 export type BookingAvailabilityParams = {
-  checkInDate: string;
-  checkOutDate: string;
-  adults: number;
-  children: number;
+    checkInDate: string;
+    checkOutDate: string;
+    adults: number;
+    children: number;
 };
 
 export type CreateBookingInput = BookingAvailabilityParams & {
-  checkoutToken?: string;
-  customerId?: string;
-  roomId: string;
-  guests: BookingGuestInput[];
-  specialRequest?: string;
-  paymentMethod: PaymentMethod;
+    checkoutToken?: string;
+    customerId?: string;
+    roomId: string;
+    guests: BookingGuestInput[];
+    specialRequest?: string;
+    paymentMethod: PaymentMethod;
 };
 
 export type CreateBookingResult = {
-  id: string;
-  bookingId: string;
-  bookingReference: string;
-  paymentMethod: PaymentMethod;
-  paymentStatus: PaymentStatus;
-  paymentReference: string | null;
-  subtotal: number;
-  taxAmount: number;
-  amount: number;
-  paymentMessage: string;
+    id: string;
+    bookingId: string;
+    bookingReference: string;
+    paymentMethod: PaymentMethod;
+    paymentStatus: PaymentStatus;
+    paymentReference: string | null;
+    subtotal: number;
+    taxAmount: number;
+    amount: number;
+    paymentMessage: string;
 };
 
 export type CreatePublicBookingInput = {
-  checkoutToken: string;
-  guestName: string;
-  guestEmail: string;
-  guestPhone: string;
-  roomId: string;
-  checkInDate: string;
-  checkOutDate: string;
-  adults: number;
-  children: number;
-  guests: PublicBookingGuestInput[];
-  specialRequest?: string;
-  paymentMethod: "ONLINE";
+    checkoutToken: string;
+    guestName: string;
+    guestEmail: string;
+    guestPhone: string;
+    roomId: string;
+    checkInDate: string;
+    checkOutDate: string;
+    adults: number;
+    children: number;
+    guests: PublicBookingGuestInput[];
+    specialRequest?: string;
+    paymentMethod: "ONLINE";
 };
 
 export type CreatePublicBookingResult = {
-  id: string;
-  bookingReference: string;
-  totalAmount: number;
-  checkoutExpiresAt: string | null;
-  checkoutToken: string;
+    id: string;
+    bookingReference: string;
+    totalAmount: number;
+    checkoutExpiresAt: string | null;
+    checkoutToken: string;
 };
 
 // CUSTOMER TYPES
 export interface CustomerBooking {
-  id: string;
-  bookingNumber: string;
-  roomType: string;
-  roomNumber?: string;
-  checkIn: string;
-  checkOut: string;
-  totalAmount: number;
-  status: BookingStatus;
-  invoice: { id: string; status: InvoiceStatus } | null;
+    id: string;
+    bookingNumber: string;
+    roomType: string;
+    roomNumber?: string;
+    checkIn: string;
+    checkOut: string;
+    totalAmount: number;
+    status: BookingStatus;
+    invoice: { id: string; status: InvoiceStatus } | null;
 }
 
 export interface CustomerBookingDetails {
-  id: string;
-  bookingNumber: string;
-  status: BookingStatus;
-  roomType: string;
-  roomNumber?: string;
-  checkIn: string;
-  checkOut: string;
-  duration: number;
-  adults: number;
-  children: number;
-  bookedOn: string;
+    id: string;
+    bookingNumber: string;
+    status: BookingStatus;
+    roomType: string;
+    roomNumber?: string;
+    checkIn: string;
+    checkOut: string;
+    duration: number;
+    adults: number;
+    children: number;
+    bookedOn: string;
 }

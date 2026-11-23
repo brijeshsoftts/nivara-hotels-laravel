@@ -1,28 +1,37 @@
 import type { BookingStatus } from "@/types/enum.types";
 
 const bookingStatuses: BookingStatus[] = [
-  "PENDING",
-  "CONFIRMED",
-  "CHECKED_IN",
-  "CHECKED_OUT",
-  "CANCELLED",
-  "NO_SHOW",
+    "PENDING",
+    "CONFIRMED",
+    "CHECKED_IN",
+    "CHECKED_OUT",
+    "CANCELLED",
+    "NO_SHOW",
 ];
 
 const invoiceStatuses = ["UNPAID", "PARTIALLY_PAID", "PAID", "REFUNDED"];
+const paymentMethods = ["CASH", "ONLINE"];
 
 export const bookingFilters = [
-  {
-    key: "status",
-    label: "Booking status",
-    options: bookingStatuses.map((value) => ({ value, label: value })),
-  },
-  {
-    key: "invoiceStatus",
-    label: "Invoice status",
-    options: invoiceStatuses.map((status) => ({
-      label: status,
-      value: status,
-    })),
-  },
+    {
+        key: "status",
+        label: "Booking status",
+        options: bookingStatuses.map((value) => ({ value, label: value })),
+    },
+    {
+        key: "invoiceStatus",
+        label: "Invoice status",
+        options: invoiceStatuses.map((status) => ({
+            label: status,
+            value: status,
+        })),
+    },
+    {
+        key: "paymentMethod",
+        label: "Payment method",
+        options: paymentMethods.map((method) => ({
+            label: method,
+            value: method,
+        })),
+    },
 ];
