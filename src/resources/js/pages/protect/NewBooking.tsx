@@ -133,7 +133,8 @@ export default function NewBookingPage() {
   const [step, setStep] = useState(1);
   const [selectedCustomer, setSelectedCustomer] =
     useState<CustomerSearchResult | null>(null);
-  const [booking, setBooking] = useState<BookingFormState>(initialBookingState);
+  const [booking, setBooking] =
+    useState<BookingFormState>(initialBookingState);
   const [roomSearch, setRoomSearch] = useState<{
     checkInDate: string;
     checkOutDate: string;
@@ -144,15 +145,18 @@ export default function NewBookingPage() {
 
   const { mutate: createBooking, isPending: isCreatingBooking } =
     useCreateBooking();
-  const { rooms, isLoading: isLoadingRooms } = useAvailableBookingRooms(
-    roomSearch ?? undefined
-  );
+  const {
+    rooms,
+    isLoading: isLoadingRooms,
+    isError: isRoomSearchError,
+    refetch: refetchRooms,
+  } = useAvailableBookingRooms(roomSearch ?? undefined);
 
   const totalGuests = booking.adults + booking.children;
   const nights = getNights(booking.checkInDate, booking.checkOutDate);
   const selectedRoom = useMemo(
     () => rooms.find((room: any) => room.id === booking.roomId) ?? null,
-    [booking.roomId, rooms]
+    [booking.roomId, rooms],
   );
 
   const canAccess =
@@ -173,22 +177,26 @@ export default function NewBookingPage() {
     step === 1
       ? Boolean(booking.customerId)
       : step === 2
-        ? Boolean(booking.roomId && roomSearch)
-        : step === 3
-          ? booking.guests.length === totalGuests &&
-            booking.guests.every(
-              (guest) => guest.fullName.trim() && guest.age > 0 && guest.gender
-            )
-          : step === 4
-            ? Boolean(booking.paymentMethod)
-            : true;
+       ? Boolean(booking.roomId && roomSearch)
+       : step === 3
+        ? booking.guests.length === totalGuests &&
+         booking.guests.every(
+           (guest) =>
+             guest.fullName.trim() &&
+             guest.age > 0 &&
+             guest.gender,
+         )
+        : step === 4
+         ? Boolean(booking.paymentMethod)
+         : true;
 
   const goToNextStep = () => {
     if (!canGoNext) return;
     setStep((current) => Math.min(current + 1, TOTAL_STEPS));
   };
 
-  const goToPreviousStep = () => setStep((current) => Math.max(current - 1, 1));
+  const goToPreviousStep = () =>
+    setStep((current) => Math.max(current - 1, 1));
 
   const handleCustomerChange = (customer: CustomerSearchResult) => {
     setSelectedCustomer(customer);
@@ -196,17 +204,20 @@ export default function NewBookingPage() {
       const primaryGuest = buildPrimaryGuest(customer);
       const guests = current.guests.length
         ? [
-            {
-              ...current.guests[0],
-              fullName:
-                current.guests[0]?.fullName?.trim() || primaryGuest.fullName,
-              age: current.guests[0]?.age || primaryGuest.age,
-              gender: current.guests[0]?.gender || primaryGuest.gender,
-              idProofNumber:
-                current.guests[0]?.idProofNumber || primaryGuest.idProofNumber,
-            },
-            ...current.guests.slice(1),
-          ]
+           {
+             ...current.guests[0],
+             fullName:
+               current.guests[0]?.fullName?.trim() ||
+               primaryGuest.fullName,
+             age: current.guests[0]?.age || primaryGuest.age,
+             gender:
+               current.guests[0]?.gender || primaryGuest.gender,
+             idProofNumber:
+               current.guests[0]?.idProofNumber ||
+               primaryGuest.idProofNumber,
+           },
+           ...current.guests.slice(1),
+         ]
         : [primaryGuest];
       return { ...current, customerId: customer.id, guests };
     });
@@ -215,7 +226,8 @@ export default function NewBookingPage() {
   const addGuest = () => {
     setBooking((current) => {
       if (
-        current.guests.length >= Math.max(1, current.adults + current.children)
+        current.guests.length >=
+        Math.max(1, current.adults + current.children)
       ) {
         return current;
       }
@@ -244,12 +256,12 @@ export default function NewBookingPage() {
   const handleGuestChange = (
     index: number,
     field: keyof BookingFormState["guests"][number],
-    value: string | number
+    value: string | number,
   ) => {
     setBooking((current) => ({
       ...current,
       guests: current.guests.map((guest, guestIndex) =>
-        guestIndex === index ? { ...guest, [field]: value } : guest
+        guestIndex === index ? { ...guest, [field]: value } : guest,
       ),
     }));
   };
@@ -257,23 +269,24 @@ export default function NewBookingPage() {
   const handleCreateBooking = () => {
     if (!booking.customerId || !booking.roomId) {
       window.alert(
-        "Please select a customer and room before confirming the booking."
+        "Please select a customer and room before confirming the booking.",
       );
       return;
     }
     if (booking.guests.length !== totalGuests) {
       window.alert(
-        "Guest count must match the requested adults + children count."
+        "Guest count must match the requested adults + children count.",
       );
       return;
     }
     if (
       booking.guests.some(
-        (guest) => !guest.fullName.trim() || guest.age <= 0 || !guest.gender
+        (guest) =>
+          !guest.fullName.trim() || guest.age <= 0 || !guest.gender,
       )
     ) {
       window.alert(
-        "Please complete every guest detail before confirming the booking."
+        "Please complete every guest detail before confirming the booking.",
       );
       return;
     }
@@ -294,7 +307,7 @@ export default function NewBookingPage() {
         specialRequest: booking.specialRequest?.trim() || undefined,
         paymentMethod: booking.paymentMethod,
       },
-      { onSuccess: () => setStep(TOTAL_STEPS) }
+      { onSuccess: () => setStep(TOTAL_STEPS) },
     );
   };
 
@@ -334,14 +347,17 @@ export default function NewBookingPage() {
                         {selectedCustomer.fullName}
                       </h3>
                       <Badge className="gap-1">
-                        <CheckCircle2 className="h-3 w-3" /> Selected
+                        <CheckCircle2 className="h-3 w-3" />{" "}
+                        Selected
                       </Badge>
                     </div>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      {selectedCustomer.email || "No email provided"}
+                      {selectedCustomer.email ||
+                        "No email provided"}
                     </p>
                     <p className="mt-0.5 text-sm text-muted-foreground">
-                      {selectedCustomer.phone || "No phone provided"}
+                      {selectedCustomer.phone ||
+                        "No phone provided"}
                     </p>
                   </div>
                   <CheckCircle2 className="hidden h-5 w-5 text-primary sm:block" />
@@ -351,8 +367,8 @@ export default function NewBookingPage() {
               <div className="flex items-start gap-3 rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
                 <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
                 <p>
-                  Choose a customer to prefill the primary guest details in the
-                  next step.
+                  Choose a customer to prefill the primary
+                  guest details in the next step.
                 </p>
               </div>
             )}
@@ -364,7 +380,11 @@ export default function NewBookingPage() {
                 </p>
               </div>
               <CreateCustomerDialog>
-                <Button type="button" variant="outline" className="gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="gap-2"
+                >
                   <Plus className="h-4 w-4" /> Create customer
                 </Button>
               </CreateCustomerDialog>
@@ -411,7 +431,8 @@ export default function NewBookingPage() {
                       setRoomSearch(null);
                       setBooking((current) => ({
                         ...current,
-                        checkOutDate: event.target.value,
+                        checkOutDate:
+                          event.target.value,
                         roomId: "",
                       }));
                     }}
@@ -427,7 +448,7 @@ export default function NewBookingPage() {
                     onChange={(event) => {
                       const adults = Math.max(
                         1,
-                        Number(event.target.value || 1)
+                        Number(event.target.value || 1),
                       );
                       setRoomSearch(null);
                       setBooking((current) => ({
@@ -435,7 +456,11 @@ export default function NewBookingPage() {
                         adults,
                         guests: current.guests.slice(
                           0,
-                          Math.max(1, adults + current.children)
+                          Math.max(
+                            1,
+                            adults +
+                              current.children,
+                          ),
                         ),
                         roomId: "",
                       }));
@@ -452,7 +477,7 @@ export default function NewBookingPage() {
                     onChange={(event) => {
                       const children = Math.max(
                         0,
-                        Number(event.target.value || 0)
+                        Number(event.target.value || 0),
                       );
                       setRoomSearch(null);
                       setBooking((current) => ({
@@ -460,7 +485,11 @@ export default function NewBookingPage() {
                         children,
                         guests: current.guests.slice(
                           0,
-                          Math.max(1, current.adults + children)
+                          Math.max(
+                            1,
+                            current.adults +
+                              children,
+                          ),
                         ),
                         roomId: "",
                       }));
@@ -474,10 +503,14 @@ export default function NewBookingPage() {
                     <Users className="h-4 w-4 text-primary" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium">{totalGuests} guests</p>
+                    <p className="text-sm font-medium">
+                      {totalGuests} guests
+                    </p>
                     <p className="text-xs text-muted-foreground">
-                      {booking.adults} adults · {booking.children} children ·{" "}
-                      {nights} {nights === 1 ? "night" : "nights"}
+                      {booking.adults} adults ·{" "}
+                      {booking.children} children ·{" "}
+                      {nights}{" "}
+                      {nights === 1 ? "night" : "nights"}
                     </p>
                   </div>
                 </div>
@@ -486,7 +519,8 @@ export default function NewBookingPage() {
                   onClick={handleRoomSearch}
                   className="gap-2"
                 >
-                  <CalendarDays className="h-4 w-4" /> Search available rooms
+                  <CalendarDays className="h-4 w-4" /> Search
+                  available rooms
                 </Button>
               </div>
             </div>
@@ -503,7 +537,10 @@ export default function NewBookingPage() {
                 </div>
                 {roomSearch && (
                   <Badge variant="secondary">
-                    {rooms.length} {rooms.length === 1 ? "option" : "options"}{" "}
+                    {rooms.length}{" "}
+                    {rooms.length === 1
+                      ? "option"
+                      : "options"}{" "}
                     found
                   </Badge>
                 )}
@@ -517,13 +554,31 @@ export default function NewBookingPage() {
                     Your room options will appear here
                   </p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Select your dates and search availability to get started.
+                    Select your dates and search
+                    availability to get started.
                   </p>
                 </div>
               ) : isLoadingRooms ? (
                 <div className="flex items-center justify-center gap-3 rounded-2xl border p-10 text-sm text-muted-foreground">
                   <Loader2 className="h-5 w-5 animate-spin text-primary" />{" "}
                   Checking room availability…
+                </div>
+              ) : isRoomSearchError ? (
+                <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed px-5 py-10 text-center">
+                  <p className="font-medium">
+                    Room availability could not be loaded
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Check your connection and try the search
+                    again.
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={refetchRooms}
+                  >
+                    Retry search
+                  </Button>
                 </div>
               ) : rooms.length === 0 ? (
                 <div className="rounded-2xl border border-dashed px-5 py-10 text-center">
@@ -532,25 +587,34 @@ export default function NewBookingPage() {
                     No rooms available for these dates
                   </p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Try different dates or adjust the guest count.
+                    Try different dates or adjust the guest
+                    count.
                   </p>
                 </div>
               ) : (
                 <div className="grid gap-4 xl:grid-cols-2">
                   {rooms.map((room: AvailableBookingRoom) => {
-                    const isSelected = booking.roomId === room.id;
+                    const isSelected =
+                      booking.roomId === room.id;
                     return (
                       <Card
                         key={room.id}
                         className={`group overflow-hidden rounded-2xl p-0 transition-all duration-200 ${isSelected ? "border-primary ring-2 ring-primary/20" : "hover:border-primary/40 hover:shadow-md"}`}
                       >
                         <div className="relative h-44 overflow-hidden bg-muted sm:h-48">
-                          {room.roomType.image?.url ? (
+                          {room.roomType.image
+                            ?.url ? (
                             <img
-                              src={room.roomType.image.url}
+                              src={
+                                room.roomType
+                                  .image.url
+                              }
                               alt={
-                                room.roomType.image.altText ??
-                                room.roomType.name
+                                room.roomType
+                                  .image
+                                  .altText ??
+                                room.roomType
+                                  .name
                               }
                               className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
                             />
@@ -563,15 +627,23 @@ export default function NewBookingPage() {
                           <div className="absolute right-4 bottom-3 left-4 flex items-end justify-between gap-3 text-white">
                             <div>
                               <p className="text-xs font-medium tracking-[0.16em] text-white/80 uppercase">
-                                Room {room.roomNumber}
+                                Room{" "}
+                                {
+                                  room.roomNumber
+                                }
                               </p>
                               <p className="mt-1 text-lg font-semibold">
-                                {room.roomType.name}
+                                {
+                                  room
+                                    .roomType
+                                    .name
+                                }
                               </p>
                             </div>
                             {isSelected && (
                               <Badge className="border-white/20 bg-white text-primary">
-                                <Check className="mr-1 h-3 w-3" /> Selected
+                                <Check className="mr-1 h-3 w-3" />{" "}
+                                Selected
                               </Badge>
                             )}
                           </div>
@@ -580,21 +652,45 @@ export default function NewBookingPage() {
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex flex-wrap gap-2">
                               <Badge variant="secondary">
-                                Up to {room.roomType.maxGuests} guests
+                                Up to{" "}
+                                {
+                                  room
+                                    .roomType
+                                    .maxGuests
+                                }{" "}
+                                guests
                               </Badge>
                               <Badge variant="secondary">
-                                {room.roomType.bedCount}{" "}
-                                {room.roomType.bedCount === 1 ? "bed" : "beds"}
+                                {
+                                  room
+                                    .roomType
+                                    .bedCount
+                                }{" "}
+                                {room.roomType
+                                  .bedCount ===
+                                1
+                                  ? "bed"
+                                  : "beds"}
                               </Badge>
-                              {room.roomType.sizeSqFt ? (
+                              {room.roomType
+                                .sizeSqFt ? (
                                 <Badge variant="secondary">
-                                  {room.roomType.sizeSqFt} sq ft
+                                  {
+                                    room
+                                      .roomType
+                                      .sizeSqFt
+                                  }{" "}
+                                  sq ft
                                 </Badge>
                               ) : null}
                             </div>
                             <div className="shrink-0 text-right">
                               <p className="text-lg font-semibold tracking-tight">
-                                {formatCurrency(room.roomType.basePrice)}
+                                {formatCurrency(
+                                  room
+                                    .roomType
+                                    .basePrice,
+                                )}
                               </p>
                               <p className="text-xs text-muted-foreground">
                                 per night
@@ -606,39 +702,58 @@ export default function NewBookingPage() {
                               .slice(0, 4)
                               .map((amenity) => (
                                 <span
-                                  key={amenity.id}
+                                  key={
+                                    amenity.id
+                                  }
                                   className="rounded-full border bg-background px-2.5 py-1 text-xs text-muted-foreground"
                                 >
-                                  {amenity.name}
+                                  {
+                                    amenity.name
+                                  }
                                 </span>
                               ))}
                           </div>
                           <div className="flex items-center justify-between gap-3 border-t pt-4">
                             <div>
                               <p className="text-xs text-muted-foreground">
-                                {nights} {nights === 1 ? "night" : "nights"} ·
-                                before GST
+                                {nights}{" "}
+                                {nights === 1
+                                  ? "night"
+                                  : "nights"}{" "}
+                                · before GST
                               </p>
                               <p className="font-semibold">
                                 {formatCurrency(
-                                  room.roomType.basePrice * nights
+                                  room
+                                    .roomType
+                                    .basePrice *
+                                    nights,
                                 )}
                               </p>
                             </div>
                             <Button
                               type="button"
-                              variant={isSelected ? "default" : "outline"}
+                              variant={
+                                isSelected
+                                  ? "default"
+                                  : "outline"
+                              }
                               className="min-w-28 gap-2"
                               onClick={() =>
-                                setBooking((current) => ({
-                                  ...current,
-                                  roomId: room.id,
-                                }))
+                                setBooking(
+                                  (
+                                    current,
+                                  ) => ({
+                                    ...current,
+                                    roomId: room.id,
+                                  }),
+                                )
                               }
                             >
                               {isSelected ? (
                                 <>
-                                  <Check className="h-4 w-4" /> Selected
+                                  <Check className="h-4 w-4" />{" "}
+                                  Selected
                                 </>
                               ) : (
                                 "Choose room"
@@ -659,7 +774,9 @@ export default function NewBookingPage() {
                     <CheckCircle2 className="h-5 w-5" />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold">Room selected</p>
+                    <p className="text-sm font-semibold">
+                      Room selected
+                    </p>
                     <p className="text-sm text-muted-foreground">
                       {selectedRoom.roomType.name} · Room{" "}
                       {selectedRoom.roomNumber}
@@ -667,7 +784,9 @@ export default function NewBookingPage() {
                   </div>
                 </div>
                 <div className="sm:text-right">
-                  <p className="text-xs text-muted-foreground">Room subtotal</p>
+                  <p className="text-xs text-muted-foreground">
+                    Room subtotal
+                  </p>
                   <p className="text-lg font-semibold">
                     {formatCurrency(subtotal)}
                   </p>
@@ -691,10 +810,12 @@ export default function NewBookingPage() {
                   <Users className="h-4 w-4 text-primary" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium">Guest information</p>
+                  <p className="text-sm font-medium">
+                    Guest information
+                  </p>
                   <p className="text-xs text-muted-foreground">
-                    {booking.guests.length} of {totalGuests} guest profiles
-                    completed
+                    {booking.guests.length} of {totalGuests}{" "}
+                    guest profiles completed
                   </p>
                 </div>
               </div>
@@ -717,11 +838,16 @@ export default function NewBookingPage() {
                   <div className="flex items-center justify-between gap-3 border-b bg-muted/25 px-4 py-3 sm:px-5">
                     <div className="flex items-center gap-3">
                       <div className="flex h-9 w-9 items-center justify-center rounded-xl border bg-background text-sm font-semibold text-primary">
-                        {String(index + 1).padStart(2, "0")}
+                        {String(index + 1).padStart(
+                          2,
+                          "0",
+                        )}
                       </div>
                       <div>
                         <p className="font-semibold">
-                          {index === 0 ? "Primary guest" : `Guest ${index + 1}`}
+                          {index === 0
+                            ? "Primary guest"
+                            : `Guest ${index + 1}`}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {index < booking.adults
@@ -731,33 +857,42 @@ export default function NewBookingPage() {
                       </div>
                     </div>
                     <Badge variant="outline">
-                      {index < booking.adults ? "Adult" : "Child"}
+                      {index < booking.adults
+                        ? "Adult"
+                        : "Child"}
                     </Badge>
                   </div>
                   <div className="grid gap-4 p-4 sm:grid-cols-2 sm:p-5">
                     <label className="space-y-2">
                       <FieldLabel>
-                        Full name <span className="text-destructive">*</span>
+                        Full name{" "}
+                        <span className="text-destructive">
+                          *
+                        </span>
                       </FieldLabel>
                       <Input
                         value={guest.fullName}
                         placeholder={
                           index === 0
-                            ? selectedCustomer?.fullName || "Enter full name"
+                            ? selectedCustomer?.fullName ||
+                             "Enter full name"
                             : "Enter full name"
                         }
                         onChange={(event) =>
                           handleGuestChange(
                             index,
                             "fullName",
-                            event.target.value
+                            event.target.value,
                           )
                         }
                       />
                     </label>
                     <label className="space-y-2">
                       <FieldLabel>
-                        Age <span className="text-destructive">*</span>
+                        Age{" "}
+                        <span className="text-destructive">
+                          *
+                        </span>
                       </FieldLabel>
                       <Input
                         type="number"
@@ -767,7 +902,13 @@ export default function NewBookingPage() {
                           handleGuestChange(
                             index,
                             "age",
-                            Math.max(1, Number(event.target.value || 1))
+                            Math.max(
+                              1,
+                              Number(
+                                event.target
+                                  .value || 1,
+                              ),
+                            ),
                           )
                         }
                       />
@@ -781,13 +922,22 @@ export default function NewBookingPage() {
                           handleGuestChange(
                             index,
                             "gender",
-                            event.target.value as "MALE" | "FEMALE" | "OTHER"
+                            event.target.value as
+                              | "MALE"
+                              | "FEMALE"
+                              | "OTHER",
                           )
                         }
                       >
-                        <option value="MALE">Male</option>
-                        <option value="FEMALE">Female</option>
-                        <option value="OTHER">Other</option>
+                        <option value="MALE">
+                          Male
+                        </option>
+                        <option value="FEMALE">
+                          Female
+                        </option>
+                        <option value="OTHER">
+                          Other
+                        </option>
                       </select>
                     </label>
                     <label className="space-y-2">
@@ -798,13 +948,15 @@ export default function NewBookingPage() {
                         </span>
                       </FieldLabel>
                       <Input
-                        value={guest.idProofNumber ?? ""}
+                        value={
+                          guest.idProofNumber ?? ""
+                        }
                         placeholder="Enter ID proof number"
                         onChange={(event) =>
                           handleGuestChange(
                             index,
                             "idProofNumber",
-                            event.target.value
+                            event.target.value,
                           )
                         }
                       />
@@ -863,7 +1015,9 @@ export default function NewBookingPage() {
                 <div className="rounded-2xl border p-4 sm:p-5">
                   <div className="mb-4 flex items-center gap-2">
                     <CalendarDays className="h-4 w-4 text-primary" />
-                    <h3 className="font-semibold">Stay summary</h3>
+                    <h3 className="font-semibold">
+                      Stay summary
+                    </h3>
                   </div>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
@@ -871,7 +1025,8 @@ export default function NewBookingPage() {
                         Customer
                       </p>
                       <p className="mt-1 font-medium">
-                        {selectedCustomer?.fullName ?? "—"}
+                        {selectedCustomer?.fullName ??
+                          "—"}
                       </p>
                     </div>
                     <div>
@@ -879,7 +1034,8 @@ export default function NewBookingPage() {
                         Occupancy
                       </p>
                       <p className="mt-1 font-medium">
-                        {booking.adults} adults · {booking.children} children
+                        {booking.adults} adults ·{" "}
+                        {booking.children} children
                       </p>
                     </div>
                     <div>
@@ -901,12 +1057,18 @@ export default function NewBookingPage() {
                   </div>
                   <div className="mt-4 flex items-center gap-3 rounded-xl bg-muted/40 p-3">
                     <div className="h-14 w-16 shrink-0 overflow-hidden rounded-lg bg-muted">
-                      {selectedRoom?.roomType.image?.url ? (
+                      {selectedRoom?.roomType.image
+                        ?.url ? (
                         <img
-                          src={selectedRoom.roomType.image.url}
+                          src={
+                            selectedRoom.roomType
+                              .image.url
+                          }
                           alt={
-                            selectedRoom.roomType.image.altText ??
-                            selectedRoom.roomType.name
+                            selectedRoom.roomType
+                              .image.altText ??
+                            selectedRoom.roomType
+                              .name
                           }
                           className="h-full w-full object-cover"
                         />
@@ -918,11 +1080,17 @@ export default function NewBookingPage() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-medium">
-                        {selectedRoom?.roomType.name ?? "No room selected"}
+                        {selectedRoom?.roomType.name ??
+                          "No room selected"}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        Room {selectedRoom?.roomNumber ?? "—"} · {nights}{" "}
-                        {nights === 1 ? "night" : "nights"}
+                        Room{" "}
+                        {selectedRoom?.roomNumber ??
+                          "—"}{" "}
+                        · {nights}{" "}
+                        {nights === 1
+                          ? "night"
+                          : "nights"}
                       </p>
                     </div>
                     <p className="shrink-0 text-sm font-semibold">
@@ -932,9 +1100,12 @@ export default function NewBookingPage() {
                 </div>
                 <div>
                   <div className="mb-3">
-                    <h3 className="font-semibold">Payment method</h3>
+                    <h3 className="font-semibold">
+                      Payment method
+                    </h3>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      Select the method to associate with this booking.
+                      Select the method to associate with
+                      this booking.
                     </p>
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
@@ -954,12 +1125,17 @@ export default function NewBookingPage() {
                         <Wallet className="h-5 w-5" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="font-semibold">Cash payment</p>
+                        <p className="font-semibold">
+                          Cash payment
+                        </p>
                         <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                          Cash is recorded as paid when this booking is created.
+                          Record cash collected
+                          separately after the booking
+                          is created.
                         </p>
                       </div>
-                      {booking.paymentMethod === "CASH" && (
+                      {booking.paymentMethod ===
+                        "CASH" && (
                         <CheckCircle2 className="h-4 w-4 text-primary" />
                       )}
                     </button>
@@ -979,19 +1155,24 @@ export default function NewBookingPage() {
                         <CreditCard className="h-5 w-5" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="font-semibold">Online payment</p>
+                        <p className="font-semibold">
+                          Online payment
+                        </p>
                         <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                          Use the configured online payment flow.
+                          Use the configured online
+                          payment flow.
                         </p>
                       </div>
-                      {booking.paymentMethod === "ONLINE" && (
+                      {booking.paymentMethod ===
+                        "ONLINE" && (
                         <CheckCircle2 className="h-4 w-4 text-primary" />
                       )}
                     </button>
                   </div>
                   <p className="mt-2 text-xs text-muted-foreground">
-                    Selecting a method here does not, by itself, verify that a
-                    payment has been received.
+                    Selecting a method here does not, by
+                    itself, verify that a payment has been
+                    received.
                   </p>
                 </div>
               </div>
@@ -1000,26 +1181,33 @@ export default function NewBookingPage() {
                   <p className="text-xs font-semibold tracking-[0.16em] text-primary uppercase">
                     Price breakdown
                   </p>
-                  <h3 className="mt-1 text-lg font-semibold">Booking total</h3>
+                  <h3 className="mt-1 text-lg font-semibold">
+                    Booking total
+                  </h3>
                 </div>
                 <div className="space-y-4 p-5">
                   <div className="flex justify-between gap-3 text-sm">
                     <span className="text-muted-foreground">
-                      Room ({nights} {nights === 1 ? "night" : "nights"})
+                      Room ({nights}{" "}
+                      {nights === 1 ? "night" : "nights"})
                     </span>
                     <span className="font-medium tabular-nums">
                       {formatCurrency(subtotal)}
                     </span>
                   </div>
                   <div className="flex justify-between gap-3 text-sm">
-                    <span className="text-muted-foreground">GST (18%)</span>
+                    <span className="text-muted-foreground">
+                      GST (18%)
+                    </span>
                     <span className="font-medium tabular-nums">
                       {formatCurrency(taxAmount)}
                     </span>
                   </div>
                   <div className="border-t pt-4">
                     <div className="flex items-end justify-between gap-3">
-                      <span className="font-semibold">Grand total</span>
+                      <span className="font-semibold">
+                        Grand total
+                      </span>
                       <span className="text-2xl font-semibold tracking-tight tabular-nums">
                         {formatCurrency(grandTotal)}
                       </span>
@@ -1030,7 +1218,8 @@ export default function NewBookingPage() {
                   </div>
                   <div className="rounded-xl bg-muted/40 p-3 text-xs leading-5 text-muted-foreground">
                     <ShieldCheck className="mr-1.5 inline h-3.5 w-3.5 text-primary" />
-                    Confirm the final amount before completing the reservation.
+                    Confirm the final amount before
+                    completing the reservation.
                   </div>
                 </div>
               </div>
@@ -1054,9 +1243,10 @@ export default function NewBookingPage() {
                     Review booking details
                   </h2>
                   <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
-                    Make sure the customer, stay dates, guest details and amount
-                    are correct. You can go back to any previous step to make
-                    changes.
+                    Make sure the customer, stay dates,
+                    guest details and amount are correct.
+                    You can go back to any previous step to
+                    make changes.
                   </p>
                 </div>
               </div>
@@ -1065,14 +1255,21 @@ export default function NewBookingPage() {
               <div className="space-y-4">
                 <div className="rounded-2xl border p-4 sm:p-5">
                   <div className="mb-4 flex items-center justify-between gap-3">
-                    <h3 className="font-semibold">Reservation details</h3>
-                    <Badge variant="outline">Draft review</Badge>
+                    <h3 className="font-semibold">
+                      Reservation details
+                    </h3>
+                    <Badge variant="outline">
+                      Draft review
+                    </Badge>
                   </div>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="rounded-xl bg-muted/30 p-3">
-                      <p className="text-xs text-muted-foreground">Customer</p>
+                      <p className="text-xs text-muted-foreground">
+                        Customer
+                      </p>
                       <p className="mt-1 font-semibold">
-                        {selectedCustomer?.fullName ?? "—"}
+                        {selectedCustomer?.fullName ??
+                          "—"}
                       </p>
                       <p className="mt-1 text-xs text-muted-foreground">
                         {selectedCustomer?.phone ??
@@ -1085,7 +1282,10 @@ export default function NewBookingPage() {
                         Stay duration
                       </p>
                       <p className="mt-1 font-semibold">
-                        {nights} {nights === 1 ? "night" : "nights"}
+                        {nights}{" "}
+                        {nights === 1
+                          ? "night"
+                          : "nights"}
                       </p>
                       <p className="mt-1 text-xs text-muted-foreground">
                         {booking.checkInDate || "—"} →{" "}
@@ -1095,12 +1295,18 @@ export default function NewBookingPage() {
                   </div>
                   <div className="mt-4 flex items-center gap-3 rounded-xl border p-3">
                     <div className="h-16 w-20 shrink-0 overflow-hidden rounded-lg bg-muted">
-                      {selectedRoom?.roomType.image?.url ? (
+                      {selectedRoom?.roomType.image
+                        ?.url ? (
                         <img
-                          src={selectedRoom.roomType.image.url}
+                          src={
+                            selectedRoom.roomType
+                              .image.url
+                          }
                           alt={
-                            selectedRoom.roomType.image.altText ??
-                            selectedRoom.roomType.name
+                            selectedRoom.roomType
+                              .image.altText ??
+                            selectedRoom.roomType
+                              .name
                           }
                           className="h-full w-full object-cover"
                         />
@@ -1112,15 +1318,21 @@ export default function NewBookingPage() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="font-semibold">
-                        {selectedRoom?.roomType.name ?? "Room not selected"}
+                        {selectedRoom?.roomType.name ??
+                          "Room not selected"}
                       </p>
                       <p className="mt-1 text-sm text-muted-foreground">
-                        Room {selectedRoom?.roomNumber ?? "—"} ·{" "}
-                        {selectedRoom?.roomType.bedType ??
+                        Room{" "}
+                        {selectedRoom?.roomNumber ??
+                          "—"}{" "}
+                        ·{" "}
+                        {selectedRoom?.roomType
+                          .bedType ??
                           "Bed type not specified"}
                       </p>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {booking.adults} adults · {booking.children} children
+                        {booking.adults} adults ·{" "}
+                        {booking.children} children
                       </p>
                     </div>
                     <Button
@@ -1135,7 +1347,9 @@ export default function NewBookingPage() {
                 </div>
                 <div className="rounded-2xl border p-4 sm:p-5">
                   <div className="mb-4 flex items-center justify-between gap-3">
-                    <h3 className="font-semibold">Guest list</h3>
+                    <h3 className="font-semibold">
+                      Guest list
+                    </h3>
                     <Button
                       type="button"
                       variant="ghost"
@@ -1158,15 +1372,19 @@ export default function NewBookingPage() {
                             .map((part) => part[0])
                             .join("")
                             .slice(0, 2)
-                            .toUpperCase() || String(index + 1)}
+                            .toUpperCase() ||
+                            String(index + 1)}
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-medium">
-                            {guest.fullName || "Name not provided"}
+                            {guest.fullName ||
+                              "Name not provided"}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {index < booking.adults ? "Adult" : "Child"} · Age{" "}
-                            {guest.age}
+                            {index < booking.adults
+                              ? "Adult"
+                              : "Child"}{" "}
+                            · Age {guest.age}
                           </p>
                         </div>
                         <Badge variant="outline">
@@ -1202,19 +1420,24 @@ export default function NewBookingPage() {
                     {formatCurrency(grandTotal)}
                   </p>
                   <p className="mt-2 text-xs text-background/70">
-                    {nights} {nights === 1 ? "night" : "nights"} · {totalGuests}{" "}
-                    guests
+                    {nights}{" "}
+                    {nights === 1 ? "night" : "nights"} ·{" "}
+                    {totalGuests} guests
                   </p>
                 </div>
                 <div className="space-y-3 p-5">
                   <div className="flex justify-between gap-3 text-sm">
-                    <span className="text-muted-foreground">Room subtotal</span>
+                    <span className="text-muted-foreground">
+                      Room subtotal
+                    </span>
                     <span className="font-medium">
                       {formatCurrency(subtotal)}
                     </span>
                   </div>
                   <div className="flex justify-between gap-3 text-sm">
-                    <span className="text-muted-foreground">GST (18%)</span>
+                    <span className="text-muted-foreground">
+                      GST (18%)
+                    </span>
                     <span className="font-medium">
                       {formatCurrency(taxAmount)}
                     </span>
@@ -1224,12 +1447,15 @@ export default function NewBookingPage() {
                       Payment method
                     </span>
                     <span className="font-medium">
-                      {booking.paymentMethod === "CASH" ? "Cash" : "Online"}
+                      {booking.paymentMethod === "CASH"
+                        ? "Cash"
+                        : "Online"}
                     </span>
                   </div>
                   <div className="rounded-xl bg-muted/40 p-3 text-xs leading-5 text-muted-foreground">
                     <MapPin className="mr-1 inline h-3.5 w-3.5" />
-                    Cash bookings are confirmed and paid on creation. Online
+                    Cash bookings are confirmed, but payment
+                    must be recorded before check-in. Online
                     payments remain pending until verified.
                   </div>
                 </div>
@@ -1255,7 +1481,8 @@ export default function NewBookingPage() {
                 Create a booking
               </h1>
               <p className="mt-1 text-sm text-muted-foreground">
-                A guided workflow for a seamless guest reservation.
+                A guided workflow for a seamless guest
+                reservation.
               </p>
             </div>
           </div>
@@ -1274,15 +1501,20 @@ export default function NewBookingPage() {
         className="rounded-2xl border bg-card p-3 sm:p-4"
       >
         <div className="mb-4 flex items-center justify-between gap-3 px-1">
-          <p className="text-sm font-semibold">Reservation progress</p>
+          <p className="text-sm font-semibold">
+            Reservation progress
+          </p>
           <p className="text-xs text-muted-foreground">
-            {Math.round(((step - 1) / (TOTAL_STEPS - 1)) * 100)}% complete
+            {Math.round(((step - 1) / (TOTAL_STEPS - 1)) * 100)}%
+            complete
           </p>
         </div>
         <div className="mb-4 h-1.5 overflow-hidden rounded-full bg-muted">
           <div
             className="h-full rounded-full bg-primary transition-all duration-300"
-            style={{ width: `${((step - 1) / (TOTAL_STEPS - 1)) * 100}%` }}
+            style={{
+              width: `${((step - 1) / (TOTAL_STEPS - 1)) * 100}%`,
+            }}
           />
         </div>
         <div className="grid grid-cols-5 gap-1 sm:gap-3">
@@ -1364,7 +1596,9 @@ export default function NewBookingPage() {
                   ) : (
                     <Check className="h-4 w-4" />
                   )}
-                  {isCreatingBooking ? "Creating booking…" : "Create booking"}
+                  {isCreatingBooking
+                    ? "Creating booking…"
+                    : "Create booking"}
                 </Button>
               )}
             </div>
@@ -1374,7 +1608,9 @@ export default function NewBookingPage() {
           <div className="rounded-2xl border bg-card p-5">
             <div className="flex items-center gap-2">
               <ShieldCheck className="h-4 w-4 text-primary" />
-              <p className="text-sm font-semibold">Booking checklist</p>
+              <p className="text-sm font-semibold">
+                Booking checklist
+              </p>
             </div>
             <div className="mt-4 space-y-4">
               {[
@@ -1388,7 +1624,7 @@ export default function NewBookingPage() {
                     booking.checkInDate &&
                     booking.checkOutDate &&
                     booking.roomId &&
-                    roomSearch
+                    roomSearch,
                   ),
                 },
                 {
@@ -1396,7 +1632,9 @@ export default function NewBookingPage() {
                   done:
                     booking.guests.length === totalGuests &&
                     booking.guests.every(
-                      (guest) => guest.fullName.trim() && guest.age > 0
+                      (guest) =>
+                        guest.fullName.trim() &&
+                        guest.age > 0,
                     ),
                 },
                 {
@@ -1404,7 +1642,10 @@ export default function NewBookingPage() {
                   done: Boolean(booking.paymentMethod),
                 },
               ].map((item) => (
-                <div key={item.label} className="flex items-start gap-2.5">
+                <div
+                  key={item.label}
+                  className="flex items-start gap-2.5"
+                >
                   <span
                     className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${item.done ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}
                   >
@@ -1427,10 +1668,13 @@ export default function NewBookingPage() {
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-background text-primary">
               <Sparkles className="h-4 w-4" />
             </div>
-            <p className="mt-3 text-sm font-semibold">Nivara standard</p>
+            <p className="mt-3 text-sm font-semibold">
+              Nivara standard
+            </p>
             <p className="mt-1 text-sm leading-6 text-muted-foreground">
-              Double-check guest names and stay dates before confirming.
-              Accurate details help ensure a smooth check-in.
+              Double-check guest names and stay dates before
+              confirming. Accurate details help ensure a smooth
+              check-in.
             </p>
           </div>
           {step >= 2 && (
@@ -1442,8 +1686,8 @@ export default function NewBookingPage() {
                 {formatCurrency(grandTotal)}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                {nights} {nights === 1 ? "night" : "nights"} · including
-                estimated GST
+                {nights} {nights === 1 ? "night" : "nights"} ·
+                including estimated GST
               </p>
             </div>
           )}

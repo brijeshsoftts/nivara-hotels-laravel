@@ -151,6 +151,168 @@ class BookingController extends Controller
         ]);
     }
 
+    public function show(Request $request, string $id)
+    {
+        $user = $request->user();
+        abort_unless($user, 401);
+        abort_unless(in_array($user->role, [
+            UserRole::ADMIN->value,
+            UserRole::MANAGER->value,
+            UserRole::STAFF->value,
+            UserRole::CUSTOMER->value,
+        ], true), 403);
+        abort_unless(
+            $user->role !== UserRole::STAFF->value || $user->category !== 'HOUSEKEEPER',
+            403,
+        );
+
+        $booking = Booking::with([
+            'customer.avatar',
+            'customer.customer',
+            'createdBy.avatar',
+            'bookingRooms.room.roomAssignments.user',
+            'bookingRooms.roomType',
+            'bookingGuests',
+            'invoices.payments.receivedBy',
+        ])->findOrFail($id);
+
+        if ($user->role === UserRole::CUSTOMER->value) {
+            abort_unless($booking->customer_id === $user->id, 404);
+
+            $bookingRoom = $booking->bookingRooms->first();
+            $room = $bookingRoom?->room;
+
+            return response()->json(['data' => [
+                'id' => $booking->id,
+                'bookingNumber' => $booking->booking_reference,
+                'status' => $booking->status->value,
+                'roomType' => $bookingRoom?->roomType?->name ?? '',
+                'roomNumber' => $room?->room_number,
+                'checkIn' => $booking->check_in_date?->toIso8601String(),
+                'checkOut' => $booking->check_out_date?->toIso8601String(),
+                'duration' => max(0, $booking->check_in_date->diffInDays($booking->check_out_date)),
+                'adults' => $booking->bookingGuests->filter(fn($guest) => $guest->age === null || $guest->age >= 18)->count(),
+                'children' => $booking->bookingGuests->filter(fn($guest) => $guest->age !== null && $guest->age < 18)->count(),
+                'bookedOn' => $booking->booked_at?->toIso8601String(),
+            ]]);
+        }
+
+        $bookingRoom = $booking->bookingRooms->first();
+        $room = $bookingRoom?->room;
+        $roomType = $bookingRoom?->roomType;
+        $customer = $booking->customer;
+        $customerProfile = $customer?->customer;
+        $creator = $booking->createdBy;
+        $invoice = $booking->invoices->first();
+        $enumValue = fn($value) => $value instanceof \BackedEnum ? $value->value : $value;
+
+        return response()->json(['data' => [
+            'id' => $booking->id,
+            'bookingReference' => $booking->booking_reference,
+            'customerId' => $booking->customer_id ?? '',
+            'checkInDate' => $booking->check_in_date?->toIso8601String(),
+            'checkOutDate' => $booking->check_out_date?->toIso8601String(),
+            'totalGuests' => (int) $booking->total_guests,
+            'totalAmount' => (int) $booking->total_amount,
+            'paymentMethod' => $enumValue($booking->payment_method),
+            'specialRequest' => $booking->special_request,
+            'status' => $enumValue($booking->status),
+            'bookedAt' => $booking->booked_at?->toIso8601String(),
+            'checkedInAt' => $booking->checked_in_at?->toIso8601String(),
+            'checkedOutAt' => $booking->checked_out_at?->toIso8601String(),
+            'cancelledAt' => $booking->cancelled_at?->toIso8601String(),
+            'createdBy' => $booking->created_by ?? '',
+            'createdAt' => $booking->created_at?->toIso8601String(),
+            'updatedAt' => $booking->updated_at?->toIso8601String(),
+            'customer' => [
+                'id' => $customer?->id ?? $booking->id,
+                'fullName' => $customer?->full_name ?? $booking->guest_name ?? 'Guest',
+                'email' => $customer?->email ?? $booking->guest_email ?? '',
+                'phone' => $customer?->phone ?? $booking->guest_phone ?? '',
+                'profileImage' => $customer?->avatar ? [
+                    'url' => $customer->avatar->url,
+                    'altText' => $customer->avatar->alt_text,
+                ] : null,
+                'profile' => $customerProfile ? [
+                    'idProofNumber' => $customerProfile->id_proof_number ?? '',
+                    'address' => $customerProfile->address ?? '',
+                ] : null,
+            ],
+            'creator' => [
+                'id' => $creator?->id ?? '',
+                'fullName' => $creator?->full_name ?? $creator?->name ?? 'Guest checkout',
+                'email' => $creator?->email ?? '',
+                'phone' => $creator?->phone ?? '',
+                'profileImage' => $creator?->avatar ? [
+                    'url' => $creator->avatar->url,
+                    'altText' => $creator->avatar->alt_text,
+                ] : null,
+            ],
+            'bookingRoom' => $bookingRoom ? [
+                'id' => $bookingRoom->id,
+                'assignedRoom' => $room ? [
+                    'id' => $room->id,
+                    'roomNumber' => $room->room_number,
+                    'name' => $room->name,
+                    'floor' => (int) $room->floor,
+                    'housekeepers' => $room->roomAssignments
+                        ->filter(fn($assignment) => $assignment->is_active)
+                        ->map(fn($assignment) => $assignment->user)
+                        ->filter()
+                        ->map(fn($housekeeper) => [
+                            'id' => $housekeeper->id,
+                            'fullName' => $housekeeper->full_name ?? $housekeeper->name,
+                            'email' => $housekeeper->email ?? '',
+                            'phone' => $housekeeper->phone ?? '',
+                        ])->values(),
+                ] : null,
+                'roomType' => $roomType ? [
+                    'id' => $roomType->id,
+                    'name' => $roomType->name,
+                    'slug' => $roomType->slug,
+                    'maxGuests' => (int) $roomType->max_guests,
+                    'basePrice' => (int) $roomType->base_price,
+                    'currency' => $roomType->currency ?? 'INR',
+                    'bedType' => $enumValue($roomType->bed_type),
+                    'bedCount' => (int) $roomType->bed_count,
+                ] : null,
+                'pricePerNight' => (int) $bookingRoom->price_per_night,
+            ] : null,
+            'bookingGuests' => $booking->bookingGuests->map(fn($guest) => [
+                'id' => $guest->id,
+                'fullName' => $guest->full_name,
+                'age' => $guest->age,
+                'gender' => $enumValue($guest->gender),
+                'idProofNumber' => $guest->id_proof_number,
+            ])->values(),
+            'invoice' => $invoice ? [
+                'id' => $invoice->id,
+                'invoiceNumber' => $invoice->invoice_number,
+                'subtotal' => (int) $invoice->subtotal,
+                'taxAmount' => (int) $invoice->tax_amount,
+                'discountAmount' => (int) $invoice->discount_amount,
+                'totalAmount' => (int) $invoice->total_amount,
+                'paymentMethod' => $enumValue($booking->payment_method),
+                'status' => $enumValue($invoice->status),
+                'issuedAt' => $invoice->issued_at?->toIso8601String(),
+                'payments' => $invoice->payments->map(fn($payment) => [
+                    'id' => $payment->id,
+                    'paymentReference' => $payment->payment_reference,
+                    'transactionId' => $payment->transaction_id,
+                    'amount' => (int) $payment->amount,
+                    'paymentMethod' => $enumValue($payment->payment_method),
+                    'paymentStatus' => $enumValue($payment->payment_status),
+                    'paidAt' => $payment->paid_at?->toIso8601String(),
+                    'createdAt' => $payment->created_at?->toIso8601String(),
+                    'recordedBy' => $payment->receivedBy ? [
+                        'id' => $payment->receivedBy->id,
+                        'fullName' => $payment->receivedBy->full_name ?? $payment->receivedBy->name,
+                    ] : null,
+                ])->values(),
+            ] : null,
+        ]]);
+    }
+
     private function getStats(): array
     {
         $total = Booking::count();
@@ -205,20 +367,9 @@ class BookingController extends Controller
     public function create()
     {
         $roomTypes = RoomType::where('is_active', true)->with(['amenities', 'images'])->get();
-        $availableRooms = Room::with('roomType')->where('occupancy_status', OccupancyStatus::VACANT->value)->get()->map(fn($r) => [
-            'id' => $r->id,
-            'roomNumber' => $r->room_number,
-            'name' => $r->name,
-            'floor' => (string) $r->floor,
-            'roomTypeId' => $r->room_type_id,
-            'roomType' => [
-                'id' => $r->room_type_id,
-                'name' => $r->roomType?->name ?? 'Room Type',
-                'basePrice' => $r->roomType?->base_price ?? 2500,
-            ],
-            'occupancyStatus' => 'VACANT',
-            'housekeepingStatus' => 'CLEAN',
-        ]);
+        $availableRooms = $this->availableRoomQuery()->get()->map(
+            fn(Room $room) => $this->mapAvailableRoom($room)
+        );
 
         $customers = Customer::with('user')->take(20)->get()->map(fn($c) => [
             'id' => $c->id,
@@ -243,114 +394,226 @@ class BookingController extends Controller
 
     public function availableRooms(Request $request)
     {
-        $rooms = Room::with('roomType')->where('occupancy_status', OccupancyStatus::VACANT->value)->get()->map(fn($r) => [
-            'id' => $r->id,
-            'roomNumber' => $r->room_number,
-            'name' => $r->name,
-            'floor' => (string) $r->floor,
-            'roomTypeId' => $r->room_type_id,
-            'roomType' => [
-                'id' => $r->room_type_id,
-                'name' => $r->roomType?->name ?? 'Room Type',
-                'basePrice' => $r->roomType?->base_price ?? 2500,
-            ],
-            'occupancyStatus' => 'VACANT',
-            'housekeepingStatus' => 'CLEAN',
+        $validated = $request->validate([
+            'checkInDate' => ['required', 'date', 'after_or_equal:today'],
+            'checkOutDate' => ['required', 'date', 'after:checkInDate'],
+            'adults' => ['required', 'integer', 'min:1', 'max:20'],
+            'children' => ['required', 'integer', 'min:0', 'max:20'],
         ]);
+        $checkIn = Carbon::parse($validated['checkInDate']);
+        $checkOut = Carbon::parse($validated['checkOutDate']);
+        $totalGuests = $validated['adults'] + $validated['children'];
+        $rooms = $this->availableRoomQuery($totalGuests, $checkIn, $checkOut)
+            ->get()
+            ->map(fn(Room $room) => $this->mapAvailableRoom($room));
 
         return response()->json(['data' => $rooms]);
     }
 
+    private function availableRoomQuery(
+        int $totalGuests = 0,
+        ?Carbon $checkIn = null,
+        ?Carbon $checkOut = null,
+    ) {
+        $query = Room::query()
+            ->with(['roomType.amenities', 'roomType.images'])
+            ->where('is_active', true)
+            ->whereIn('occupancy_status', [
+                OccupancyStatus::VACANT->value,
+                OccupancyStatus::RESERVED->value,
+            ])
+            ->whereHas('roomType', fn($roomTypes) => $roomTypes
+                ->where('is_active', true)
+                ->where('max_guests', '>=', $totalGuests));
+
+        if ($checkIn && $checkOut) {
+            $overlappingRoomIds = BookingRoom::query()
+                ->whereNotNull('assigned_room_id')
+                ->whereHas('booking', fn($bookings) => $bookings
+                    ->whereNotIn('status', [
+                        BookingStatus::CANCELLED->value,
+                        BookingStatus::NO_SHOW->value,
+                        BookingStatus::CHECKED_OUT->value,
+                    ])
+                    ->where('check_in_date', '<', $checkOut)
+                    ->where('check_out_date', '>', $checkIn))
+                ->select('assigned_room_id');
+
+            $query->whereNotIn('id', $overlappingRoomIds);
+        }
+
+        return $query;
+    }
+
+    private function mapAvailableRoom(Room $room): array
+    {
+        $roomType = $room->roomType;
+        $image = $roomType?->images->first();
+
+        return [
+            'id' => $room->id,
+            'roomNumber' => $room->room_number,
+            'floor' => (int) $room->floor,
+            'roomName' => $room->name,
+            'roomType' => [
+                'id' => $roomType?->id ?? $room->room_type_id,
+                'name' => $roomType?->name ?? 'Room Type',
+                'maxGuests' => (int) ($roomType?->max_guests ?? 1),
+                'basePrice' => (int) ($roomType?->base_price ?? 2500),
+                'currency' => 'INR',
+                'bedType' => $roomType?->bed_type?->value ?? (string) ($roomType?->bed_type ?? ''),
+                'bedCount' => (int) ($roomType?->bed_count ?? 1),
+                'sizeSqFt' => $roomType?->size_sq_ft,
+                'image' => $image ? [
+                    'url' => $image->url,
+                    'altText' => $image->alt_text,
+                ] : null,
+                'amenities' => $roomType?->amenities->map(fn($amenity) => [
+                    'id' => $amenity->id,
+                    'name' => $amenity->name,
+                    'icon' => $amenity->icon,
+                ])->values() ?? collect(),
+            ],
+        ];
+    }
+
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'paymentMethod' => ['sometimes', Rule::enum(PaymentMethod::class)],
+        $legacyRooms = $request->input('rooms', []);
+        $legacyRoom = is_array($legacyRooms) ? ($legacyRooms[0] ?? null) : null;
+        $legacyRoomId = is_array($legacyRoom)
+            ? ($legacyRoom['roomId'] ?? $legacyRoom['id'] ?? null)
+            : $legacyRoom;
+        $hasGuestDetails = $request->has('guests');
+
+        $request->merge([
+            'checkInDate' => $request->input('checkInDate', $request->input('checkIn', Carbon::today()->toDateString())),
+            'checkOutDate' => $request->input('checkOutDate', $request->input('checkOut', Carbon::today()->addDays(2)->toDateString())),
+            'adults' => $request->input('adults', $request->input('totalGuests', 1)),
+            'children' => $request->input('children', 0),
+            'roomId' => $request->input('roomId', $legacyRoomId),
+            'guests' => $request->input('guests', []),
+            'paymentMethod' => $request->input('paymentMethod', PaymentMethod::CASH->value),
         ]);
-        $paymentMethod = $validated['paymentMethod'] ?? PaymentMethod::CASH->value;
 
-        return DB::transaction(function () use ($request, $paymentMethod) {
+        $validated = $request->validate([
+            'customerId' => ['nullable', 'string', 'exists:customers,id'],
+            'checkInDate' => ['required', 'date', 'after_or_equal:today'],
+            'checkOutDate' => ['required', 'date', 'after:checkInDate'],
+            'adults' => ['required', 'integer', 'min:1', 'max:20'],
+            'children' => ['required', 'integer', 'min:0', 'max:20'],
+            'roomId' => ['required', 'string', 'exists:rooms,id'],
+            'guests' => ['sometimes', 'array'],
+            'guests.*.fullName' => ['required', 'string', 'max:255'],
+            'guests.*.age' => ['required', 'integer', 'min:1', 'max:120'],
+            'guests.*.gender' => ['required', Rule::in(['MALE', 'FEMALE', 'OTHER'])],
+            'guests.*.idProofNumber' => ['nullable', 'string', 'max:255'],
+            'specialRequest' => ['nullable', 'string', 'max:1000'],
+            'paymentMethod' => ['required', Rule::enum(PaymentMethod::class)],
+        ]);
+        $guestDetails = $validated['guests'] ?? [];
+        if ($hasGuestDetails) {
+            abort_unless(
+                count($guestDetails) === $validated['adults'] + $validated['children'],
+                422,
+                'Guest count must match the requested adults and children count.'
+            );
+        }
+        $paymentMethod = $validated['paymentMethod'];
+
+        return DB::transaction(function () use ($request, $validated, $guestDetails, $hasGuestDetails, $paymentMethod) {
             $ref = 'BK-' . strtoupper(Str::random(8));
-            $checkInRaw = $request->input('checkInDate') ?? $request->input('checkIn');
-            $checkOutRaw = $request->input('checkOutDate') ?? $request->input('checkOut');
-            $checkIn = Carbon::parse($checkInRaw ?? Carbon::today());
-            $checkOut = Carbon::parse($checkOutRaw ?? Carbon::today()->addDays(2));
-            $days = max(1, $checkIn->diffInDays($checkOut));
-
-            $customerId = $request->input('customerId');
-            $userCustomerId = null;
-            if ($customerId) {
-                $cust = Customer::find($customerId);
-                $userCustomerId = $cust ? $cust->user_id : $customerId;
-            } elseif ($request->filled('customer.email')) {
-                $cData = $request->input('customer');
-                $guestUser = User::firstOrCreate(
-                    ['email' => $cData['email']],
+            $checkIn = Carbon::parse($validated['checkInDate']);
+            $checkOut = Carbon::parse($validated['checkOutDate']);
+            $days = max(1, (int) $checkIn->diffInDays($checkOut));
+            $customer = isset($validated['customerId'])
+                ? Customer::with('user')->findOrFail($validated['customerId'])
+                : null;
+            if (!$customer && $request->filled('customer.email')) {
+                $customerData = $request->input('customer');
+                $customerUser = User::firstOrCreate(
+                    ['email' => $customerData['email']],
                     [
-                        'name' => $cData['fullName'] ?? 'Guest',
-                        'full_name' => $cData['fullName'] ?? 'Guest',
-                        'phone' => $cData['phone'] ?? null,
+                        'name' => $customerData['fullName'] ?? 'Guest',
+                        'full_name' => $customerData['fullName'] ?? 'Guest',
+                        'phone' => $customerData['phone'] ?? null,
                         'role' => UserRole::CUSTOMER->value,
                         'password' => Hash::make(Str::random(16)),
                         'is_active' => true,
                     ]
                 );
-                Customer::firstOrCreate(['user_id' => $guestUser->id]);
-                $userCustomerId = $guestUser->id;
-            } else {
-                $userCustomerId = User::where('role', UserRole::CUSTOMER->value)->first()?->id ?? User::first()?->id;
+                $customer = Customer::firstOrCreate(['user_id' => $customerUser->id]);
+                $customer->setRelation('user', $customerUser);
             }
+            $room = Room::with('roomType')->lockForUpdate()->findOrFail($validated['roomId']);
+            $totalGuests = $request->has('totalGuests') && !$request->has('adults')
+                ? (int) $request->input('totalGuests')
+                : $validated['adults'] + $validated['children'];
 
-            $rooms = $request->input('rooms', []);
-            $totalAmount = 0;
+            abort_unless(
+                $room->is_active
+                    && in_array($room->occupancy_status->value, [OccupancyStatus::VACANT->value, OccupancyStatus::RESERVED->value], true)
+                    && $room->roomType?->is_active
+                    && $room->roomType->max_guests >= $totalGuests
+                    && !$this->roomHasOverlappingBooking($room->id, $checkIn, $checkOut),
+                422,
+                'The selected room is no longer available for these dates.'
+            );
+
+            $price = (int) $room->roomType->base_price;
+            $subtotal = $price * $days;
+            $taxAmount = (int) round($subtotal * 0.18);
+            $userCustomerId = $customer?->user_id;
 
             $booking = Booking::create([
                 'booking_reference' => $ref,
-                'customer_id' => $userCustomerId,
-                'guest_name' => $request->input('customer.fullName', 'Walk-in Guest'),
-                'guest_email' => $request->input('customer.email', 'guest@example.com'),
-                'guest_phone' => $request->input('customer.phone', '+91 9876543210'),
+                'customer_id' => $customer?->user_id,
+                'guest_name' => $guestDetails[0]['fullName'] ?? $customer?->user?->full_name ?? $customer?->user?->name ?? $request->input('customer.fullName', 'Walk-in Guest'),
+                'guest_email' => $customer?->user?->email ?? $request->input('customer.email'),
+                'guest_phone' => $customer?->user?->phone ?? $request->input('customer.phone'),
                 'check_in_date' => $checkIn,
                 'check_out_date' => $checkOut,
-                'total_guests' => (int) ($request->input('totalGuests') ?? $request->input('adults', 1)),
-                'total_amount' => 0,
+                'total_guests' => $totalGuests,
+                'total_amount' => $subtotal,
                 'payment_method' => $paymentMethod,
                 'status' => $paymentMethod === PaymentMethod::ONLINE->value
                     ? BookingStatus::PENDING->value
                     : BookingStatus::CONFIRMED->value,
+                'special_request' => $validated['specialRequest'] ?? null,
+                'created_by' => $request->user()?->id,
                 'booked_at' => Carbon::now(),
             ]);
 
-            foreach ($rooms as $r) {
-                $roomId = is_array($r) ? ($r['roomId'] ?? $r['id']) : $r;
-                $physRoom = Room::with('roomType')->find($roomId);
-                $price = $physRoom?->roomType?->base_price ?? 3500;
-                $roomTotal = $price * $days;
-                $totalAmount += $roomTotal;
+            BookingRoom::create([
+                'booking_id' => $booking->id,
+                'room_type_id' => $room->room_type_id,
+                'assigned_room_id' => $room->id,
+                'price_per_night' => $price,
+            ]);
 
-                BookingRoom::create([
+            foreach ($guestDetails as $guest) {
+                BookingGuest::create([
                     'booking_id' => $booking->id,
-                    'room_type_id' => $physRoom?->room_type_id ?? RoomType::first()?->id,
-                    'assigned_room_id' => $physRoom?->id,
-                    'price_per_night' => $price,
+                    'full_name' => $guest['fullName'],
+                    'age' => $guest['age'],
+                    'gender' => $guest['gender'],
+                    'id_proof_number' => $guest['idProofNumber'] ?? null,
                 ]);
-
-                if ($physRoom) {
-                    $physRoom->occupancy_status = OccupancyStatus::OCCUPIED->value;
-                    $physRoom->save();
-                }
             }
 
-            $booking->total_amount = max($totalAmount, 3500);
-            $booking->save();
+            $room->occupancy_status = $hasGuestDetails
+                ? OccupancyStatus::RESERVED->value
+                : OccupancyStatus::OCCUPIED->value;
+            $room->save();
 
             $inv = Invoice::create([
                 'invoice_number' => 'INV-' . strtoupper(Str::random(8)),
                 'booking_id' => $booking->id,
                 'customer_id' => $userCustomerId,
-                'subtotal' => $booking->total_amount,
-                'tax_amount' => round($booking->total_amount * 0.12, 2),
+                'subtotal' => $subtotal,
+                'tax_amount' => $taxAmount,
                 'discount_amount' => 0,
-                'total_amount' => round($booking->total_amount * 1.12, 2),
+                'total_amount' => $subtotal + $taxAmount,
                 'status' => InvoiceStatus::UNPAID->value,
                 'issued_at' => Carbon::now(),
             ]);
@@ -368,6 +631,21 @@ class BookingController extends Controller
 
             return redirect()->route('dashboard.bookings')->with('success', "Booking {$booking->booking_reference} created successfully.");
         });
+    }
+
+    private function roomHasOverlappingBooking(string $roomId, Carbon $checkIn, Carbon $checkOut): bool
+    {
+        return BookingRoom::query()
+            ->where('assigned_room_id', $roomId)
+            ->whereHas('booking', fn($bookings) => $bookings
+                ->whereNotIn('status', [
+                    BookingStatus::CANCELLED->value,
+                    BookingStatus::NO_SHOW->value,
+                    BookingStatus::CHECKED_OUT->value,
+                ])
+                ->where('check_in_date', '<', $checkOut)
+                ->where('check_out_date', '>', $checkIn))
+            ->exists();
     }
 
     public function updateStatus(Request $request, string $id)

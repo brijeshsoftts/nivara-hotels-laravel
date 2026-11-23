@@ -184,14 +184,18 @@ class CustomerController extends Controller
         $s = $request->input('q', $request->input('search', ''));
         $customers = Customer::with('user')
             ->where(function ($query) use ($s) {
-                $query->whereHas('user', fn($q) => $q->where('name', 'like', "%{$s}%")->orWhere('email', 'like', "%{$s}%")->orWhere('phone', 'like', "%{$s}%"))
+                $query->whereHas('user', fn($q) => $q
+                    ->where('name', 'like', "%{$s}%")
+                    ->orWhere('full_name', 'like', "%{$s}%")
+                    ->orWhere('email', 'like', "%{$s}%")
+                    ->orWhere('phone', 'like', "%{$s}%"))
                     ->orWhere('id_proof_number', 'like', "%{$s}%");
             })
             ->take(10)
             ->get()
             ->map(fn($c) => [
                 'id' => $c->id,
-                'fullName' => $c->user?->name ?? 'Guest',
+                'fullName' => $c->user?->full_name ?? $c->user?->name ?? 'Guest',
                 'email' => $c->user?->email,
                 'phone' => $c->user?->phone,
                 'idProofType' => $c->id_proof_type,

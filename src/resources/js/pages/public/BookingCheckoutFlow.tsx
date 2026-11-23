@@ -62,7 +62,7 @@ type CheckoutFormData = z.output<CheckoutSchema>;
 
 function getStayDetails(
   checkInDate: string | null,
-  checkOutDate: string | null
+  checkOutDate: string | null,
 ): StayDetails | null {
   if (
     !checkInDate ||
@@ -101,7 +101,7 @@ function getPhotoAlt(altText: string | null, roomName: string) {
   if (
     !altText ||
     /^(pasted image|image)(?:\s*\(\d+\))?(?:\.[a-z0-9]+)?$/i.test(
-      altText.trim()
+      altText.trim(),
     )
   ) {
     return `${roomName} room photo`;
@@ -129,7 +129,10 @@ function ProgressSteps({ currentStep }: { currentStep: number }) {
         return (
           <React.Fragment key={step}>
             {index > 0 && (
-              <li aria-hidden="true" className="h-px flex-1 bg-border" />
+              <li
+                aria-hidden="true"
+                className="h-px flex-1 bg-border"
+              />
             )}
             <li
               aria-current={active ? "step" : undefined}
@@ -143,7 +146,10 @@ function ProgressSteps({ currentStep }: { currentStep: number }) {
                 }`}
               >
                 {completed ? (
-                  <Check aria-hidden="true" className="size-4" />
+                  <Check
+                    aria-hidden="true"
+                    className="size-4"
+                  />
                 ) : (
                   number
                 )}
@@ -238,11 +244,18 @@ function CheckoutError({
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
           {onRetry && (
-            <Button onClick={onRetry} type="button" variant="outline">
+            <Button
+              onClick={onRetry}
+              type="button"
+              variant="outline"
+            >
               Try again
             </Button>
           )}
-          <Button nativeButton={false} render={<Link href={backTo} />}>
+          <Button
+            nativeButton={false}
+            render={<Link href={backTo} />}
+          >
             Back to room
           </Button>
         </div>
@@ -298,19 +311,25 @@ function BookingConfirmation({
             </dd>
           </div>
           <div className="border-b border-border py-4">
-            <dt className="text-xs text-muted-foreground">Check-in</dt>
+            <dt className="text-xs text-muted-foreground">
+              Check-in
+            </dt>
             <dd className="mt-1 text-sm font-medium">
               {format(stay.checkIn, "EEE, dd MMM yyyy")}
             </dd>
           </div>
           <div className="border-b border-border py-4">
-            <dt className="text-xs text-muted-foreground">Check-out</dt>
+            <dt className="text-xs text-muted-foreground">
+              Check-out
+            </dt>
             <dd className="mt-1 text-sm font-medium">
               {format(stay.checkOut, "EEE, dd MMM yyyy")}
             </dd>
           </div>
           <div className="border-b border-border py-4">
-            <dt className="text-xs text-muted-foreground">Guests</dt>
+            <dt className="text-xs text-muted-foreground">
+              Guests
+            </dt>
             <dd className="mt-1 text-sm font-medium">
               {adults} adult{adults === 1 ? "" : "s"}
               {children > 0 &&
@@ -318,20 +337,27 @@ function BookingConfirmation({
             </dd>
           </div>
           <div className="border-b border-border py-4">
-            <dt className="text-xs text-muted-foreground">Payment</dt>
+            <dt className="text-xs text-muted-foreground">
+              Payment
+            </dt>
             <dd className="mt-1 text-sm font-medium text-success">
               {payment.paymentStatus} · {payment.bookingStatus}
             </dd>
           </div>
           <div className="py-4 sm:col-span-2">
-            <dt className="text-xs text-muted-foreground">Amount paid</dt>
+            <dt className="text-xs text-muted-foreground">
+              Amount paid
+            </dt>
             <dd className="mt-1 font-heading text-2xl font-semibold">
               {formatPrice(payment.paidAmount)}
             </dd>
           </div>
         </dl>
         <div className="mt-7 flex flex-wrap gap-3">
-          <Button nativeButton={false} render={<Link href="/rooms" />}>
+          <Button
+            nativeButton={false}
+            render={<Link href="/rooms" />}
+          >
             Browse more rooms
           </Button>
           <Button
@@ -349,9 +375,13 @@ function BookingConfirmation({
 
 export default function BookingCheckoutFlow() {
   const page = usePage<any>();
-  const slug = (page.props as any)?.slug || (typeof window !== "undefined" ? window.location.pathname.split("/")[2] : "");
+  const slug =
+    (page.props as any)?.slug ||
+    (typeof window !== "undefined"
+      ? window.location.pathname.split("/")[2]
+      : "");
   const searchParams = new URLSearchParams(
-    typeof window !== "undefined" ? window.location.search : ""
+    typeof window !== "undefined" ? window.location.search : "",
   );
   const preferences = getBookingPreferences(searchParams);
   const { checkInDate, checkOutDate, adults, children } = preferences;
@@ -371,29 +401,34 @@ export default function BookingCheckoutFlow() {
   } = useAvailableRoom(slug ?? null, stay?.checkInDate, stay?.checkOutDate);
   const availabilityParams = stay
     ? {
-        checkInDate: stay.checkInDate,
-        checkOutDate: stay.checkOutDate,
-        adults,
-        children,
-      }
+       checkInDate: stay.checkInDate,
+       checkOutDate: stay.checkOutDate,
+       adults,
+       children,
+     }
     : undefined;
   const {
     rooms: availableRooms,
     isLoading: isAvailabilityLoading,
     isError: isAvailabilityError,
     refetch: refetchAvailability,
-  } = useAvailableBookingRooms(availabilityParams);
+  } = useAvailableBookingRooms(
+    availabilityParams,
+    "/public/bookings/available-rooms",
+  );
   const createBooking = useCreatePublicBooking();
   const {
     startPayment,
     isPending: isPaymentPending,
     isCheckoutOpen,
   } = useRazorpayPayment();
-  const [checkoutToken] = React.useState(() => globalThis.crypto.randomUUID());
+  const [checkoutToken] = React.useState(() =>
+    globalThis.crypto.randomUUID(),
+  );
   const [booking, setBooking] =
     React.useState<CreatePublicBookingResult | null>(null);
   const [payment, setPayment] = React.useState<PublicPaymentStatus | null>(
-    null
+    null,
   );
   const [paymentMessage, setPaymentMessage] = React.useState("");
   const [specialRequest, setSpecialRequest] = React.useState("");
@@ -408,7 +443,7 @@ export default function BookingCheckoutFlow() {
       phone: "",
       companions: Array.from(
         { length: Math.max(adults + children - 1, 0) },
-        () => ({ fullName: "" })
+        () => ({ fullName: "" }),
       ),
     },
   });
@@ -430,7 +465,7 @@ export default function BookingCheckoutFlow() {
   const confirmed = Boolean(
     booking &&
     payment?.paymentStatus === "COMPLETED" &&
-    payment.bookingStatus === "CONFIRMED"
+    payment.bookingStatus === "CONFIRMED",
   );
   const currentStep = confirmed ? 3 : booking ? 2 : 1;
 
@@ -446,7 +481,7 @@ export default function BookingCheckoutFlow() {
             status.bookingStatus !== "CONFIRMED"
           ) {
             setPaymentMessage(
-              "Payment received. Your booking is being confirmed; please do not pay again."
+              "Payment received. Your booking is being confirmed; please do not pay again.",
             );
           } else {
             setPaymentMessage("");
@@ -455,15 +490,15 @@ export default function BookingCheckoutFlow() {
       },
       onCancelled: () =>
         setPaymentMessage(
-          "Payment was cancelled. Your reservation is pending; you can retry securely below."
+          "Payment was cancelled. Your reservation is pending; you can retry securely below.",
         ),
       onFailed: () =>
         setPaymentMessage(
-          "Payment did not complete. Your reservation is pending; please retry or use another payment method."
+          "Payment did not complete. Your reservation is pending; please retry or use another payment method.",
         ),
       onVerificationFailed: () =>
         setPaymentMessage(
-          "We could not verify the payment yet. Do not retry if your account was charged; contact support."
+          "We could not verify the payment yet. Do not retry if your account was charged; contact support.",
         ),
     });
   };
@@ -491,9 +526,13 @@ export default function BookingCheckoutFlow() {
         children,
         guests: [
           { fullName: values.fullName },
-          ...values.companions.map((guest) => ({ fullName: guest.fullName })),
+          ...values.companions.map((guest) => ({
+            fullName: guest.fullName,
+          })),
         ],
-        ...(specialRequest.trim() && { specialRequest: specialRequest.trim() }),
+        ...(specialRequest.trim() && {
+          specialRequest: specialRequest.trim(),
+        }),
         paymentMethod: "ONLINE",
       });
       setBooking(createdBooking);
@@ -501,7 +540,7 @@ export default function BookingCheckoutFlow() {
     } catch (error) {
       notifyError(error);
       setPaymentMessage(
-        "We could not prepare your reservation. Check room availability and try again."
+        "We could not prepare your reservation. Check room availability and try again.",
       );
     }
   };
@@ -590,7 +629,8 @@ export default function BookingCheckoutFlow() {
             Complete your booking
           </h1>
           <p className="mt-2 max-w-xl text-sm leading-6 text-background/85 sm:text-base">
-            Confirm your stay details and continue to secure online payment.
+            Confirm your stay details and continue to secure online
+            payment.
           </p>
         </div>
       </section>
@@ -611,7 +651,9 @@ export default function BookingCheckoutFlow() {
               />
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <Label htmlFor="guest-full-name">Full name *</Label>
+                  <Label htmlFor="guest-full-name">
+                    Full name *
+                  </Label>
                   <Input
                     autoComplete="name"
                     className="mt-2 h-10 bg-background"
@@ -621,11 +663,16 @@ export default function BookingCheckoutFlow() {
                     {...form.register("fullName")}
                   />
                   <FieldError>
-                    {form.formState.errors.fullName?.message}
+                    {
+                      form.formState.errors.fullName
+                        ?.message
+                    }
                   </FieldError>
                 </div>
                 <div>
-                  <Label htmlFor="guest-email">Email address *</Label>
+                  <Label htmlFor="guest-email">
+                    Email address *
+                  </Label>
                   <Input
                     autoComplete="email"
                     className="mt-2 h-10 bg-background"
@@ -640,7 +687,9 @@ export default function BookingCheckoutFlow() {
                   </FieldError>
                 </div>
                 <div>
-                  <Label htmlFor="guest-phone">Mobile number *</Label>
+                  <Label htmlFor="guest-phone">
+                    Mobile number *
+                  </Label>
                   <div className="relative mt-2">
                     <Phone
                       aria-hidden="true"
@@ -667,7 +716,10 @@ export default function BookingCheckoutFlow() {
               {fields.length > 0 && (
                 <div className="mt-6 border-t border-border pt-5">
                   <div className="mb-4 flex items-center gap-2">
-                    <Users aria-hidden="true" className="size-4 text-primary" />
+                    <Users
+                      aria-hidden="true"
+                      className="size-4 text-primary"
+                    />
                     <h3 className="text-sm font-semibold text-foreground">
                       Other guests
                     </h3>
@@ -675,22 +727,32 @@ export default function BookingCheckoutFlow() {
                   <div className="grid gap-4 sm:grid-cols-2">
                     {fields.map((field, index) => {
                       const error =
-                        form.formState.errors.companions?.[index]?.fullName
-                          ?.message;
+                        form.formState.errors
+                          .companions?.[index]
+                          ?.fullName?.message;
                       return (
                         <div key={field.id}>
-                          <Label htmlFor={`companion-${index}`}>
-                            Guest {index + 2} full name *
+                          <Label
+                            htmlFor={`companion-${index}`}
+                          >
+                            Guest {index + 2} full
+                            name *
                           </Label>
                           <Input
                             autoComplete="off"
                             className="mt-2 h-10 bg-background"
-                            disabled={Boolean(booking)}
+                            disabled={Boolean(
+                              booking,
+                            )}
                             id={`companion-${index}`}
                             placeholder="Guest full name"
-                            {...form.register(`companions.${index}.fullName`)}
+                            {...form.register(
+                              `companions.${index}.fullName`,
+                            )}
                           />
-                          <FieldError>{error}</FieldError>
+                          <FieldError>
+                            {error}
+                          </FieldError>
                         </div>
                       );
                     })}
@@ -707,15 +769,25 @@ export default function BookingCheckoutFlow() {
               />
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="rounded-md border border-border bg-background p-3">
-                  <p className="text-xs text-muted-foreground">Check-in</p>
+                  <p className="text-xs text-muted-foreground">
+                    Check-in
+                  </p>
                   <p className="mt-1 text-sm font-semibold">
-                    {format(stay.checkIn, "EEE, dd MMM yyyy")}
+                    {format(
+                      stay.checkIn,
+                      "EEE, dd MMM yyyy",
+                    )}
                   </p>
                 </div>
                 <div className="rounded-md border border-border bg-background p-3">
-                  <p className="text-xs text-muted-foreground">Check-out</p>
+                  <p className="text-xs text-muted-foreground">
+                    Check-out
+                  </p>
                   <p className="mt-1 text-sm font-semibold">
-                    {format(stay.checkOut, "EEE, dd MMM yyyy")}
+                    {format(
+                      stay.checkOut,
+                      "EEE, dd MMM yyyy",
+                    )}
                   </p>
                 </div>
                 <div className="rounded-md border border-border bg-background p-3">
@@ -723,8 +795,9 @@ export default function BookingCheckoutFlow() {
                     Duration and guests
                   </p>
                   <p className="mt-1 text-sm font-semibold">
-                    {nights} {nights === 1 ? "night" : "nights"} · {adults}{" "}
-                    adult{adults === 1 ? "" : "s"}
+                    {nights}{" "}
+                    {nights === 1 ? "night" : "nights"} ·{" "}
+                    {adults} adult{adults === 1 ? "" : "s"}
                     {children > 0 &&
                       ` · ${children} ${children === 1 ? "child" : "children"}`}
                   </p>
@@ -734,7 +807,10 @@ export default function BookingCheckoutFlow() {
                 className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
                 href={roomBackTo}
               >
-                <ArrowLeft aria-hidden="true" className="size-4" />
+                <ArrowLeft
+                  aria-hidden="true"
+                  className="size-4"
+                />
                 Edit stay
               </Link>
             </section>
@@ -745,7 +821,10 @@ export default function BookingCheckoutFlow() {
                 icon={MessageSquare}
                 title="Special requests"
               />
-              <Label htmlFor="special-request" className="sr-only">
+              <Label
+                htmlFor="special-request"
+                className="sr-only"
+              >
                 Special requests
               </Label>
               <Textarea
@@ -753,7 +832,9 @@ export default function BookingCheckoutFlow() {
                 disabled={Boolean(booking)}
                 id="special-request"
                 maxLength={500}
-                onChange={(event) => setSpecialRequest(event.target.value)}
+                onChange={(event) =>
+                  setSpecialRequest(event.target.value)
+                }
                 placeholder="Let us know about arrival time, accessibility needs, or other requests."
                 value={specialRequest}
               />
@@ -773,8 +854,8 @@ export default function BookingCheckoutFlow() {
                     Secure online payment
                   </h2>
                   <p className="mt-1 text-sm leading-5 text-muted-foreground">
-                    Card, UPI, and other supported methods are handled in
-                    Razorpay checkout.
+                    Card, UPI, and other supported methods
+                    are handled in Razorpay checkout.
                   </p>
                 </div>
               </div>
@@ -795,10 +876,13 @@ export default function BookingCheckoutFlow() {
                   className="cursor-pointer text-sm leading-5 font-normal"
                   htmlFor="accept-terms"
                 >
-                  I agree to the booking and cancellation terms. *
+                  I agree to the booking and cancellation
+                  terms. *
                 </Label>
                 {termsAttempted && !acceptedTerms && (
-                  <FieldError>Please accept the terms to continue.</FieldError>
+                  <FieldError>
+                    Please accept the terms to continue.
+                  </FieldError>
                 )}
               </div>
             </div>
@@ -809,13 +893,17 @@ export default function BookingCheckoutFlow() {
               <div className="aspect-video overflow-hidden bg-muted">
                 {room.images[0] ? (
                   <img
-                    alt={getPhotoAlt(room.images[0].altText, room.name)}
+                    alt={getPhotoAlt(
+                      room.images[0].altText,
+                      room.name,
+                    )}
                     className="h-full w-full object-cover"
                     fetchPriority="high"
                     onError={handleRoomImageError}
                     src={
-                      room.images.find((image: any) => image.isPrimary)?.url ??
-                      room.images[0].url
+                      room.images.find(
+                        (image: any) => image.isPrimary,
+                      )?.url ?? room.images[0].url
                     }
                   />
                 ) : (
@@ -839,7 +927,10 @@ export default function BookingCheckoutFlow() {
                     )}
                   </div>
                   <p className="shrink-0 text-right text-sm font-semibold text-foreground">
-                    {formatCurrency(room.basePrice, room.currency)}
+                    {formatCurrency(
+                      room.basePrice,
+                      room.currency,
+                    )}
                     <span className="block text-xs font-normal text-muted-foreground">
                       per night
                     </span>
@@ -852,12 +943,18 @@ export default function BookingCheckoutFlow() {
                       aria-hidden="true"
                       className="size-4 text-primary"
                     />
-                    {formatString(room.bedType)} · {room.bedCount}{" "}
+                    {formatString(room.bedType)} ·{" "}
+                    {room.bedCount}{" "}
                     {room.bedCount === 1 ? "bed" : "beds"}
                   </span>
-                  {room.sizeSqFt !== null && <span>{room.sizeSqFt} sq ft</span>}
+                  {room.sizeSqFt !== null && (
+                    <span>{room.sizeSqFt} sq ft</span>
+                  )}
                   <span className="inline-flex items-center gap-1.5">
-                    <Users aria-hidden="true" className="size-4 text-primary" />
+                    <Users
+                      aria-hidden="true"
+                      className="size-4 text-primary"
+                    />
                     {adults + children} guests
                   </span>
                 </div>
@@ -865,18 +962,30 @@ export default function BookingCheckoutFlow() {
                 <dl className="mt-4 space-y-3 text-sm">
                   <div className="flex justify-between gap-3">
                     <dt className="text-muted-foreground">
-                      {formatCurrency(room.basePrice, room.currency)} × {nights}{" "}
+                      {formatCurrency(
+                        room.basePrice,
+                        room.currency,
+                      )}{" "}
+                      × {nights}{" "}
                       {nights === 1 ? "night" : "nights"}
                     </dt>
                     <dd className="font-medium text-foreground">
-                      {formatCurrency(roomSubtotal, room.currency)}
+                      {formatCurrency(
+                        roomSubtotal,
+                        room.currency,
+                      )}
                     </dd>
                   </div>
                   {booking && taxAmount !== null && (
                     <div className="flex justify-between gap-3">
-                      <dt className="text-muted-foreground">Taxes and fees</dt>
+                      <dt className="text-muted-foreground">
+                        Taxes and fees
+                      </dt>
                       <dd className="font-medium text-foreground">
-                        {formatCurrency(taxAmount, room.currency)}
+                        {formatCurrency(
+                          taxAmount,
+                          room.currency,
+                        )}
                       </dd>
                     </div>
                   )}
@@ -884,7 +993,10 @@ export default function BookingCheckoutFlow() {
                     <dt>Total due</dt>
                     <dd className="text-right">
                       {booking
-                        ? formatCurrency(booking.totalAmount, room.currency)
+                        ? formatCurrency(
+                           booking.totalAmount,
+                           room.currency,
+                         )
                         : "Confirmed before payment"}
                     </dd>
                   </div>
@@ -908,11 +1020,14 @@ export default function BookingCheckoutFlow() {
                       className="text-xs leading-5 text-destructive"
                       role="alert"
                     >
-                      Availability could not be checked. Retry before paying.
+                      Availability could not be checked.
+                      Retry before paying.
                     </p>
                     <Button
                       className="mt-2 h-8 px-2 text-xs"
-                      onClick={() => void refetchAvailability()}
+                      onClick={() =>
+                        void refetchAvailability()
+                      }
                       type="button"
                       variant="outline"
                     >
@@ -927,7 +1042,8 @@ export default function BookingCheckoutFlow() {
                       className="mt-4 text-xs leading-5 text-destructive"
                       role="status"
                     >
-                      This room is no longer available for the selected stay.
+                      This room is no longer available for
+                      the selected stay.
                     </p>
                   )}
                 {paymentMessage && (
@@ -945,32 +1061,43 @@ export default function BookingCheckoutFlow() {
                   form={CHECKOUT_FORM_ID}
                   type="submit"
                 >
-                  {createBooking.isPending || isPaymentPending ? (
+                  {createBooking.isPending ||
+                  isPaymentPending ? (
                     <LoaderCircle
                       aria-hidden="true"
                       className="size-4 animate-spin"
                     />
                   ) : (
-                    <LockKeyhole aria-hidden="true" className="size-4" />
+                    <LockKeyhole
+                      aria-hidden="true"
+                      className="size-4"
+                    />
                   )}
                   {createBooking.isPending
                     ? "Preparing reservation"
                     : isPaymentPending
-                      ? "Opening secure payment"
-                      : booking
-                        ? `Retry payment · ${formatCurrency(booking.totalAmount, room.currency)}`
-                        : "Continue to secure payment"}
+                     ? "Opening secure payment"
+                     : booking
+                      ? `Retry payment · ${formatCurrency(booking.totalAmount, room.currency)}`
+                      : "Continue to secure payment"}
                 </Button>
                 <p className="mt-3 flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
-                  <CreditCard aria-hidden="true" className="size-3.5" />
-                  Payment details are entered securely with Razorpay.
+                  <CreditCard
+                    aria-hidden="true"
+                    className="size-3.5"
+                  />
+                  Payment details are entered securely with
+                  Razorpay.
                 </p>
               </div>
             </section>
             <div className="mt-3 flex items-start gap-2 px-1 text-xs leading-5 text-muted-foreground">
-              <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-              Your booking is confirmed only after payment verification
-              succeeds.
+              <Info
+                aria-hidden="true"
+                className="mt-0.5 size-4 shrink-0"
+              />
+              Your booking is confirmed only after payment
+              verification succeeds.
             </div>
           </aside>
         </form>

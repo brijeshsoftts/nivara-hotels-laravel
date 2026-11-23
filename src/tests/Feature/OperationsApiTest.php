@@ -10,6 +10,7 @@ use App\Enums\PaymentStatus;
 use App\Enums\UserRole;
 use App\Models\Amenity;
 use App\Models\Booking;
+use App\Models\BookingGuest;
 use App\Models\BookingRoom;
 use App\Models\Customer;
 use App\Models\HousekeepingTask;
@@ -324,6 +325,88 @@ class OperationsApiTest extends TestCase
         $this->actingAs($this->admin)->getJson("/room-types/{$roomTypeId}")
             ->assertOk()
             ->assertJsonPath('data.name', 'Royal Heritage Villa');
+    }
+
+    public function test_booking_wizard_searches_rooms_and_persists_guest_details(): void
+    {
+        $room = Room::with('roomType')
+            ->where('occupancy_status', OccupancyStatus::VACANT->value)
+            ->whereHas('roomType', fn($query) => $query->where('max_guests', '>=', 1))
+            ->firstOrFail();
+        $customer = Customer::firstOrFail();
+
+        $this->actingAs($this->admin)
+            ->getJson('/customers/search?q=' . urlencode($customer->user->full_name))
+            ->assertOk()
+            ->assertJsonFragment([
+                'id' => $customer->id,
+                'fullName' => $customer->user->full_name,
+            ]);
+
+        $checkIn = now()->addYears(2)->toDateString();
+        $checkOut = now()->addYears(2)->addDays(2)->toDateString();
+        $availabilityParams = [
+            'checkInDate' => $checkIn,
+            'checkOutDate' => $checkOut,
+            'adults' => 1,
+            'children' => 0,
+        ];
+
+        $this->getJson('/public/bookings/available-rooms?' . http_build_query($availabilityParams))
+            ->assertOk()
+            ->assertJsonFragment(['id' => $room->id]);
+
+        $this->actingAs($this->admin)
+            ->getJson('/bookings/available-rooms?' . http_build_query($availabilityParams))
+            ->assertOk()
+            ->assertJsonStructure(['data' => ['*' => [
+                'id',
+                'roomNumber',
+                'roomType' => [
+                    'maxGuests',
+                    'basePrice',
+                    'image',
+                    'amenities',
+                ],
+            ]]])
+            ->assertJsonFragment(['id' => $room->id]);
+
+        $response = $this->actingAs($this->admin)->postJson('/dashboard/bookings', [
+            ...$availabilityParams,
+            'customerId' => $customer->id,
+            'roomId' => $room->id,
+            'guests' => [[
+                'fullName' => 'Wizard Primary Guest',
+                'age' => 30,
+                'gender' => 'MALE',
+                'idProofNumber' => 'ID-TEST-1',
+            ]],
+            'specialRequest' => 'Late arrival',
+            'paymentMethod' => PaymentMethod::CASH->value,
+        ]);
+
+        $response->assertOk()->assertJsonStructure(['data' => ['id', 'bookingReference', 'invoiceId']]);
+        $booking = Booking::with(['bookingRooms', 'invoices'])->findOrFail($response->json('data.id'));
+
+        $this->assertSame('Wizard Primary Guest', $booking->guest_name);
+        $this->assertSame('Late arrival', $booking->special_request);
+        $this->assertSame(1, BookingGuest::where('booking_id', $booking->id)->count());
+        $this->assertSame($room->id, $booking->bookingRooms->first()->assigned_room_id);
+        $this->assertSame(OccupancyStatus::RESERVED, $room->fresh()->occupancy_status);
+        $this->assertSame((int) round($booking->invoices->first()->subtotal * 0.18), $booking->invoices->first()->tax_amount);
+
+        $this->actingAs($this->admin)
+            ->getJson("/bookings/{$booking->id}")
+            ->assertOk()
+            ->assertJsonPath('data.bookingReference', $booking->booking_reference)
+            ->assertJsonPath('data.bookingGuests.0.fullName', 'Wizard Primary Guest')
+            ->assertJsonPath('data.invoice.totalAmount', $booking->invoices->first()->total_amount);
+
+        $remainingRoomIds = collect($this->actingAs($this->admin)
+            ->getJson('/bookings/available-rooms?' . http_build_query($availabilityParams))
+            ->assertOk()
+            ->json('data'))->pluck('id');
+        $this->assertFalse($remainingRoomIds->contains($room->id));
     }
 
     public function test_in_person_and_public_booking_flow(): void

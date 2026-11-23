@@ -29,9 +29,14 @@ Route::middleware(['auth'])->group(function () {
 
     // 2. Profile Management
     Route::get('/profile/me', [ProfileController::class, 'me'])->name('profile.me');
+    Route::get('/profile/details', [ProfileController::class, 'details'])->name('profile.details');
+    Route::patch('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar.update');
+    Route::delete('/profile/avatar', [ProfileController::class, 'removeAvatar'])->name('profile.avatar.delete');
     Route::get('/dashboard/profile', [ProfileController::class, 'edit'])->name('dashboard.profile');
     Route::patch('/dashboard/profile', [ProfileController::class, 'update'])->name('dashboard.profile.update');
     Route::patch('/dashboard/profile/change-password', [ProfileController::class, 'changePassword'])->name('dashboard.profile.password');
+    Route::post('/dashboard/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('dashboard.profile.avatar.update');
+    Route::delete('/dashboard/profile/avatar', [ProfileController::class, 'removeAvatar'])->name('dashboard.profile.avatar.delete');
     Route::patch('/profile/me', [ProfileController::class, 'update'])->name('profile.update');
     Route::patch('/profile/change-password', [ProfileController::class, 'changePassword'])->name('profile.change-password');
 
