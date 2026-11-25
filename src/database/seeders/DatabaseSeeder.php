@@ -43,11 +43,11 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        $passwordHash = Hash::make('password');
+        $passwordHash = Hash::make('admin123');
 
         // 1. Users
         $admin = User::firstOrCreate(
-            ['email' => 'admin@nivarahotels.com'],
+            ['email' => 'admin@gmail.com'],
             [
                 'name' => 'Admin Officer',
                 'full_name' => 'General Administration',
@@ -275,7 +275,7 @@ class DatabaseSeeder extends Seeder
 
             // 5. Physical Rooms
             for ($floor = 1; $floor <= 3; $floor++) {
-                $roomNum = sprintf('%d0%d', $floor, match($rt['slug']) {
+                $roomNum = sprintf('%d0%d', $floor, match ($rt['slug']) {
                     'deluxe-room' => 1,
                     'premium-room' => 2,
                     'executive-room' => 3,
