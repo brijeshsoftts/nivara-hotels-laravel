@@ -2,62 +2,88 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\UserRole;
 use App\Models\AuditLog;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Inertia\Response as InertiaResponse;
 
 class AuditLogController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request): JsonResponse|InertiaResponse
     {
-        $page = (int) $request->input('page', 1);
-        $limit = (int) $request->input('limit', 20);
-        $query = AuditLog::with('user')->latest();
+        abort_unless($request->user()?->role === UserRole::ADMIN->value, 403);
 
-        if ($request->filled('action')) {
-            $query->where('action', $request->input('action'));
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:100'],
+            'entityType' => ['nullable', 'string', 'max:100'],
+            'page' => ['nullable', 'integer', 'min:1'],
+            'limit' => ['nullable', 'integer', 'min:1', 'max:100'],
+        ]);
+        $page = (int) ($filters['page'] ?? 1);
+        $limit = (int) ($filters['limit'] ?? 20);
+        $query = AuditLog::query()
+            ->with('user:id,full_name,email')
+            ->orderByDesc('created_at')
+            ->orderByDesc('id');
+
+        if (! empty($filters['entityType'])) {
+            $query->where('entity_type', $filters['entityType']);
         }
-        if ($request->filled('search')) {
-            $s = $request->input('search');
-            $query->where(fn($q) => $q->where('action', 'like', "%{$s}%")->orWhere('entity_name', 'like', "%{$s}%"));
+
+        if (! empty($filters['search'])) {
+            $search = $filters['search'];
+            $query->where(function (Builder $query) use ($search): void {
+                $query
+                    ->where('action', 'like', "%{$search}%")
+                    ->orWhere('entity_type', 'like', "%{$search}%")
+                    ->orWhere('entity_id', 'like', "%{$search}%")
+                    ->orWhereHas('user', function (Builder $userQuery) use ($search): void {
+                        $userQuery
+                            ->where('full_name', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%");
+                    });
+            });
         }
 
         $total = $query->count();
-        $auditLogs = $query->skip(($page - 1) * $limit)->take($limit)->get()->map(fn($log) => [
+        $auditLogs = $query->skip(($page - 1) * $limit)->take($limit)->get()->map(fn(AuditLog $log): array => [
             'id' => $log->id,
+            'userId' => $log->user_id,
             'action' => $log->action,
-            'entityName' => $log->entity_name,
+            'entityType' => $log->entity_type,
             'entityId' => $log->entity_id,
-            'details' => $log->details,
-            'ipAddress' => $log->ip_address,
-            'userName' => $log->user?->name ?? 'System',
+            'oldValues' => $log->old_values ?? [],
+            'newValues' => $log->new_values ?? [],
             'createdAt' => $log->created_at?->toIso8601String(),
+            'user' => $log->user ? [
+                'id' => $log->user->id,
+                'fullName' => $log->user->full_name,
+                'email' => $log->user->email,
+            ] : null,
         ]);
 
-        if ($request->wantsJson() && !$request->header('X-Inertia')) {
-            return response()->json([
-                'data' => $auditLogs,
-                'meta' => [
-                    'total' => $total,
-                    'page' => $page,
-                    'limit' => $limit,
-                    'totalPages' => ceil(max($total, 1) / max($limit, 1)),
-                ],
-            ]);
+        $meta = [
+            'total' => $total,
+            'page' => $page,
+            'limit' => $limit,
+            'totalPages' => max((int) ceil($total / $limit), 1),
+        ];
+
+        if ($request->wantsJson() && ! $request->header('X-Inertia')) {
+            return response()->json(['data' => $auditLogs, 'meta' => $meta]);
         }
 
         return Inertia::render('protect/audit-logs/index', [
-            'auditLogs' => [
-                'data' => $auditLogs,
-                'meta' => [
-                    'total' => $total,
-                    'page' => $page,
-                    'limit' => $limit,
-                    'totalPages' => ceil(max($total, 1) / max($limit, 1)),
-                ],
+            'auditLogs' => ['data' => $auditLogs, 'meta' => $meta],
+            'filters' => [
+                'search' => $filters['search'] ?? '',
+                'entityType' => $filters['entityType'] ?? '',
+                'page' => $page,
+                'limit' => $limit,
             ],
-            'filters' => $request->only(['action', 'search', 'page', 'limit']),
         ]);
     }
 }
-
