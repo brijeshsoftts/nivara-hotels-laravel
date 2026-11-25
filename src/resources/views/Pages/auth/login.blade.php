@@ -21,22 +21,7 @@
             <div class="absolute inset-0 -z-10 bg-foreground/55"></div>
 
             <!-- Logo -->
-            <a href="{{ url('/') }}" class="relative z-10 flex items-center gap-3">
-                <div class="relative flex items-end justify-center overflow-hidden h-12 w-10 rounded-t-full rounded-b-sm bg-secondary pb-1">
-                    <svg class="absolute -bottom-1 h-7 w-7 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M13 8c0-2.76-2.46-5-5.5-5S2 5.24 2 8h2l1-1 1 1h4" />
-                        <path d="M13 7.14A5.82 5.82 0 0 1 16.5 6c3.04 0 5.5 2.24 5.5 5h-3l-1-1-1 1h-3" />
-                        <path d="M5.89 9.71c-2.15 1.5-2.3 4.47-.39 6.29h2.8" />
-                        <path d="M17.5 15.71c2.15-1.5 2.3-4.47.39-6.29h-2.8" />
-                        <path d="m9 16 1 6" />
-                        <path d="m15 16-1 6" />
-                    </svg>
-                </div>
-                <div class="flex min-w-0 flex-col justify-center">
-                    <span class="font-heading text-[26px] leading-none tracking-wide text-background">Nivara</span>
-                    <span class="mt-1 font-sans text-[9px] font-medium tracking-[0.25em] uppercase text-background/80">HOTELS &amp; RESORTS</span>
-                </div>
-            </a>
+            <x-auth-brand />
 
             <div class="relative z-10 mt-10 max-w-xl xl:mt-12">
                 <h1 class="max-w-md font-heading text-4xl leading-[1.08] font-medium text-background xl:text-5xl">
@@ -96,17 +81,7 @@
         <section class="flex min-h-svh flex-col justify-between px-6 py-8 sm:px-10 lg:px-12 lg:py-10">
             <!-- Mobile Logo -->
             <div class="flex items-center justify-between lg:hidden mb-6">
-                <a href="{{ url('/') }}" class="flex items-center gap-3">
-                    <div class="relative flex items-end justify-center overflow-hidden h-10 w-8 rounded-t-full rounded-b-sm bg-secondary pb-1">
-                        <svg class="absolute -bottom-1 h-6 w-6 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                            <path d="M13 8c0-2.76-2.46-5-5.5-5S2 5.24 2 8h2l1-1 1 1h4" />
-                            <path d="M13 7.14A5.82 5.82 0 0 1 16.5 6c3.04 0 5.5 2.24 5.5 5h-3l-1-1-1 1h-3" />
-                            <path d="m9 16 1 6" />
-                            <path d="m15 16-1 6" />
-                        </svg>
-                    </div>
-                    <span class="font-heading text-2xl text-primary">Nivara</span>
-                </a>
+                <x-auth-brand :compact="true" />
             </div>
 
             <div class="mx-auto w-full max-w-md my-auto">
@@ -136,7 +111,7 @@
                                 <rect width="20" height="16" x="2" y="4" rx="2" />
                                 <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
                             </svg>
-                            <input id="login-email" name="email" type="email" value="{{ old('email') }}" autocomplete="email" required autofocus placeholder="Enter your email address" class="h-11 w-full rounded-md border border-input bg-background px-3 pl-10 text-sm text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring">
+                            <input id="login-email" name="email" type="email" value="{{ old('email') }}" autocomplete="email" maxlength="255" required autofocus placeholder="Enter your email address" aria-invalid="{{ $errors->has('email') ? 'true' : 'false' }}" @if ($errors->has('email')) aria-describedby="login-email-error" @endif class="h-11 w-full rounded-md border border-input bg-background px-3 pl-10 text-sm text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring">
                         </div>
                         @error('email')
                         <p class="text-sm text-destructive" id="login-email-error">{{ $message }}</p>
@@ -144,26 +119,29 @@
                     </div>
 
                     <div class="space-y-2">
-                        <div class="flex items-center justify-between">
+                        <div class="flex items-center justify-between gap-3">
                             <label for="login-password" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-foreground">
                                 Password <span aria-hidden="true" class="text-destructive">*</span>
                             </label>
+                            <a href="{{ route('password.request') }}" class="text-sm font-medium text-foreground underline decoration-primary underline-offset-4 transition-colors hover:text-primary">
+                                Forgot password?
+                            </a>
                         </div>
                         <div class="relative">
                             <svg class="absolute top-1/2 left-3 size-4.5 -translate-y-1/2 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                                 <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
                                 <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                             </svg>
-                            <input id="login-password" name="password" type="password" autocomplete="current-password" required placeholder="Enter your password" class="h-11 w-full rounded-md border border-input bg-background px-3 pr-10 pl-10 text-sm text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring">
+                            <input id="login-password" name="password" type="password" autocomplete="current-password" required placeholder="Enter your password" aria-invalid="{{ $errors->has('password') ? 'true' : 'false' }}" @if ($errors->has('password')) aria-describedby="login-password-error" @endif class="h-11 w-full rounded-md border border-input bg-background px-3 pr-10 pl-10 text-sm text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring">
                         </div>
                         @error('password')
                         <p class="text-sm text-destructive" id="login-password-error">{{ $message }}</p>
                         @enderror
                     </div>
 
-                    <div class="flex items-center justify-between pt-1">
+                    <div class="flex items-center pt-1">
                         <label class="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
-                            <input type="checkbox" name="remember" value="1" class="size-4 rounded border-input text-primary accent-primary">
+                            <input type="checkbox" name="remember" value="1" @checked(old('remember')) class="size-4 rounded border-input text-primary accent-primary">
                             Remember me
                         </label>
                     </div>

@@ -2,15 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\BookingStatus;
+use App\Enums\IssueCategory;
 use App\Enums\IssuePriority;
 use App\Enums\IssueStatus;
-use App\Enums\IssueCategory;
+use App\Enums\NotificationType;
 use App\Enums\UserRole;
-use App\Enums\BookingStatus;
 use App\Models\Booking;
 use App\Models\Issue;
 use App\Models\Room;
 use App\Models\Staff;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -18,6 +20,8 @@ use Inertia\Inertia;
 
 class IssueController extends Controller
 {
+    public function __construct(private NotificationService $notificationService) {}
+
     public function index(Request $request)
     {
         $page = max(1, (int) $request->input('page', 1));
@@ -44,12 +48,12 @@ class IssueController extends Controller
             $query->where(function ($issues) use ($search) {
                 $issues->where('reference', 'like', "%{$search}%")
                     ->orWhere('title', 'like', "%{$search}%")
-                    ->orWhereHas('room', fn($rooms) => $rooms->where('room_number', 'like', "%{$search}%"));
+                    ->orWhereHas('room', fn ($rooms) => $rooms->where('room_number', 'like', "%{$search}%"));
             });
         }
 
         $total = (clone $query)->count();
-        $issues = $query->skip(($page - 1) * $limit)->take($limit)->get()->map(fn($i) => [
+        $issues = $query->skip(($page - 1) * $limit)->take($limit)->get()->map(fn ($i) => [
             'id' => $i->id,
             'reference' => $i->reference,
             'title' => $i->title,
@@ -71,12 +75,12 @@ class IssueController extends Controller
             'reportedAt' => $i->reported_at?->toIso8601String(),
         ]);
 
-        $rooms = Room::all()->map(fn($r) => ['id' => $r->id, 'roomNumber' => $r->room_number, 'name' => $r->name]);
-        $staff = Staff::with('user')->get()->map(fn($s) => ['id' => $s->id, 'name' => $s->user?->name ?? 'Staff']);
+        $rooms = Room::all()->map(fn ($r) => ['id' => $r->id, 'roomNumber' => $r->room_number, 'name' => $r->name]);
+        $staff = Staff::with('user')->get()->map(fn ($s) => ['id' => $s->id, 'name' => $s->user?->name ?? 'Staff']);
 
         $stats = $this->getStats($request);
 
-        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+        if ($request->wantsJson() && ! $request->header('X-Inertia')) {
             return response()->json([
                 'data' => $issues,
                 'meta' => [
@@ -115,6 +119,7 @@ class IssueController extends Controller
         }
 
         $issue = $query->firstOrFail();
+
         return response()->json(['data' => $this->formatIssueDetails($issue)]);
     }
 
@@ -180,37 +185,41 @@ class IssueController extends Controller
             [
                 'id' => 'total-issues',
                 'title' => 'Total Issues',
+                'label' => 'Total Issues',
                 'value' => number_format($total),
                 'description' => $isCustomer ? 'Issues you reported' : 'All reported issues',
                 'icon' => 'ClipboardList',
-                'link' => '/issues',
+                'link' => '/dashboard/issues',
                 'tone' => 'sky',
             ],
             [
                 'id' => 'medium-issues',
                 'title' => 'Medium Priority',
+                'label' => 'Medium Priority',
                 'value' => number_format($medium),
                 'description' => $isCustomer ? 'Your medium-priority issues' : 'Issues with medium priority',
                 'icon' => 'CircleAlert',
-                'link' => '/issues?priority=MEDIUM',
+                'link' => '/dashboard/issues?priority=MEDIUM',
                 'tone' => 'gold',
             ],
             [
                 'id' => 'high-issues',
                 'title' => 'High Priority',
+                'label' => 'High Priority',
                 'value' => number_format($high),
                 'description' => $isCustomer ? 'Your high-priority issues' : 'Issues with high priority',
                 'icon' => 'TriangleAlert',
-                'link' => '/issues?priority=HIGH',
+                'link' => '/dashboard/issues?priority=HIGH',
                 'tone' => 'rose',
             ],
             [
                 'id' => 'urgent-issues',
                 'title' => 'Urgent Priority',
+                'label' => 'Urgent Priority',
                 'value' => number_format($urgent),
                 'description' => $isCustomer ? 'Your urgent issues' : 'Issues requiring urgent attention',
                 'icon' => 'Siren',
-                'link' => '/issues?priority=URGENT',
+                'link' => '/dashboard/issues?priority=URGENT',
                 'tone' => 'violet',
             ],
         ];
@@ -244,12 +253,12 @@ class IssueController extends Controller
             $roomId = $booking?->bookingRooms()
                 ->whereNotNull('assigned_room_id')
                 ->value('assigned_room_id');
-            abort_if(!$roomId, 422, 'A current checked-in stay is required to report an issue.');
+            abort_if(! $roomId, 422, 'A current checked-in stay is required to report an issue.');
         }
-        abort_if(!$roomId, 422, 'A room is required to report an issue.');
+        abort_if(! $roomId, 422, 'A room is required to report an issue.');
 
         $issue = Issue::create([
-            'reference' => 'ISS-' . now()->timestamp . '-' . Str::upper(Str::random(5)),
+            'reference' => 'ISS-'.now()->timestamp.'-'.Str::upper(Str::random(5)),
             'title' => $validated['title'],
             'description' => $validated['description'],
             'category' => $validated['category'],
@@ -261,8 +270,19 @@ class IssueController extends Controller
             'image_id' => $validated['imageId'] ?? null,
         ]);
 
-        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+        $this->notificationService->createForRoles(
+            [UserRole::ADMIN, UserRole::MANAGER],
+            NotificationType::ISSUE_CREATED,
+            "New issue: {$issue->reference}",
+            "{$issue->title} ({$issue->category->value}, {$issue->priority->value}): ".substr($issue->description, 0, 240).'. Reported by '.($request->user()->full_name ?? $request->user()->name).'.',
+            'ISSUE',
+            $issue->id,
+            [(string) $request->user()->id],
+        );
+
+        if ($request->wantsJson() && ! $request->header('X-Inertia')) {
             $issue->load(['room', 'reportedBy']);
+
             return response()->json([
                 'data' => [
                     'id' => $issue->id,
@@ -300,26 +320,63 @@ class IssueController extends Controller
         ]);
 
         abort_if($validated === [], 422, 'Provide at least one issue field to update.');
+        $previousAssigneeId = $issue->assigned_to_id;
 
         foreach (['title', 'description', 'category', 'status', 'priority'] as $field) {
             if (array_key_exists($field, $validated)) {
                 $issue->{$field} = $validated[$field];
             }
         }
-        if (($validated['status'] ?? null) === IssueStatus::IN_PROGRESS->value && !$issue->started_at) {
+        if (($validated['status'] ?? null) === IssueStatus::IN_PROGRESS->value && ! $issue->started_at) {
             $issue->started_at = now();
         }
-        if (($validated['status'] ?? null) === IssueStatus::COMPLETED->value && !$issue->completed_at) {
+        if (($validated['status'] ?? null) === IssueStatus::COMPLETED->value && ! $issue->completed_at) {
             $issue->completed_at = now();
         }
-        if (($validated['status'] ?? null) === IssueStatus::RESOLVED->value && !$issue->resolved_at) {
+        if (($validated['status'] ?? null) === IssueStatus::RESOLVED->value && ! $issue->resolved_at) {
             $issue->resolved_at = now();
         }
-        if (array_key_exists('assignedToId', $validated)) $issue->assigned_to_id = $validated['assignedToId'];
+        if (array_key_exists('assignedToId', $validated)) {
+            $issue->assigned_to_id = $validated['assignedToId'];
+        }
+        $changedFields = array_keys($issue->getDirty());
         $issue->save();
 
-        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+        $updaterId = (string) $request->user()->id;
+        if (
+            $previousAssigneeId !== $issue->assigned_to_id
+            && $issue->assigned_to_id
+            && (string) $issue->assigned_to_id !== $updaterId
+        ) {
+            $this->notificationService->createForUsers(
+                [(string) $issue->assigned_to_id],
+                NotificationType::ISSUE_ASSIGNED,
+                'Issue assigned to you',
+                "Issue {$issue->reference}: {$issue->title} ({$issue->category->value}, {$issue->priority->value}) was assigned to you by ".($request->user()->full_name ?? $request->user()->name).'.',
+                'ISSUE',
+                $issue->id,
+            );
+        }
+
+        $updatedFields = array_diff($changedFields, ['assigned_to_id']);
+        $stakeholderIds = array_values(array_unique(array_filter(
+            [$issue->reported_by_id, $issue->assigned_to_id],
+            fn ($userId): bool => $userId !== null && (string) $userId !== $updaterId,
+        )));
+        if ($updatedFields !== [] && $stakeholderIds !== []) {
+            $this->notificationService->createForUsers(
+                array_map('strval', $stakeholderIds),
+                NotificationType::ISSUE_UPDATED,
+                "Issue updated: {$issue->reference}",
+                "{$issue->title} is {$issue->status->value} with {$issue->priority->value} priority. Updated by ".($request->user()->full_name ?? $request->user()->name).': '.implode(', ', $updatedFields).'.',
+                'ISSUE',
+                $issue->id,
+            );
+        }
+
+        if ($request->wantsJson() && ! $request->header('X-Inertia')) {
             $issue->load(['room', 'reportedBy', 'assignedTo', 'image']);
+
             return response()->json([
                 'data' => $this->formatIssueDetails($issue),
                 'message' => 'Issue updated successfully',
@@ -334,7 +391,7 @@ class IssueController extends Controller
         $issue = Issue::findOrFail($id);
         $issue->delete();
 
-        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+        if ($request->wantsJson() && ! $request->header('X-Inertia')) {
             return response()->json(['message' => 'Issue deleted successfully']);
         }
 

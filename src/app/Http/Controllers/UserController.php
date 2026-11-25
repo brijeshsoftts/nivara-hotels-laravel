@@ -10,6 +10,8 @@ use Inertia\Inertia;
 
 class UserController extends Controller
 {
+    private const DEFAULT_USER_PASSWORD = 'Admin@1234';
+
     public function index(Request $request)
     {
         $page = (int) $request->input('page', 1);
@@ -52,7 +54,7 @@ class UserController extends Controller
 
         $stats = $this->getStats();
 
-        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+        if ($request->wantsJson() && ! $request->header('X-Inertia')) {
             return response()->json([
                 'data' => $users,
                 'meta' => [
@@ -75,7 +77,7 @@ class UserController extends Controller
                 ],
             ],
             'stats' => $stats,
-            'filters' => $request->only(['role', 'search', 'page', 'limit']),
+            'filters' => $request->only(['role', 'isActive', 'search', 'page', 'limit']),
         ]);
     }
 
@@ -110,21 +112,21 @@ class UserController extends Controller
                 'id' => 'manager-accounts',
                 'label' => 'Managers',
                 'value' => number_format($managerCount),
-                'link' => '/dashboard/users',
+                'link' => '/dashboard/users?role=MANAGER',
                 'icon' => 'UserCheck',
             ],
             [
                 'id' => 'staff-accounts',
                 'label' => 'Staff Accounts',
                 'value' => number_format($staffCount),
-                'link' => '/dashboard/users',
+                'link' => '/dashboard/users?role=STAFF',
                 'icon' => 'UserPlus',
             ],
             [
                 'id' => 'inactive-accounts',
                 'label' => 'Inactive Accounts',
                 'value' => number_format($inactiveCount),
-                'link' => '/dashboard/users',
+                'link' => '/dashboard/users?isActive=false',
                 'icon' => 'UserX',
             ],
         ];
@@ -138,7 +140,7 @@ class UserController extends Controller
             'email' => ['required', 'email', 'unique:users,email'],
             'phone' => ['nullable', 'string'],
             'role' => ['nullable', 'string'],
-            'password' => ['required', 'string', 'min:6'],
+            'password' => ['nullable', 'string', 'min:6'],
             'isActive' => ['nullable', 'boolean'],
         ]);
 
@@ -150,11 +152,11 @@ class UserController extends Controller
             'email' => $validated['email'],
             'phone' => $validated['phone'] ?? null,
             'role' => $validated['role'] ?? UserRole::STAFF->value,
-            'password' => Hash::make($validated['password']),
+            'password' => Hash::make($validated['password'] ?? self::DEFAULT_USER_PASSWORD),
             'is_active' => $validated['isActive'] ?? true,
         ]);
 
-        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+        if ($request->wantsJson() && ! $request->header('X-Inertia')) {
             return response()->json(['data' => ['id' => $user->id, 'email' => $user->email], 'message' => 'User created successfully.'], 200);
         }
 
@@ -164,6 +166,7 @@ class UserController extends Controller
     public function show(string $id)
     {
         $u = User::with('avatar')->findOrFail($id);
+
         return response()->json([
             'data' => [
                 'id' => $u->id,
@@ -174,7 +177,7 @@ class UserController extends Controller
                 'role' => $u->role instanceof \BackedEnum ? $u->role->value : (string) $u->role,
                 'isActive' => (bool) $u->is_active,
                 'createdAt' => $u->created_at?->toIso8601String(),
-            ]
+            ],
         ]);
     }
 
@@ -197,13 +200,19 @@ class UserController extends Controller
             $updates['name'] = $validated['name'];
             $updates['full_name'] = $validated['name'];
         }
-        if (isset($validated['phone'])) $updates['phone'] = $validated['phone'];
-        if (isset($validated['role'])) $updates['role'] = $validated['role'];
-        if (isset($validated['isActive'])) $updates['is_active'] = $validated['isActive'];
+        if (isset($validated['phone'])) {
+            $updates['phone'] = $validated['phone'];
+        }
+        if (isset($validated['role'])) {
+            $updates['role'] = $validated['role'];
+        }
+        if (isset($validated['isActive'])) {
+            $updates['is_active'] = $validated['isActive'];
+        }
 
         $user->update($updates);
 
-        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+        if ($request->wantsJson() && ! $request->header('X-Inertia')) {
             return response()->json(['data' => ['id' => $user->id], 'message' => 'User updated successfully']);
         }
 
@@ -213,9 +222,9 @@ class UserController extends Controller
     public function toggleStatus(Request $request, string $id)
     {
         $user = User::findOrFail($id);
-        $user->update(['is_active' => !$user->is_active]);
+        $user->update(['is_active' => ! $user->is_active]);
 
-        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+        if ($request->wantsJson() && ! $request->header('X-Inertia')) {
             return response()->json(['data' => ['id' => $user->id, 'isActive' => (bool) $user->is_active]]);
         }
 
@@ -227,7 +236,7 @@ class UserController extends Controller
         $user = User::findOrFail($id);
         $user->delete();
 
-        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+        if ($request->wantsJson() && ! $request->header('X-Inertia')) {
             return response()->json(['message' => 'User deleted successfully']);
         }
 

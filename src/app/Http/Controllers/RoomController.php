@@ -18,6 +18,9 @@ class RoomController extends Controller
         $limit = (int) $request->input('limit', 20);
         $query = Room::with('roomType')->orderBy('room_number');
 
+        if ($request->filled('isActive')) {
+            $query->where('is_active', $request->boolean('isActive'));
+        }
         if ($request->filled('floor')) {
             $query->where('floor', (int) $request->input('floor'));
         }
@@ -53,6 +56,7 @@ class RoomController extends Controller
 
         $roomTypes = RoomType::with(['amenities', 'images'])->withCount('rooms')->get()->map(function ($rt) {
             $primaryImg = $rt->images->firstWhere('is_primary', true) ?? $rt->images->first();
+
             return [
                 'id' => $rt->id,
                 'name' => $rt->name,
@@ -115,7 +119,7 @@ class RoomController extends Controller
                 'trend' => 'up',
                 'description' => 'Ready for check-in',
                 'label' => 'Vacant & Available',
-                'link' => '/dashboard/rooms',
+                'link' => '/dashboard/rooms?occupancyStatus=VACANT&housekeepingStatus=CLEAN&isActive=true',
                 'icon' => 'CheckCircle',
             ],
             [
@@ -126,7 +130,7 @@ class RoomController extends Controller
                 'trend' => 'up',
                 'description' => 'Guests in house',
                 'label' => 'Occupied Rooms',
-                'link' => '/dashboard/bookings',
+                'link' => '/dashboard/rooms?occupancyStatus=OCCUPIED',
                 'icon' => 'UserCheck',
             ],
             [
@@ -137,12 +141,12 @@ class RoomController extends Controller
                 'trend' => 'up',
                 'description' => 'Housekeeping verified',
                 'label' => 'Cleaned & Ready',
-                'link' => '/dashboard/tasks',
+                'link' => '/dashboard/rooms?housekeepingStatus=CLEAN',
                 'icon' => 'Sparkles',
             ],
         ];
 
-        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+        if ($request->wantsJson() && ! $request->header('X-Inertia')) {
             return response()->json([
                 'data' => $rooms,
                 'meta' => [
@@ -171,7 +175,7 @@ class RoomController extends Controller
                 'data' => $amenities,
             ],
             'stats' => $stats,
-            'filters' => $request->only(['floor', 'occupancyStatus', 'housekeepingStatus', 'roomTypeId', 'search', 'page', 'limit']),
+            'filters' => $request->only(['isActive', 'floor', 'occupancyStatus', 'housekeepingStatus', 'roomTypeId', 'search', 'page', 'limit']),
         ]);
     }
 
@@ -199,6 +203,7 @@ class RoomController extends Controller
             'name' => ['nullable', 'string'],
             'floor' => ['required', 'integer'],
             'roomTypeId' => ['required', 'string'],
+            'description' => ['nullable', 'string'],
         ]);
 
         $room = Room::create([
@@ -206,12 +211,13 @@ class RoomController extends Controller
             'name' => $validated['name'] ?? ('Room ' . $validated['roomNumber']),
             'floor' => $validated['floor'],
             'room_type_id' => $validated['roomTypeId'],
+            'description' => $validated['description'] ?? null,
             'occupancy_status' => OccupancyStatus::VACANT->value,
             'housekeeping_status' => HousekeepingStatus::CLEAN->value,
             'is_active' => true,
         ]);
 
-        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+        if ($request->wantsJson() && ! $request->header('X-Inertia')) {
             return response()->json(['data' => ['id' => $room->id], 'message' => 'Room created successfully.'], 200);
         }
 
@@ -220,18 +226,37 @@ class RoomController extends Controller
 
     public function show(string $id)
     {
-        $r = Room::with('roomType')->findOrFail($id);
+        $r = Room::with('roomType.images')->findOrFail($id);
+        $roomType = $r->roomType;
+        $primaryImage = $roomType?->images->firstWhere('is_primary', true);
+
         return response()->json([
             'data' => [
                 'id' => $r->id,
                 'roomNumber' => $r->room_number,
                 'name' => $r->name,
-                'floor' => (string) $r->floor,
+                'floor' => $r->floor,
                 'roomTypeId' => $r->room_type_id,
+                'description' => $r->description,
                 'occupancyStatus' => $r->occupancy_status instanceof \BackedEnum ? $r->occupancy_status->value : (string) $r->occupancy_status,
                 'housekeepingStatus' => $r->housekeeping_status instanceof \BackedEnum ? $r->housekeeping_status->value : (string) $r->housekeeping_status,
                 'isActive' => (bool) $r->is_active,
-            ]
+                'createdAt' => $r->created_at?->toISOString(),
+                'updatedAt' => $r->updated_at?->toISOString(),
+                'roomType' => $roomType ? [
+                    'id' => $roomType->id,
+                    'name' => $roomType->name,
+                    'slug' => $roomType->slug,
+                    'basePrice' => $roomType->base_price,
+                    'currency' => $roomType->currency ?? 'INR',
+                    'isActive' => (bool) $roomType->is_active,
+                    'image' => $primaryImage ? [
+                        'id' => $primaryImage->id,
+                        'url' => $primaryImage->url,
+                        'altText' => $primaryImage->alt_text,
+                    ] : null,
+                ] : null,
+            ],
         ]);
     }
 
@@ -247,15 +272,27 @@ class RoomController extends Controller
             'housekeepingStatus' => ['nullable', 'string'],
         ]);
 
-        if (isset($validated['roomNumber'])) $room->room_number = $validated['roomNumber'];
-        if (isset($validated['name'])) $room->name = $validated['name'];
-        if (isset($validated['floor'])) $room->floor = $validated['floor'];
-        if (isset($validated['roomTypeId'])) $room->room_type_id = $validated['roomTypeId'];
-        if (isset($validated['occupancyStatus'])) $room->occupancy_status = $validated['occupancyStatus'];
-        if (isset($validated['housekeepingStatus'])) $room->housekeeping_status = $validated['housekeepingStatus'];
+        if (isset($validated['roomNumber'])) {
+            $room->room_number = $validated['roomNumber'];
+        }
+        if (isset($validated['name'])) {
+            $room->name = $validated['name'];
+        }
+        if (isset($validated['floor'])) {
+            $room->floor = $validated['floor'];
+        }
+        if (isset($validated['roomTypeId'])) {
+            $room->room_type_id = $validated['roomTypeId'];
+        }
+        if (isset($validated['occupancyStatus'])) {
+            $room->occupancy_status = $validated['occupancyStatus'];
+        }
+        if (isset($validated['housekeepingStatus'])) {
+            $room->housekeeping_status = $validated['housekeepingStatus'];
+        }
         $room->save();
 
-        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+        if ($request->wantsJson() && ! $request->header('X-Inertia')) {
             return response()->json(['data' => ['id' => $room->id], 'message' => 'Room updated successfully']);
         }
 
@@ -267,7 +304,7 @@ class RoomController extends Controller
         $room = Room::findOrFail($id);
         $room->update(['occupancy_status' => OccupancyStatus::VACANT->value]);
 
-        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+        if ($request->wantsJson() && ! $request->header('X-Inertia')) {
             return response()->json(['data' => ['id' => $room->id], 'message' => 'Room released from out-of-order']);
         }
 
@@ -279,7 +316,7 @@ class RoomController extends Controller
         $room = Room::findOrFail($id);
         $room->delete();
 
-        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+        if ($request->wantsJson() && ! $request->header('X-Inertia')) {
             return response()->json(['message' => 'Room deleted successfully']);
         }
 

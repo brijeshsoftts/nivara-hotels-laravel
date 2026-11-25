@@ -19,24 +19,24 @@ class StaffController extends Controller
         $page = (int) $request->input('page', 1);
         $limit = (int) $request->input('limit', 10);
         $query = Staff::with(['user', 'user.avatar'])
-            ->whereHas('user', fn($q) => $q->whereNull('soft_deleted_at'))
+            ->whereHas('user', fn ($q) => $q->whereNull('soft_deleted_at'))
             ->orderByDesc('created_at');
 
         if ($request->filled('category')) {
             $query->where('category', $request->input('category'));
         }
         if ($request->filled('isActive')) {
-            $query->whereHas('user', fn($q) => $q->where('is_active', $request->boolean('isActive')));
+            $query->whereHas('user', fn ($q) => $q->where('is_active', $request->boolean('isActive')));
         }
         if ($request->filled('search')) {
             $s = $request->input('search');
-            $query->whereHas('user', fn($q) => $q->where('name', 'like', "%{$s}%")
+            $query->whereHas('user', fn ($q) => $q->where('name', 'like', "%{$s}%")
                 ->orWhere('email', 'like', "%{$s}%")
                 ->orWhere('phone', 'like', "%{$s}%"));
         }
 
         $total = $query->count();
-        $staff = $query->skip(($page - 1) * $limit)->take($limit)->get()->map(fn($st) => [
+        $staff = $query->skip(($page - 1) * $limit)->take($limit)->get()->map(fn ($st) => [
             'id' => $st->id,
             'userId' => $st->user_id,
             'name' => $st->user?->name ?? 'Staff',
@@ -56,7 +56,7 @@ class StaffController extends Controller
 
         $stats = $this->getStats();
 
-        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+        if ($request->wantsJson() && ! $request->header('X-Inertia')) {
             return response()->json([
                 'data' => $staff,
                 'meta' => [
@@ -79,7 +79,7 @@ class StaffController extends Controller
                 ],
             ],
             'stats' => $stats,
-            'filters' => $request->only(['category', 'search', 'page', 'limit']),
+            'filters' => $request->only(['category', 'isActive', 'search', 'page', 'limit']),
         ]);
     }
 
@@ -91,20 +91,20 @@ class StaffController extends Controller
     private function getStats(): array
     {
         $visibleStaff = Staff::query()
-            ->whereHas('user', fn($query) => $query->whereNull('soft_deleted_at'));
+            ->whereHas('user', fn ($query) => $query->whereNull('soft_deleted_at'));
         $total = (clone $visibleStaff)->count();
         $active = (clone $visibleStaff)
-            ->whereHas('user', fn($query) => $query->where('is_active', true))
+            ->whereHas('user', fn ($query) => $query->where('is_active', true))
             ->count();
         $inactive = (clone $visibleStaff)
-            ->whereHas('user', fn($query) => $query->where('is_active', false))
+            ->whereHas('user', fn ($query) => $query->where('is_active', false))
             ->count();
         $categoryCounts = (clone $visibleStaff)
             ->selectRaw('category, COUNT(*) as aggregate')
             ->groupBy('category')
             ->pluck('aggregate', 'category');
         $topCategory = collect(Category::cases())
-            ->map(fn(Category $category) => [
+            ->map(fn (Category $category) => [
                 'category' => $category,
                 'count' => (int) $categoryCounts->get($category->value, 0),
             ])
@@ -123,21 +123,21 @@ class StaffController extends Controller
                 'id' => 'active-staff',
                 'label' => 'Active',
                 'value' => number_format($active),
-                'link' => '/dashboard/staff?isActive=1',
+                'link' => '/dashboard/staff?isActive=true',
                 'icon' => 'UserCheck',
             ],
             [
                 'id' => 'inactive-staff',
                 'label' => 'Inactive',
                 'value' => number_format($inactive),
-                'link' => '/dashboard/staff?isActive=0',
+                'link' => '/dashboard/staff?isActive=false',
                 'icon' => 'UserX',
             ],
             [
-                'id' => 'staff-' . strtolower($topCategory['category']->value),
+                'id' => 'staff-'.strtolower($topCategory['category']->value),
                 'label' => $this->getCategoryLabel($topCategory['category']),
                 'value' => number_format($topCategory['count']),
-                'link' => '/dashboard/staff?category=' . $topCategory['category']->value,
+                'link' => '/dashboard/staff?category='.$topCategory['category']->value,
                 'icon' => 'Users',
             ],
         ];
@@ -186,14 +186,14 @@ class StaffController extends Controller
                 'category' => $validated['category'],
                 'father_name' => $validated['fatherName'] ?? 'N/A',
                 'mother_name' => $validated['motherName'] ?? 'N/A',
-                'id_proof_number' => $validated['idProofNumber'] ?? ('ID_' . strtoupper(Str::random(8))),
+                'id_proof_number' => $validated['idProofNumber'] ?? ('ID_'.strtoupper(Str::random(8))),
                 'qualification' => $validated['qualification'] ?? 'Graduate',
                 'experience' => $validated['experience'] ?? '1 year',
                 'emergency_contact' => $validated['emergencyContact'] ?? $validated['phone'],
                 'address' => $validated['address'] ?? 'Staff Quarters',
             ]);
 
-            if ($request->wantsJson() && !$request->header('X-Inertia')) {
+            if ($request->wantsJson() && ! $request->header('X-Inertia')) {
                 return response()->json(['data' => ['id' => $staff->id], 'message' => 'Staff created successfully.'], 200);
             }
 
@@ -209,7 +209,7 @@ class StaffController extends Controller
             'idProofImage',
             'signatureImage',
         ])
-            ->whereHas('user', fn($query) => $query->whereNull('soft_deleted_at'))
+            ->whereHas('user', fn ($query) => $query->whereNull('soft_deleted_at'))
             ->findOrFail($id);
 
         return response()->json([
@@ -246,7 +246,7 @@ class StaffController extends Controller
                     ] : null,
                 ],
                 'assignedTasks' => $st->user->assignedHousekeepingTasks
-                    ->map(fn($task) => [
+                    ->map(fn ($task) => [
                         'id' => $task->id,
                         'taskType' => $task->task_type instanceof \BackedEnum ? $task->task_type->value : (string) $task->task_type,
                         'status' => $task->status instanceof \BackedEnum ? $task->status->value : (string) $task->status,
@@ -258,7 +258,7 @@ class StaffController extends Controller
                         ],
                     ])
                     ->values(),
-            ]
+            ],
         ]);
     }
 
@@ -273,9 +273,15 @@ class StaffController extends Controller
             'phone' => ['nullable', 'string'],
         ]);
 
-        if (isset($validated['category'])) $staff->category = $validated['category'];
-        if (isset($validated['salary'])) $staff->salary = $validated['salary'];
-        if (isset($validated['employmentStatus'])) $staff->employment_status = $validated['employmentStatus'];
+        if (isset($validated['category'])) {
+            $staff->category = $validated['category'];
+        }
+        if (isset($validated['salary'])) {
+            $staff->salary = $validated['salary'];
+        }
+        if (isset($validated['employmentStatus'])) {
+            $staff->employment_status = $validated['employmentStatus'];
+        }
         $staff->save();
 
         if ($staff->user) {
@@ -283,11 +289,13 @@ class StaffController extends Controller
                 $staff->user->full_name = $validated['fullName'];
                 $staff->user->name = $validated['fullName'];
             }
-            if (isset($validated['phone'])) $staff->user->phone = $validated['phone'];
+            if (isset($validated['phone'])) {
+                $staff->user->phone = $validated['phone'];
+            }
             $staff->user->save();
         }
 
-        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+        if ($request->wantsJson() && ! $request->header('X-Inertia')) {
             return response()->json(['data' => ['id' => $staff->id], 'message' => 'Staff updated successfully']);
         }
 
@@ -298,10 +306,10 @@ class StaffController extends Controller
     {
         $staff = Staff::findOrFail($id);
         if ($staff->user) {
-            $staff->user->update(['is_active' => !$staff->user->is_active]);
+            $staff->user->update(['is_active' => ! $staff->user->is_active]);
         }
 
-        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+        if ($request->wantsJson() && ! $request->header('X-Inertia')) {
             return response()->json(['data' => ['id' => $staff->id]]);
         }
 
@@ -315,7 +323,7 @@ class StaffController extends Controller
         $staff->delete();
         $user?->delete();
 
-        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+        if ($request->wantsJson() && ! $request->header('X-Inertia')) {
             return response()->json(['message' => 'Staff deleted successfully']);
         }
 

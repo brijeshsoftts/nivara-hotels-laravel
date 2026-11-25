@@ -198,7 +198,7 @@ function HeroSection() {
 
                     <Button
                         nativeButton={false}
-                        // render={<Link to="/rooms" />}
+                        render={<Link href={publicPageUrl("/rooms")} />}
                         className="h-12 rounded-lg bg-primary px-8 text-sm font-medium text-primary-foreground shadow-md transition-all hover:bg-primary/90"
                     >
                         Explore Rooms <ArrowRight className="ml-2 h-4 w-4" />
@@ -859,7 +859,7 @@ function CTASection() {
                         {/* Action Button */}
                         <Button
                             nativeButton={false}
-                            // render={<Link to="/rooms" />}
+                            render={<Link href={publicPageUrl("/rooms")} />}
                             className="group h-11 rounded-lg px-7 text-[14px] font-semibold shadow-md transition-all"
                             variant="secondary"
                         >

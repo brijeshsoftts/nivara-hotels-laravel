@@ -9,6 +9,7 @@ use App\Http\Controllers\HousekeepingTaskController;
 use App\Http\Controllers\InquiryController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\IssueController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RoomController;
@@ -18,6 +19,9 @@ use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth'])->group(function () {
+
+    Route::patch('/dashboard/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('dashboard.notifications.read');
+    Route::patch('/dashboard/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('dashboard.notifications.read-all');
 
     // 1. Dashboard Pages & Analytics Endpoints
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\BookingStatus;
 use App\Enums\InvoiceStatus;
+use App\Enums\NotificationType;
 use App\Enums\OccupancyStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\UserRole;
@@ -17,6 +18,7 @@ use App\Models\Invoice;
 use App\Models\Room;
 use App\Models\RoomType;
 use App\Models\User;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -27,6 +29,8 @@ use Inertia\Response;
 
 class PublicController extends Controller
 {
+    public function __construct(private NotificationService $notificationService) {}
+
     public function home(Request $request): Response
     {
         $featuredRooms = RoomType::where('is_active', true)
@@ -451,6 +455,26 @@ class PublicController extends Controller
                 'status' => InvoiceStatus::UNPAID->value,
                 'due_date' => Carbon::now()->addDays(2)->toDateString(),
             ]);
+
+            $totalGuests = (int) $booking->adults + (int) $booking->children;
+            $message = "Booking {$booking->booking_reference} is confirmed for {$checkIn->toDateString()} to {$checkOut->toDateString()}. Guests: {$totalGuests}.";
+            $this->notificationService->createForUsers(
+                [(string) $user->id],
+                NotificationType::BOOKING_CONFIRMED,
+                'Booking confirmed',
+                $message,
+                'BOOKING',
+                $booking->id,
+            );
+            $this->notificationService->createForRoles(
+                [UserRole::ADMIN, UserRole::MANAGER],
+                NotificationType::BOOKING_CONFIRMED,
+                'New booking confirmed',
+                $message,
+                'BOOKING',
+                $booking->id,
+                [(string) $user->id],
+            );
 
             if ($request->wantsJson() && ! $request->header('X-Inertia')) {
                 return response()->json([

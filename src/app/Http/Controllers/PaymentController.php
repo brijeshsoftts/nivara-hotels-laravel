@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\InvoiceStatus;
 use App\Enums\BookingStatus;
+use App\Enums\InvoiceStatus;
+use App\Enums\NotificationType;
 use App\Enums\OccupancyStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
@@ -13,15 +14,19 @@ use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\PaymentWebhookEvent;
 use App\Models\Room;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 class PaymentController extends Controller
 {
+    public function __construct(private NotificationService $notificationService) {}
+
     public function index(Request $request)
     {
         [$user, $role, $category] = $this->actor($request);
@@ -36,33 +41,37 @@ class PaymentController extends Controller
         }
         $method = $request->input('paymentMethod', $request->input('method'));
         $status = $request->input('paymentStatus', $request->input('status'));
-        if ($method) $query->where('payment_method', $method);
-        if ($status) $query->where('payment_status', $status);
+        if ($method) {
+            $query->where('payment_method', $method);
+        }
+        if ($status) {
+            $query->where('payment_status', $status);
+        }
         if ($request->filled('search')) {
             $search = trim((string) $request->input('search'));
             $query->where(function ($payments) use ($search) {
                 $payments->where('payment_reference', 'like', "%{$search}%")
-                    ->orWhereHas('booking', fn($bookings) => $bookings->where('booking_reference', 'like', "%{$search}%"))
-                    ->orWhereHas('customer', fn($customers) => $customers->where('full_name', 'like', "%{$search}%"));
+                    ->orWhereHas('booking', fn ($bookings) => $bookings->where('booking_reference', 'like', "%{$search}%"))
+                    ->orWhereHas('customer', fn ($customers) => $customers->where('full_name', 'like', "%{$search}%"));
             });
         }
 
         $total = (clone $query)->count();
         $payments = $query->skip(($page - 1) * $limit)->take($limit)->get()
-            ->map(fn(Payment $payment) => $role === UserRole::CUSTOMER
+            ->map(fn (Payment $payment) => $role === UserRole::CUSTOMER
                 ? $this->mapCustomerPayment($payment)
                 : $this->mapPayment($payment));
 
         $invoices = Invoice::whereNotIn('status', [InvoiceStatus::PAID->value, InvoiceStatus::REFUNDED->value])
-            ->when($role === UserRole::CUSTOMER, fn($invoices) => $invoices->where('customer_id', $user->id))
-            ->get()->map(fn($i) => [
+            ->when($role === UserRole::CUSTOMER, fn ($invoices) => $invoices->where('customer_id', $user->id))
+            ->get()->map(fn ($i) => [
                 'id' => $i->id,
                 'invoiceNumber' => $i->invoice_number,
                 'totalAmount' => (float) $i->total_amount,
             ]);
         $stats = $this->getStats($role, $category, $user->id);
 
-        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+        if ($request->wantsJson() && ! $request->header('X-Inertia')) {
             return response()->json([
                 'data' => $payments,
                 'meta' => [
@@ -152,7 +161,7 @@ class PaymentController extends Controller
     ): array {
         $keyId = config('services.razorpay.key_id');
         $keySecret = config('services.razorpay.key_secret');
-        abort_if(!$keyId || !$keySecret, 503, 'Online payments are not configured.');
+        abort_if(! $keyId || ! $keySecret, 503, 'Online payments are not configured.');
 
         $attempt = DB::transaction(function () use ($bookingId, $userId, $role, $paymentId, $checkoutToken) {
             $booking = Booking::query()->lockForUpdate()->find($bookingId);
@@ -181,16 +190,20 @@ class PaymentController extends Controller
                 ->where('booking_id', $booking->id)
                 ->where('payment_method', PaymentMethod::ONLINE->value)
                 ->whereIn('payment_status', [PaymentStatus::PENDING->value, PaymentStatus::FAILED->value]);
-            if ($paymentId) $query->where('id', $paymentId);
+            if ($paymentId) {
+                $query->where('id', $paymentId);
+            }
             $attempt = $query->lockForUpdate()->latest('created_at')->first();
-            if ($paymentId && !$attempt) abort(404, 'Payment not found.');
+            if ($paymentId && ! $attempt) {
+                abort(404, 'Payment not found.');
+            }
             if ($attempt && $attempt->payment_status === PaymentStatus::FAILED && $attempt->transaction_id) {
                 $attempt = null;
             }
             if ($attempt && (int) $attempt->amount !== $outstanding) {
                 abort(409, 'Payment is being reconciled.');
             }
-            if (!$attempt) {
+            if (! $attempt) {
                 $attempt = Payment::create([
                     'payment_reference' => $this->createPaymentReference(),
                     'invoice_id' => $invoice->id,
@@ -208,7 +221,7 @@ class PaymentController extends Controller
                 if ($attempt->payment_status === PaymentStatus::FAILED) {
                     $attempt->payment_status = PaymentStatus::PENDING->value;
                 }
-                if (!$attempt->order_id) {
+                if (! $attempt->order_id) {
                     abort_if(
                         $attempt->order_creation_started_at
                             && $attempt->order_creation_started_at->gt(now()->subMinutes(2)),
@@ -242,7 +255,7 @@ class PaymentController extends Controller
                 ? collect($ordersResponse->json('items', []))->firstWhere('receipt', $attempt->payment_reference)
                 : null;
 
-            if (!$gatewayOrder) {
+            if (! $gatewayOrder) {
                 $response = $gateway->post('https://api.razorpay.com/v1/orders', [
                     'amount' => (int) ($attempt->amount_paise ?? $attempt->amount * 100),
                     'currency' => $attempt->currency,
@@ -265,7 +278,9 @@ class PaymentController extends Controller
             ]);
         } catch (\Throwable $error) {
             $attempt->update(['order_creation_started_at' => null]);
-            if ($error instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface) throw $error;
+            if ($error instanceof HttpExceptionInterface) {
+                throw $error;
+            }
             abort(502, 'The payment gateway is temporarily unavailable.');
         }
 
@@ -322,19 +337,19 @@ class PaymentController extends Controller
     {
         $keyId = config('services.razorpay.key_id');
         $keySecret = config('services.razorpay.key_secret');
-        abort_if(!$keyId || !$keySecret, 503, 'Online payments are not configured.');
+        abort_if(! $keyId || ! $keySecret, 503, 'Online payments are not configured.');
         abort_unless($attempt->order_id === $validated['razorpayOrderId'], 422, 'Payment order does not match.');
 
         $expectedSignature = hash_hmac(
             'sha256',
-            $validated['razorpayOrderId'] . '|' . $validated['razorpayPaymentId'],
+            $validated['razorpayOrderId'].'|'.$validated['razorpayPaymentId'],
             $keySecret
         );
         abort_unless(hash_equals($expectedSignature, $validated['razorpaySignature']), 422, 'Payment signature is invalid.');
 
         $response = Http::withBasicAuth($keyId, $keySecret)
             ->timeout(15)
-            ->get('https://api.razorpay.com/v1/payments/' . rawurlencode($validated['razorpayPaymentId']));
+            ->get('https://api.razorpay.com/v1/payments/'.rawurlencode($validated['razorpayPaymentId']));
         abort_unless($response->successful(), 502, 'Could not verify the payment with the gateway.');
         $gatewayPayment = $response->json();
         abort_unless(
@@ -355,17 +370,24 @@ class PaymentController extends Controller
     {
         DB::transaction(function () use ($attempt, $gatewayPayment) {
             $payment = Payment::query()->lockForUpdate()->findOrFail($attempt->id);
-            if ($payment->payment_status === PaymentStatus::REFUNDED) return;
+            if ($payment->payment_status === PaymentStatus::REFUNDED) {
+                return;
+            }
             if ($gatewayPayment['status'] === 'failed') {
                 if ($payment->payment_status !== PaymentStatus::COMPLETED) {
                     $payment->payment_status = PaymentStatus::FAILED->value;
                     $payment->transaction_id = $gatewayPayment['id'] ?? null;
                     $payment->save();
                 }
+
                 return;
             }
-            if (empty($gatewayPayment['captured'])) return;
-            if ($payment->payment_status === PaymentStatus::COMPLETED && $payment->transaction_id === $gatewayPayment['id']) return;
+            if (empty($gatewayPayment['captured'])) {
+                return;
+            }
+            if ($payment->payment_status === PaymentStatus::COMPLETED && $payment->transaction_id === $gatewayPayment['id']) {
+                return;
+            }
             abort_unless(in_array($payment->payment_status, [PaymentStatus::PENDING, PaymentStatus::FAILED], true), 409, 'Payment status changed.');
 
             $payment->payment_status = PaymentStatus::COMPLETED->value;
@@ -377,7 +399,7 @@ class PaymentController extends Controller
 
             $invoice = Invoice::query()->lockForUpdate()->findOrFail($payment->invoice_id);
             $booking = Booking::query()->lockForUpdate()->findOrFail($payment->booking_id);
-            $this->refreshInvoiceStatus($invoice, $booking);
+            $this->refreshInvoiceStatus($invoice, $booking, $payment);
         });
     }
 
@@ -430,8 +452,8 @@ class PaymentController extends Controller
         $signature = (string) $request->header('x-razorpay-signature');
         $eventId = (string) $request->header('x-razorpay-event-id');
         $webhookSecret = config('services.razorpay.webhook_secret');
-        abort_if(!$webhookSecret, 503, 'Payment webhooks are not configured.');
-        abort_if(!$signature || !$eventId, 400, 'Webhook signature and event ID are required.');
+        abort_if(! $webhookSecret, 503, 'Payment webhooks are not configured.');
+        abort_if(! $signature || ! $eventId, 400, 'Webhook signature and event ID are required.');
 
         $expectedSignature = hash_hmac('sha256', $rawBody, $webhookSecret);
         abort_unless(hash_equals($expectedSignature, $signature), 400, 'Webhook signature is invalid.');
@@ -454,7 +476,9 @@ class PaymentController extends Controller
                 'gateway_payment_id' => $gatewayPaymentId,
             ]);
 
-            if (!in_array($eventType, ['payment.captured', 'payment.failed'], true) || !is_array($entity)) return;
+            if (! in_array($eventType, ['payment.captured', 'payment.failed'], true) || ! is_array($entity)) {
+                return;
+            }
             abort_unless(isset($entity['id'], $entity['order_id'], $entity['amount'], $entity['currency']), 400, 'Webhook payment data is invalid.');
             $payment = Payment::where('order_id', $orderId)->first();
             abort_unless($payment, 404, 'Payment order not found.');
@@ -540,10 +564,10 @@ class PaymentController extends Controller
         $refundedAmount = (clone $refunded)->sum('amount');
 
         return [
-            ['id' => 'total-collected', 'icon' => 'IndianRupee', 'title' => 'Total Collected', 'value' => '₹' . number_format($completedAmount), 'description' => 'From completed payments', 'tone' => 'emerald'],
-            ['id' => 'pending-payments', 'icon' => 'Clock', 'title' => 'Pending Payments', 'value' => '₹' . number_format($pendingAmount), 'description' => number_format((clone $pending)->count()) . ' awaiting confirmation', 'tone' => 'gold'],
-            ['id' => 'refunded-payments', 'icon' => 'RefreshCw', 'title' => 'Refunded', 'value' => '₹' . number_format($refundedAmount), 'description' => 'Total amount refunded', 'tone' => 'rose'],
-            ['id' => 'completed-payments', 'icon' => 'CheckCircle', 'title' => 'Completed Payments', 'value' => number_format((clone $completed)->count()), 'description' => 'Successfully collected transactions', 'tone' => 'sky'],
+            ['id' => 'total-collected', 'icon' => 'IndianRupee', 'title' => 'Total Collected', 'label' => 'Total Collected', 'value' => '₹'.number_format($completedAmount), 'description' => 'From completed payments', 'link' => '/dashboard/payments?paymentStatus='.PaymentStatus::COMPLETED->value, 'tone' => 'emerald'],
+            ['id' => 'pending-payments', 'icon' => 'Clock', 'title' => 'Pending Payments', 'label' => 'Pending Payments', 'value' => '₹'.number_format($pendingAmount), 'description' => number_format((clone $pending)->count()).' awaiting confirmation', 'link' => '/dashboard/payments?paymentStatus='.PaymentStatus::PENDING->value, 'tone' => 'gold'],
+            ['id' => 'refunded-payments', 'icon' => 'RefreshCw', 'title' => 'Refunded', 'label' => 'Refunded', 'value' => '₹'.number_format($refundedAmount), 'description' => 'Total amount refunded', 'link' => '/dashboard/payments?paymentStatus='.PaymentStatus::REFUNDED->value, 'tone' => 'rose'],
+            ['id' => 'completed-payments', 'icon' => 'CheckCircle', 'title' => 'Completed Payments', 'label' => 'Completed Payments', 'value' => number_format((clone $completed)->count()), 'description' => 'Successfully collected transactions', 'link' => '/dashboard/payments?paymentStatus='.PaymentStatus::COMPLETED->value, 'tone' => 'sky'],
         ];
     }
 
@@ -632,12 +656,12 @@ class PaymentController extends Controller
                 'recorded_by' => $request->user()->id,
             ]);
 
-            $balance = $this->refreshInvoiceStatus($invoice, $booking);
+            $balance = $this->refreshInvoiceStatus($invoice, $booking, $payment);
 
             return $this->paymentResult($payment, $booking, $invoice, $balance);
         });
 
-        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+        if ($request->wantsJson() && ! $request->header('X-Inertia')) {
             return response()->json(['data' => $result, 'message' => 'Cash payment collected.'], 201);
         }
 
@@ -706,12 +730,12 @@ class PaymentController extends Controller
                 ]);
             }
 
-            $balance = $this->refreshInvoiceStatus($invoice, $booking);
+            $balance = $this->refreshInvoiceStatus($invoice, $booking, $payment);
 
             return $this->paymentResult($payment, $booking, $invoice, $balance);
         });
 
-        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+        if ($request->wantsJson() && ! $request->header('X-Inertia')) {
             return response()->json(['data' => $result, 'message' => 'QR payment recorded.'], 201);
         }
 
@@ -732,12 +756,14 @@ class PaymentController extends Controller
         $bookingMethod = $booking->payment_method;
         abort_unless($bookingMethod === $method, 422, 'This booking is not payable with the selected method.');
         $payableStatuses = [BookingStatus::PENDING, BookingStatus::CONFIRMED];
-        if ($allowCheckedIn) $payableStatuses[] = BookingStatus::CHECKED_IN;
+        if ($allowCheckedIn) {
+            $payableStatuses[] = BookingStatus::CHECKED_IN;
+        }
         abort_unless(in_array($booking->status, $payableStatuses, true), 422, 'This booking is not payable in its current state.');
         abort_unless($booking->bookingRooms()->whereNotNull('assigned_room_id')->exists(), 422, 'An assigned room is required before payment can be recorded.');
     }
 
-    private function refreshInvoiceStatus(Invoice $invoice, Booking $booking): int
+    private function refreshInvoiceStatus(Invoice $invoice, Booking $booking, Payment $payment): int
     {
         $paidAmount = (int) Payment::where('invoice_id', $invoice->id)
             ->where('payment_status', PaymentStatus::COMPLETED->value)
@@ -747,9 +773,51 @@ class PaymentController extends Controller
             : ($paidAmount > 0 ? InvoiceStatus::PARTIALLY_PAID : InvoiceStatus::UNPAID);
         $invoice->save();
 
+        $customerId = $payment->customer_id ?? $booking->customer_id;
+
+        if ($customerId) {
+            $this->notificationService->createForUsers(
+                [(string) $customerId],
+                NotificationType::PAYMENT_RECEIVED,
+                'Payment received',
+                'INR '.number_format((int) $payment->amount, 0, '.', ',')." received via {$payment->payment_method->value}. Reference {$payment->payment_reference} for booking {$booking->booking_reference}.",
+                'PAYMENT',
+                $payment->id,
+            );
+
+            $this->notificationService->createForRoles(
+                [UserRole::ADMIN, UserRole::MANAGER],
+                NotificationType::PAYMENT_RECEIVED,
+                'Payment received',
+                'INR '.number_format((int) $payment->amount, 0, '.', ',')." received for booking {$booking->booking_reference}.",
+                'PAYMENT',
+                $payment->id,
+                $payment->recorded_by ? [(string) $payment->recorded_by] : [],
+            );
+        }
+
         if ($invoice->status === InvoiceStatus::PAID && $booking->status === BookingStatus::PENDING) {
             $booking->status = BookingStatus::CONFIRMED;
             $booking->save();
+            if ($booking->customer_id) {
+                $this->notificationService->createForUsers(
+                    [(string) $booking->customer_id],
+                    NotificationType::BOOKING_CONFIRMED,
+                    'Booking confirmed',
+                    "Booking {$booking->booking_reference} is confirmed after payment.",
+                    'BOOKING',
+                    $booking->id,
+                );
+            }
+            $this->notificationService->createForRoles(
+                [UserRole::ADMIN, UserRole::MANAGER],
+                NotificationType::BOOKING_CONFIRMED,
+                'Booking confirmed',
+                "Booking {$booking->booking_reference} was confirmed after successful payment.",
+                'BOOKING',
+                $booking->id,
+                $payment->recorded_by ? [(string) $payment->recorded_by] : [],
+            );
             foreach ($booking->bookingRooms as $bookingRoom) {
                 if ($bookingRoom->assigned_room_id) {
                     Room::whereKey($bookingRoom->assigned_room_id)
@@ -784,6 +852,6 @@ class PaymentController extends Controller
 
     private function createPaymentReference(): string
     {
-        return 'PAY-' . now()->timestamp . '-' . Str::upper(Str::random(5));
+        return 'PAY-'.now()->timestamp.'-'.Str::upper(Str::random(5));
     }
 }

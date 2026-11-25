@@ -33,7 +33,7 @@ export function notifyError(error: unknown) {
             return;
         }
 
-        const errors = errObj.errors || errObj.error?.errors;
+        const errors = errObj.errors || errObj.error?.errors || errObj;
         if (errors && typeof errors === "object") {
             const first = Object.values(errors)[0];
             if (typeof first === "string") {

@@ -1,4 +1,5 @@
 import { cn } from "cn";
+import { usePage } from "@inertiajs/react";
 import { AlertCircle, Inbox, Search } from "lucide-react";
 import * as React from "react";
 
@@ -60,7 +61,6 @@ export interface DataTable<T> {
     defaultPageSize?: number;
     onPageChange?: (page: number) => void;
     onRowClick?: (item: T) => void;
-    onActionClick?: (item: T) => void;
     renderActions?: (item: T) => React.ReactNode;
     refetch?: () => void;
     showSearch?: boolean;
@@ -75,6 +75,32 @@ export interface DataTable<T> {
     isError?: boolean;
     errorMessage?: string;
     emptyMessage?: string;
+}
+
+function getSelectedFilters(
+    url: string,
+    filters: DynamicFilter[],
+    selectedFilters?: Record<string, string>,
+): Record<string, string> {
+    const query = new URLSearchParams(url.split("?")[1] ?? "");
+
+    return filters.reduce<Record<string, string>>((values, filter) => {
+        const rawValue = selectedFilters?.[filter.key] ?? query.get(filter.key);
+        if (rawValue === null || rawValue === undefined || rawValue === "") {
+            return values;
+        }
+
+        const option = filter.options.find(({ value }) => {
+            const optionValue = String(value);
+            return (
+                optionValue === rawValue ||
+                (typeof value === "boolean" && rawValue === (value ? "1" : "0"))
+            );
+        });
+
+        values[filter.key] = String(option?.value ?? rawValue);
+        return values;
+    }, {});
 }
 
 export function DataTable<T extends Record<string, any>>({
@@ -101,17 +127,27 @@ export function DataTable<T extends Record<string, any>>({
     onRowClick,
     renderActions,
 }: DataTable<T>) {
+    const { url } = usePage();
     const [searchQuery, setSearchQuery] = React.useState("");
     const [filterValues, setFilterValues] = React.useState<
         Record<string, string>
-    >(selectedFilters ?? {});
+    >(() => getSelectedFilters(url, filters, selectedFilters));
     const [localPage, setLocalPage] = React.useState(1);
     const [pageSize] = React.useState(defaultPageSize);
     const [selectRow, setSelectRow] = React.useState<T | null>(null);
 
     React.useEffect(() => {
-        if (selectedFilters) setFilterValues(selectedFilters);
-    }, [selectedFilters]);
+        const nextValues = getSelectedFilters(url, filters, selectedFilters);
+        setFilterValues((currentValues) => {
+            const currentKeys = Object.keys(currentValues);
+            const nextKeys = Object.keys(nextValues);
+            const hasSameValues =
+                currentKeys.length === nextKeys.length &&
+                nextKeys.every((key) => currentValues[key] === nextValues[key]);
+
+            return hasSameValues ? currentValues : nextValues;
+        });
+    }, [filters, selectedFilters, url]);
 
     const handleSearch = (val: string) => {
         setSearchQuery(val);

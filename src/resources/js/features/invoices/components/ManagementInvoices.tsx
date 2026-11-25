@@ -33,7 +33,15 @@ export const filters = [
   {
     key: "status",
     label: "Status",
-    options: invoiceStatus.map((value) => ({ value, label: value })),
+    options: [
+      ...invoiceStatus.map((value) => ({ value, label: value })),
+      { value: "OUTSTANDING", label: "Outstanding" },
+    ],
+  },
+  {
+    key: "issuedThisMonth",
+    label: "Issue date",
+    options: [{ value: true, label: "This month" }],
   },
 ];
 
@@ -68,7 +76,9 @@ function InvoicesTable() {
       header: "Total Amount",
       align: "right",
       cell: (invoice) => (
-        <span className="tabular-nums">{formatPrice(invoice.totalAmount)}</span>
+        <span className="tabular-nums">
+          {formatPrice(invoice.totalAmount)}
+        </span>
       ),
     },
     {
@@ -125,7 +135,11 @@ function InvoicesTable() {
       data={data?.data || []}
       columns={columns}
       searchPlaceholder="Search invoice, booking, or customer..."
-      searchableKeys={["paymentReference", "bookingReference", "customerName"]}
+      searchableKeys={[
+        "paymentReference",
+        "bookingReference",
+        "customerName",
+      ]}
       onSearchChange={setSearch}
       onFilterChange={(key, value) => setFilter({ [key]: value })}
       filters={filters}

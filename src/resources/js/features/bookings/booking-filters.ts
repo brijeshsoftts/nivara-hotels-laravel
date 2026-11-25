@@ -1,12 +1,11 @@
-import type { BookingStatus } from "@/types/enum.types";
-
-const bookingStatuses: BookingStatus[] = [
+const bookingStatuses: string[] = [
     "PENDING",
     "CONFIRMED",
     "CHECKED_IN",
     "CHECKED_OUT",
     "CANCELLED",
     "NO_SHOW",
+    "NON_CANCELLED",
 ];
 
 const invoiceStatuses = ["UNPAID", "PARTIALLY_PAID", "PAID", "REFUNDED"];
@@ -16,7 +15,10 @@ export const bookingFilters = [
     {
         key: "status",
         label: "Booking status",
-        options: bookingStatuses.map((value) => ({ value, label: value })),
+        options: bookingStatuses.map((value) => ({
+            value,
+            label: value === "NON_CANCELLED" ? "Non-cancelled" : value,
+        })),
     },
     {
         key: "invoiceStatus",

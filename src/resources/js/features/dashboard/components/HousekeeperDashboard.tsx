@@ -1,10 +1,5 @@
 import { formatDate } from "date-fns/format";
-import {
-  CalendarDays,
-  CheckCircle2,
-  LoaderCircle,
-  Play,
-} from "lucide-react";
+import { CalendarDays, CheckCircle2, LoaderCircle, Play } from "lucide-react";
 import { useState } from "react";
 import { router, usePage } from "@inertiajs/react";
 import { toast } from "sonner";
@@ -43,15 +38,17 @@ function QueueHeader({
 function TaskQueueRow({ task }: { task: any }) {
   const [isUpdating, setIsUpdating] = useState(false);
   const nextStatus = task.status === "PENDING" ? "IN_PROGRESS" : "COMPLETED";
-  const actionLabel = task.status === "PENDING" ? "Start task" : "Complete task";
+  const actionLabel =
+    task.status === "PENDING" ? "Start task" : "Complete task";
+  const taskDate = task.due;
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
-  const isOverdue = task.scheduledDate ? new Date(task.scheduledDate) < startOfToday : false;
+  const isOverdue = taskDate ? new Date(taskDate) < startOfToday : false;
 
   const handleStatusUpdate = () => {
     setIsUpdating(true);
     router.patch(
-      `/dashboard/tasks/${task.id}/status`,
+      `/dashboard/tasks/${task.taskId}/status`,
       { status: nextStatus },
       {
         onSuccess: () => {
@@ -61,7 +58,7 @@ function TaskQueueRow({ task }: { task: any }) {
           toast.error("Failed to update task");
         },
         onFinish: () => setIsUpdating(false),
-      }
+      },
     );
   };
 
@@ -69,7 +66,9 @@ function TaskQueueRow({ task }: { task: any }) {
     <li className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <p className="text-sm font-medium">Room {task.roomNumber || task.room?.roomNumber}</p>
+          <p className="text-sm font-medium">
+            Room {task.roomNumber}
+          </p>
           <TaskTypeBadge value={task.taskType} />
           <TaskStatusBadge value={task.status} />
         </div>
@@ -78,7 +77,7 @@ function TaskQueueRow({ task }: { task: any }) {
         >
           <CalendarDays className="size-3.5" />
           {isOverdue ? "Overdue · " : "Due "}
-          {task.scheduledDate ? formatDate(task.scheduledDate, "dd MMM, yyyy") : "Today"}
+          {taskDate ? formatDate(taskDate, "dd MMM, yyyy") : "Today"}
         </p>
       </div>
 
@@ -98,8 +97,11 @@ function TaskQueueRow({ task }: { task: any }) {
           )}
           {isUpdating ? "Updating..." : actionLabel}
         </Button>
-        {task.roomId || task.room?.id ? (
-          <HouseKeeperRoomDetails roomId={task.roomId || task.room?.id} buttonLabel="View room" />
+        {task.roomId ? (
+          <HouseKeeperRoomDetails
+            roomId={task.roomId}
+            buttonLabel="View room"
+          />
         ) : null}
       </div>
     </li>
@@ -120,7 +122,10 @@ export function HousekeeperDashboard({
     <div className="space-y-6">
       <DashboardStats />
       <div className="grid items-start gap-6 xl:grid-cols-2">
-        <section className="min-w-0 space-y-3" aria-labelledby="my-tasks-title">
+        <section
+          className="min-w-0 space-y-3"
+          aria-labelledby="my-tasks-title"
+        >
           <QueueHeader
             id="my-tasks-title"
             title="My tasks"
@@ -133,7 +138,7 @@ export function HousekeeperDashboard({
           ) : (
             <ul className="divide-y rounded-lg border bg-card">
               {tasks.map((task: any) => (
-                <TaskQueueRow key={task.id} task={task} />
+                <TaskQueueRow key={task.taskId} task={task} />
               ))}
             </ul>
           )}

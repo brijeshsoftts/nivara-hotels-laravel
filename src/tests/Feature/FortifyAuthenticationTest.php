@@ -16,7 +16,8 @@ class FortifyAuthenticationTest extends TestCase
     {
         $this->get(route('login'))
             ->assertOk()
-            ->assertSee('Welcome back');
+            ->assertSee('Welcome back')
+            ->assertSee(route('password.request'));
 
         $this->get(route('register'))
             ->assertOk()
@@ -59,6 +60,18 @@ class FortifyAuthenticationTest extends TestCase
 
         $response->assertRedirect('/dashboard');
         $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_login_rejects_malformed_and_oversized_email_addresses(): void
+    {
+        foreach (['not-an-email', str_repeat('a', 250).'@x.com'] as $email) {
+            $this->from(route('login'))->post(route('login.store'), [
+                'email' => $email,
+                'password' => 'password',
+            ])->assertSessionHasErrors('email');
+        }
+
+        $this->assertGuest();
     }
 
     public function test_inactive_users_cannot_login(): void

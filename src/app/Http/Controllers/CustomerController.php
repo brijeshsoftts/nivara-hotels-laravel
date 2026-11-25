@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Enums\BookingStatus;
 use App\Enums\UserRole;
+use App\Models\Booking;
 use App\Models\Customer;
+use App\Models\Payment;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -21,16 +23,16 @@ class CustomerController extends Controller
         $page = (int) $request->input('page', 1);
         $limit = (int) $request->input('limit', 10);
         $query = Customer::with(['user.avatar', 'bookings'])
-            ->whereHas('user', fn($q) => $q
+            ->whereHas('user', fn ($q) => $q
                 ->where('role', UserRole::CUSTOMER->value)
                 ->whereNull('soft_deleted_at'))
             ->orderByDesc('created_at');
 
         if ($request->filled('isActive')) {
-            $query->whereHas('user', fn($q) => $q->where('is_active', $request->boolean('isActive')));
+            $query->whereHas('user', fn ($q) => $q->where('is_active', $request->boolean('isActive')));
         }
         if ($request->filled('hasActiveBooking')) {
-            $bookingFilter = fn($q) => $q->whereIn('status', self::ACTIVE_BOOKING_STATUSES);
+            $bookingFilter = fn ($q) => $q->whereIn('status', self::ACTIVE_BOOKING_STATUSES);
             $request->boolean('hasActiveBooking')
                 ? $query->whereHas('bookings', $bookingFilter)
                 : $query->whereDoesntHave('bookings', $bookingFilter);
@@ -39,7 +41,7 @@ class CustomerController extends Controller
             $days = filter_var($request->input('createdWithinDays'), FILTER_VALIDATE_INT);
             if ($days !== false && $days > 0) {
                 $cutoff = now()->subDays(min($days, 3650));
-                $query->whereHas('user', fn($q) => $q->where('created_at', '>=', $cutoff));
+                $query->whereHas('user', fn ($q) => $q->where('created_at', '>=', $cutoff));
             }
         }
 
@@ -47,14 +49,14 @@ class CustomerController extends Controller
             $s = $request->input('search');
             $query->where(function ($q) use ($s) {
                 $q->where('id_proof_number', 'like', "%{$s}%")
-                    ->orWhereHas('user', fn($uq) => $uq->where('name', 'like', "%{$s}%")
+                    ->orWhereHas('user', fn ($uq) => $uq->where('name', 'like', "%{$s}%")
                         ->orWhere('email', 'like', "%{$s}%")
                         ->orWhere('phone', 'like', "%{$s}%"));
             });
         }
 
         $total = $query->count();
-        $customers = $query->skip(($page - 1) * $limit)->take($limit)->get()->map(fn($c) => [
+        $customers = $query->skip(($page - 1) * $limit)->take($limit)->get()->map(fn ($c) => [
             'id' => $c->id,
             'userId' => $c->user_id,
             'name' => $c->user?->name ?? 'Guest',
@@ -68,7 +70,7 @@ class CustomerController extends Controller
             'country' => $c->country ?? 'India',
             'status' => $c->status,
             'totalBookings' => $c->bookings->count(),
-            'activeBooking' => $c->bookings->contains(fn($booking) => in_array(
+            'activeBooking' => $c->bookings->contains(fn ($booking) => in_array(
                 $booking->status instanceof \BackedEnum ? $booking->status->value : (string) $booking->status,
                 self::ACTIVE_BOOKING_STATUSES,
                 true,
@@ -85,7 +87,7 @@ class CustomerController extends Controller
 
         $stats = $this->getStats();
 
-        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+        if ($request->wantsJson() && ! $request->header('X-Inertia')) {
             return response()->json([
                 'data' => $customers,
                 'meta' => [
@@ -119,7 +121,7 @@ class CustomerController extends Controller
 
     private function getStats(): array
     {
-        $customerQuery = fn() => User::where('role', UserRole::CUSTOMER->value)
+        $customerQuery = fn () => User::where('role', UserRole::CUSTOMER->value)
             ->whereNull('soft_deleted_at');
         $activeBookingStatuses = [
             BookingStatus::PENDING->value,
@@ -129,7 +131,7 @@ class CustomerController extends Controller
         $total = $customerQuery()->count();
         $active = $customerQuery()->where('is_active', true)->count();
         $withActiveBooking = $customerQuery()
-            ->whereHas('bookings', fn($query) => $query->whereIn('status', $activeBookingStatuses))
+            ->whereHas('bookings', fn ($query) => $query->whereIn('status', $activeBookingStatuses))
             ->count();
         $newCustomers = $customerQuery()
             ->where('created_at', '>=', now()->subDays(30))
@@ -154,7 +156,7 @@ class CustomerController extends Controller
                 'description' => 'Accounts currently active',
                 'tone' => 'emerald',
                 'icon' => 'UserCheck',
-                'link' => '/dashboard/customers?isActive=1',
+                'link' => '/dashboard/customers?isActive=true',
             ],
             [
                 'id' => 'customers-with-active-bookings',
@@ -164,7 +166,7 @@ class CustomerController extends Controller
                 'description' => 'Pending, confirmed, or checked in',
                 'tone' => 'sky',
                 'icon' => 'CalendarCheck',
-                'link' => '/dashboard/customers?hasActiveBooking=1',
+                'link' => '/dashboard/customers?hasActiveBooking=true',
             ],
             [
                 'id' => 'new-customer',
@@ -184,7 +186,7 @@ class CustomerController extends Controller
         $s = $request->input('q', $request->input('search', ''));
         $customers = Customer::with('user')
             ->where(function ($query) use ($s) {
-                $query->whereHas('user', fn($q) => $q
+                $query->whereHas('user', fn ($q) => $q
                     ->where('name', 'like', "%{$s}%")
                     ->orWhere('full_name', 'like', "%{$s}%")
                     ->orWhere('email', 'like', "%{$s}%")
@@ -193,7 +195,7 @@ class CustomerController extends Controller
             })
             ->take(10)
             ->get()
-            ->map(fn($c) => [
+            ->map(fn ($c) => [
                 'id' => $c->id,
                 'fullName' => $c->user?->full_name ?? $c->user?->name ?? 'Guest',
                 'email' => $c->user?->email,
@@ -208,6 +210,7 @@ class CustomerController extends Controller
     public function show(string $id)
     {
         $c = Customer::with(['user', 'bookings'])->findOrFail($id);
+
         return response()->json([
             'data' => [
                 'id' => $c->id,
@@ -224,21 +227,23 @@ class CustomerController extends Controller
                 'status' => $c->status,
                 'totalBookings' => $c->bookings->count(),
                 'createdAt' => $c->created_at?->toIso8601String(),
-            ]
+            ],
         ]);
     }
 
     public function customerBookings(string $id)
     {
         $c = Customer::findOrFail($id);
-        $bookings = \App\Models\Booking::where('customer_id', $c->user_id)->get();
+        $bookings = Booking::where('customer_id', $c->user_id)->get();
+
         return response()->json(['data' => $bookings]);
     }
 
     public function customerPayments(string $id)
     {
         $c = Customer::findOrFail($id);
-        $payments = \App\Models\Payment::where('customer_id', $c->user_id)->get();
+        $payments = Payment::where('customer_id', $c->user_id)->get();
+
         return response()->json(['data' => $payments]);
     }
 
@@ -274,11 +279,11 @@ class CustomerController extends Controller
 
             $customer = Customer::create([
                 'user_id' => $user->id,
-                'id_proof_number' => $validated['idProofNumber'] ?? ('ID_' . strtoupper(Str::random(8))),
+                'id_proof_number' => $validated['idProofNumber'] ?? ('ID_'.strtoupper(Str::random(8))),
                 'address' => $validated['address'] ?? ($validated['city'] ?? 'Nivara Residence'),
             ]);
 
-            if ($request->wantsJson() && !$request->header('X-Inertia')) {
+            if ($request->wantsJson() && ! $request->header('X-Inertia')) {
                 return response()->json(['data' => ['id' => $customer->id], 'message' => 'Customer created successfully.'], 200);
             }
 
@@ -298,10 +303,18 @@ class CustomerController extends Controller
             'state' => ['nullable', 'string'],
         ]);
 
-        if (isset($validated['idProofType'])) $customer->id_proof_type = $validated['idProofType'];
-        if (isset($validated['idProofNumber'])) $customer->id_proof_number = $validated['idProofNumber'];
-        if (isset($validated['city'])) $customer->city = $validated['city'];
-        if (isset($validated['state'])) $customer->state = $validated['state'];
+        if (isset($validated['idProofType'])) {
+            $customer->id_proof_type = $validated['idProofType'];
+        }
+        if (isset($validated['idProofNumber'])) {
+            $customer->id_proof_number = $validated['idProofNumber'];
+        }
+        if (isset($validated['city'])) {
+            $customer->city = $validated['city'];
+        }
+        if (isset($validated['state'])) {
+            $customer->state = $validated['state'];
+        }
         $customer->save();
 
         if ($customer->user) {
@@ -309,11 +322,13 @@ class CustomerController extends Controller
                 $customer->user->full_name = $validated['fullName'];
                 $customer->user->name = $validated['fullName'];
             }
-            if (isset($validated['phone'])) $customer->user->phone = $validated['phone'];
+            if (isset($validated['phone'])) {
+                $customer->user->phone = $validated['phone'];
+            }
             $customer->user->save();
         }
 
-        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+        if ($request->wantsJson() && ! $request->header('X-Inertia')) {
             return response()->json(['data' => ['id' => $customer->id], 'message' => 'Customer updated successfully']);
         }
 
@@ -325,7 +340,7 @@ class CustomerController extends Controller
         $customer = Customer::findOrFail($id);
         $customer->delete();
 
-        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+        if ($request->wantsJson() && ! $request->header('X-Inertia')) {
             return response()->json(['message' => 'Customer deleted successfully']);
         }
 

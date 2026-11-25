@@ -2,6 +2,8 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\User;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -41,12 +43,15 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
+            'unreadNotifications' => fn () => $request->user() instanceof User
+                ? app(NotificationService::class)->unreadForUser($request->user())
+                : [],
             'flash' => [
-                'message' => fn() => $request->session()->get('message'),
-                'success' => fn() => $request->session()->get('success'),
-                'error' => fn() => $request->session()->get('error'),
+                'message' => fn () => $request->session()->get('message'),
+                'success' => fn () => $request->session()->get('success'),
+                'error' => fn () => $request->session()->get('error'),
             ],
-            'booking' => fn() => $request->session()->get('booking'),
+            'booking' => fn () => $request->session()->get('booking'),
         ];
     }
 }

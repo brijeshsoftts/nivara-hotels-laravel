@@ -23,6 +23,7 @@ use App\Models\Staff;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -77,6 +78,22 @@ class OperationsApiTest extends TestCase
         // 6. Delete
         $this->actingAs($this->admin)->deleteJson("/users/{$newUserId}")->assertOk();
         $this->assertNull(User::find($newUserId));
+    }
+
+    public function test_dashboard_user_form_creates_account_with_documented_default_password(): void
+    {
+        $this->actingAs($this->admin)
+            ->from('/dashboard/users')
+            ->post('/dashboard/users', [
+                'fullName' => 'Dashboard Created Staff',
+                'email' => 'dashboard-created-staff@nivara.test',
+                'phone' => '+91 9888877777',
+            ])
+            ->assertRedirect('/dashboard/users');
+
+        $user = User::where('email', 'dashboard-created-staff@nivara.test')->firstOrFail();
+        $this->assertSame(UserRole::STAFF->value, $user->role);
+        $this->assertTrue(Hash::check('Admin@1234', $user->password));
     }
 
     public function test_staff_crud_operations(): void
@@ -234,7 +251,7 @@ class OperationsApiTest extends TestCase
         $cust = Customer::with('user')->firstOrFail();
 
         // Search
-        $this->actingAs($this->admin)->getJson('/customers/search?q='.substr($cust->user->email, 0, 5))
+        $this->actingAs($this->admin)->getJson('/customers/search?q=' . substr($cust->user->email, 0, 5))
             ->assertOk()
             ->assertJsonFragment(['email' => $cust->user->email]);
 
@@ -278,7 +295,14 @@ class OperationsApiTest extends TestCase
         // Find
         $this->actingAs($this->admin)->getJson("/rooms/{$roomId}")
             ->assertOk()
-            ->assertJsonPath('data.roomNumber', '501');
+            ->assertJsonPath('data.roomNumber', '501')
+            ->assertJsonPath('data.roomType.id', $roomType->id)
+            ->assertJsonPath('data.roomType.name', $roomType->name)
+            ->assertJsonPath('data.roomType.basePrice', $roomType->base_price)
+            ->assertJsonPath('data.roomType.currency', $roomType->currency)
+            ->assertJsonPath('data.roomType.isActive', $roomType->is_active)
+            ->assertJsonPath('data.description', 'Top floor suite')
+            ->assertJsonStructure(['data' => ['createdAt', 'updatedAt', 'roomType' => ['image']]]);
 
         // Put Out of Order
         $this->actingAs($this->admin)->patchJson("/rooms/{$roomId}", [
@@ -331,12 +355,12 @@ class OperationsApiTest extends TestCase
     {
         $room = Room::with('roomType')
             ->where('occupancy_status', OccupancyStatus::VACANT->value)
-            ->whereHas('roomType', fn ($query) => $query->where('max_guests', '>=', 1))
+            ->whereHas('roomType', fn($query) => $query->where('max_guests', '>=', 1))
             ->firstOrFail();
         $customer = Customer::firstOrFail();
 
         $this->actingAs($this->admin)
-            ->getJson('/customers/search?q='.urlencode($customer->user->full_name))
+            ->getJson('/customers/search?q=' . urlencode($customer->user->full_name))
             ->assertOk()
             ->assertJsonFragment([
                 'id' => $customer->id,
@@ -352,7 +376,7 @@ class OperationsApiTest extends TestCase
             'children' => 0,
         ];
 
-        $this->getJson('/public/bookings/available-rooms?'.http_build_query($availabilityParams))
+        $this->getJson('/public/bookings/available-rooms?' . http_build_query($availabilityParams))
             ->assertOk()
             ->assertJsonFragment(['id' => $room->id]);
 
@@ -360,7 +384,7 @@ class OperationsApiTest extends TestCase
             ...$availabilityParams,
             'checkOutDate' => $checkIn,
         ];
-        $this->getJson('/public/bookings/available-rooms?'.http_build_query($sameDayParams))
+        $this->getJson('/public/bookings/available-rooms?' . http_build_query($sameDayParams))
             ->assertUnprocessable()
             ->assertJsonValidationErrors('checkOutDate');
 
@@ -378,7 +402,7 @@ class OperationsApiTest extends TestCase
             ->assertJsonValidationErrors('checkOutDate');
 
         $this->actingAs($this->admin)
-            ->getJson('/bookings/available-rooms?'.http_build_query($availabilityParams))
+            ->getJson('/bookings/available-rooms?' . http_build_query($availabilityParams))
             ->assertOk()
             ->assertJsonStructure(['data' => ['*' => [
                 'id',
@@ -426,7 +450,7 @@ class OperationsApiTest extends TestCase
             ->assertJsonPath('data.invoice.totalAmount', $booking->invoices->first()->total_amount);
 
         $remainingRoomIds = collect($this->actingAs($this->admin)
-            ->getJson('/bookings/available-rooms?'.http_build_query($availabilityParams))
+            ->getJson('/bookings/available-rooms?' . http_build_query($availabilityParams))
             ->assertOk()
             ->json('data'))->pluck('id');
         $this->assertFalse($remainingRoomIds->contains($room->id));
@@ -436,7 +460,7 @@ class OperationsApiTest extends TestCase
             'checkInDate' => $checkOut,
             'checkOutDate' => now()->addYears(2)->addDays(3)->toDateString(),
         ];
-        $this->getJson('/public/bookings/available-rooms?'.http_build_query($afterCheckoutParams))
+        $this->getJson('/public/bookings/available-rooms?' . http_build_query($afterCheckoutParams))
             ->assertOk()
             ->assertJsonFragment(['id' => $room->id]);
 
@@ -494,12 +518,12 @@ class OperationsApiTest extends TestCase
         $this->actingAs($this->admin)
             ->get(route('dashboard.bookings'))
             ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
+            ->assertInertia(fn(Assert $page) => $page
                 ->has('stats', 4)
                 ->where('stats.0.value', number_format(Booking::count()))
                 ->where('stats.1.value', number_format(Booking::where('status', 'CONFIRMED')->count()))
                 ->where('stats.2.value', number_format(Booking::where('status', 'PENDING')->count()))
-                ->where('stats.3.value', '₹'.number_format(Booking::where('status', '!=', 'CANCELLED')->sum('total_amount')))
+                ->where('stats.3.value', '₹' . number_format(Booking::where('status', '!=', 'CANCELLED')->sum('total_amount')))
                 ->where('stats.1.link', '/dashboard/bookings?status=CONFIRMED'));
 
         $this->actingAs($this->admin)
@@ -759,5 +783,80 @@ class OperationsApiTest extends TestCase
         $this->actingAs($this->admin)->getJson('/dashboard/booking-status')->assertOk();
         $this->actingAs($this->admin)->getJson('/dashboard/stays')->assertOk();
         $this->actingAs($this->admin)->getJson('/dashboard/tasks')->assertOk();
+    }
+
+    public function test_stat_filter_links_open_matching_filtered_lists(): void
+    {
+        $this->actingAs($this->admin);
+
+        $this->getJson('/bookings/stats')
+            ->assertJsonPath('data.0.link', '/dashboard/bookings')
+            ->assertJsonPath('data.3.link', '/dashboard/bookings?status=NON_CANCELLED');
+        $this->getJson('/customers/stats')
+            ->assertJsonPath('data.1.link', '/dashboard/customers?isActive=true')
+            ->assertJsonPath('data.2.link', '/dashboard/customers?hasActiveBooking=true');
+        $this->getJson('/staff/stats')
+            ->assertJsonPath('data.1.link', '/dashboard/staff?isActive=true')
+            ->assertJsonPath('data.2.link', '/dashboard/staff?isActive=false');
+        $this->getJson('/users/stats')
+            ->assertJsonPath('data.1.link', '/dashboard/users?role=MANAGER')
+            ->assertJsonPath('data.2.link', '/dashboard/users?role=STAFF')
+            ->assertJsonPath('data.3.link', '/dashboard/users?isActive=false');
+        $this->getJson('/invoices/stats')
+            ->assertJsonPath('data.0.link', '/dashboard/invoices?issuedThisMonth=1')
+            ->assertJsonPath('data.3.link', '/dashboard/invoices?status=OUTSTANDING');
+        $this->getJson('/payments/stats')
+            ->assertJsonPath('data.1.link', '/dashboard/payments?paymentStatus=PENDING');
+        $this->getJson('/issues/stats')
+            ->assertJsonPath('data.3.link', '/dashboard/issues?priority=URGENT');
+        $this->getJson('/tasks/stats')
+            ->assertJsonPath('data.2.link', '/dashboard/tasks?status=IN_PROGRESS');
+
+        $room = Room::with('roomType')
+            ->where('occupancy_status', OccupancyStatus::VACANT->value)
+            ->firstOrFail();
+        $customer = Customer::firstOrFail();
+        $checkIn = now()->addYears(2)->toDateString();
+        $checkOut = now()->addYears(2)->addDays(2)->toDateString();
+        $bookingResponse = $this->postJson('/dashboard/bookings', [
+            'checkInDate' => $checkIn,
+            'checkOutDate' => $checkOut,
+            'customerId' => $customer->id,
+            'roomId' => $room->id,
+            'guests' => [[
+                'fullName' => 'Filter Test Guest',
+                'age' => 30,
+                'gender' => 'MALE',
+            ]],
+            'paymentMethod' => PaymentMethod::CASH->value,
+        ])->assertOk();
+        $bookingId = $bookingResponse->json('data.id');
+
+        $cancelledBooking = Booking::findOrFail($bookingId);
+        $cancelledBooking->update(['status' => 'CANCELLED']);
+        $bookings = $this->getJson('/bookings?status=NON_CANCELLED')
+            ->assertOk()
+            ->json('data');
+        $this->assertNotContains($cancelledBooking->id, array_column($bookings, 'id'));
+
+        $invoice = Invoice::where('booking_id', $bookingId)->firstOrFail();
+        $invoice->update(['status' => InvoiceStatus::UNPAID->value]);
+        $outstandingInvoices = $this->getJson('/invoices?status=OUTSTANDING')
+            ->assertOk()
+            ->json('data');
+        $this->assertContains($invoice->id, array_column($outstandingInvoices, 'id'));
+
+        $room->refresh()->update([
+            'occupancy_status' => OccupancyStatus::VACANT->value,
+            'housekeeping_status' => HousekeepingStatus::CLEAN->value,
+            'is_active' => true,
+        ]);
+        $this->assertSame(OccupancyStatus::VACANT, $room->fresh()->occupancy_status);
+        $this->assertSame(HousekeepingStatus::CLEAN, $room->fresh()->housekeeping_status);
+        $this->assertTrue($room->fresh()->is_active);
+        $availableRooms = $this->getJson('/dashboard/rooms?occupancyStatus=VACANT&housekeepingStatus=CLEAN&isActive=true')
+            ->assertOk()
+            ->json('data');
+        $this->assertContains($room->id, array_column($availableRooms, 'id'));
     }
 }

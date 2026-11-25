@@ -52,7 +52,8 @@ function IssuesTable() {
   ];
 
   const { setSearch, setPage, params, setFilter } = useListParams();
-  const { items, pagination, isLoading, isError, refetch } = useIssues(params);
+  const { items, pagination, isLoading, isError, refetch } =
+    useIssues(params);
 
   return (
     <DataTable
@@ -71,7 +72,6 @@ function IssuesTable() {
       isLoading={isLoading}
       isError={isError}
       refetch={refetch}
-      onActionClick={() => {}}
       showSearch
       searchPlaceholder="Search issue..."
       emptyMessage="Issue not found"

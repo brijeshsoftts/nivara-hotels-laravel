@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\HousekeepingStatus;
 use App\Enums\Category;
+use App\Enums\HousekeepingStatus;
+use App\Enums\NotificationType;
 use App\Enums\TaskStatus;
 use App\Enums\TaskType;
 use App\Enums\UserRole;
@@ -11,12 +12,15 @@ use App\Models\HousekeepingTask;
 use App\Models\Room;
 use App\Models\Staff;
 use App\Models\User;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class HousekeepingTaskController extends Controller
 {
+    public function __construct(private NotificationService $notificationService) {}
+
     public function index(Request $request)
     {
         $user = $request->user();
@@ -26,7 +30,7 @@ class HousekeepingTaskController extends Controller
         $page = max(1, (int) $request->input('page', 1));
         $limit = min(100, max(1, (int) $request->input('limit', 10)));
         $query = HousekeepingTask::with(['room', 'assignedTo'])
-            ->when($user->role === UserRole::STAFF->value, fn($tasks) => $tasks->where('assigned_to', $user->id))
+            ->when($user->role === UserRole::STAFF->value, fn ($tasks) => $tasks->where('assigned_to', $user->id))
             ->orderBy('scheduled_date');
 
         if ($request->filled('status')) {
@@ -38,17 +42,17 @@ class HousekeepingTaskController extends Controller
         if ($request->filled('search')) {
             $search = trim((string) $request->input('search'));
             $query->where(function ($tasks) use ($search) {
-                $tasks->whereHas('room', fn($rooms) => $rooms
+                $tasks->whereHas('room', fn ($rooms) => $rooms
                     ->where('room_number', 'like', "%{$search}%")
                     ->orWhere('name', 'like', "%{$search}%"))
-                    ->orWhereHas('assignedTo', fn($assignees) => $assignees
+                    ->orWhereHas('assignedTo', fn ($assignees) => $assignees
                         ->where('full_name', 'like', "%{$search}%")
                         ->orWhere('email', 'like', "%{$search}%"));
             });
         }
 
         $total = (clone $query)->count();
-        $tasks = $query->skip(($page - 1) * $limit)->take($limit)->get()->map(fn($task) => [
+        $tasks = $query->skip(($page - 1) * $limit)->take($limit)->get()->map(fn ($task) => [
             'id' => $task->id,
             'room' => [
                 'id' => $task->room->id,
@@ -66,7 +70,7 @@ class HousekeepingTaskController extends Controller
         ]);
 
         $rooms = Room::where('is_active', true)->orderBy('room_number')->get()
-            ->map(fn($room) => [
+            ->map(fn ($room) => [
                 'id' => $room->id,
                 'roomNumber' => $room->room_number,
                 'name' => $room->name,
@@ -74,9 +78,9 @@ class HousekeepingTaskController extends Controller
             ]);
         $staff = Staff::with('user')
             ->where('category', Category::HOUSEKEEPER->value)
-            ->whereHas('user', fn($users) => $users->where('is_active', true)->whereNull('soft_deleted_at'))
+            ->whereHas('user', fn ($users) => $users->where('is_active', true)->whereNull('soft_deleted_at'))
             ->get()
-            ->map(fn($housekeeper) => [
+            ->map(fn ($housekeeper) => [
                 'id' => $housekeeper->user_id,
                 'fullName' => $housekeeper->user?->full_name ?? $housekeeper->user?->name ?? 'Housekeeper',
                 'phone' => $housekeeper->user?->phone ?? '',
@@ -84,7 +88,7 @@ class HousekeepingTaskController extends Controller
 
         $stats = $this->getStats($user);
 
-        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+        if ($request->wantsJson() && ! $request->header('X-Inertia')) {
             return response()->json([
                 'data' => $tasks,
                 'meta' => [
@@ -124,7 +128,7 @@ class HousekeepingTaskController extends Controller
     private function getStats(User $user): array
     {
         $query = HousekeepingTask::query()
-            ->when($user->role === UserRole::STAFF->value, fn($tasks) => $tasks->where('assigned_to', $user->id));
+            ->when($user->role === UserRole::STAFF->value, fn ($tasks) => $tasks->where('assigned_to', $user->id));
         $pending = (clone $query)->where('status', TaskStatus::PENDING->value)->count();
         $inProgress = (clone $query)->where('status', TaskStatus::IN_PROGRESS->value)->count();
         $completed = (clone $query)->where('status', TaskStatus::COMPLETED->value)->count();
@@ -148,7 +152,7 @@ class HousekeepingTaskController extends Controller
                 'value' => number_format($pending),
                 'description' => 'Waiting to be started',
                 'icon' => 'Clock',
-                'link' => $baseUrl . '?status=' . TaskStatus::PENDING->value,
+                'link' => $baseUrl.'?status='.TaskStatus::PENDING->value,
                 'tone' => 'gold',
             ],
             [
@@ -158,7 +162,7 @@ class HousekeepingTaskController extends Controller
                 'value' => number_format($inProgress),
                 'description' => 'Tasks currently underway',
                 'icon' => 'LoaderCircle',
-                'link' => $baseUrl . '?status=' . TaskStatus::IN_PROGRESS->value,
+                'link' => $baseUrl.'?status='.TaskStatus::IN_PROGRESS->value,
                 'tone' => 'violet',
             ],
             [
@@ -168,7 +172,7 @@ class HousekeepingTaskController extends Controller
                 'value' => number_format($completed),
                 'description' => 'Finished housekeeping tasks',
                 'icon' => 'CircleCheck',
-                'link' => $baseUrl . '?status=' . TaskStatus::COMPLETED->value,
+                'link' => $baseUrl.'?status='.TaskStatus::COMPLETED->value,
                 'tone' => 'emerald',
             ],
         ];
@@ -183,17 +187,17 @@ class HousekeepingTaskController extends Controller
 
         $isHousekeeper = $role === UserRole::STAFF->value
             && Staff::where('user_id', $user->id)
-            ->where('category', Category::HOUSEKEEPER->value)
-            ->whereHas('user', fn($users) => $users->where('is_active', true)->whereNull('soft_deleted_at'))
-            ->exists();
+                ->where('category', Category::HOUSEKEEPER->value)
+                ->whereHas('user', fn ($users) => $users->where('is_active', true)->whereNull('soft_deleted_at'))
+                ->exists();
 
-        abort_if($managementOnly || !$isHousekeeper, 403);
+        abort_if($managementOnly || ! $isHousekeeper, 403);
     }
 
     private function syncRoomHousekeepingStatus(string $roomId, bool $completed = false, bool $abandoned = false): void
     {
         $room = Room::find($roomId);
-        if (!$room) {
+        if (! $room) {
             return;
         }
 
@@ -240,7 +244,19 @@ class HousekeepingTaskController extends Controller
         ]);
         $this->syncRoomHousekeepingStatus($task->room_id);
 
-        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+        if ((string) $validated['assignedTo'] !== (string) $user->id) {
+            $room = Room::find($task->room_id);
+            $this->notificationService->createForUsers(
+                [(string) $validated['assignedTo']],
+                NotificationType::HOUSEKEEPING_ASSIGNED,
+                'Housekeeping task assigned',
+                "{$task->task_type->value} task for room {$room?->room_number} is scheduled for {$task->scheduled_date?->toDateString()}. Assigned by ".($user->full_name ?? $user->name).'.',
+                'HOUSEKEEPING_TASK',
+                $task->id,
+            );
+        }
+
+        if ($request->wantsJson() && ! $request->header('X-Inertia')) {
             return response()->json(['data' => ['id' => $task->id], 'message' => 'Task created successfully'], 201);
         }
 
@@ -272,10 +288,19 @@ class HousekeepingTaskController extends Controller
         }
 
         $originalRoomId = $task->room_id;
-        if (isset($validated['roomId'])) $task->room_id = $validated['roomId'];
-        if (isset($validated['taskType'])) $task->task_type = $validated['taskType'];
-        if (isset($validated['scheduledDate'])) $task->scheduled_date = $validated['scheduledDate'];
-        if (isset($validated['assignedTo'])) $task->assigned_to = $validated['assignedTo'];
+        $originalAssigneeId = $task->assigned_to;
+        if (isset($validated['roomId'])) {
+            $task->room_id = $validated['roomId'];
+        }
+        if (isset($validated['taskType'])) {
+            $task->task_type = $validated['taskType'];
+        }
+        if (isset($validated['scheduledDate'])) {
+            $task->scheduled_date = $validated['scheduledDate'];
+        }
+        if (isset($validated['assignedTo'])) {
+            $task->assigned_to = $validated['assignedTo'];
+        }
         $task->save();
 
         if ($originalRoomId !== $task->room_id) {
@@ -283,7 +308,22 @@ class HousekeepingTaskController extends Controller
         }
         $this->syncRoomHousekeepingStatus($task->room_id);
 
-        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+        if (
+            $originalAssigneeId !== $task->assigned_to
+            && (string) $task->assigned_to !== (string) $user->id
+        ) {
+            $room = Room::find($task->room_id);
+            $this->notificationService->createForUsers(
+                [(string) $task->assigned_to],
+                NotificationType::HOUSEKEEPING_ASSIGNED,
+                'Housekeeping task assigned',
+                "{$task->task_type->value} task for room {$room?->room_number} is scheduled for {$task->scheduled_date?->toDateString()}. Assigned by ".($user->full_name ?? $user->name).'.',
+                'HOUSEKEEPING_TASK',
+                $task->id,
+            );
+        }
+
+        if ($request->wantsJson() && ! $request->header('X-Inertia')) {
             return response()->json(['data' => ['id' => $task->id], 'message' => 'Task updated successfully']);
         }
 
@@ -310,12 +350,16 @@ class HousekeepingTaskController extends Controller
         abort_unless($task->status === $expectedCurrent, 409);
 
         $task->status = $status;
-        if ($status === TaskStatus::IN_PROGRESS->value) $task->started_at = now();
-        if ($status === TaskStatus::COMPLETED->value) $task->completed_at = now();
+        if ($status === TaskStatus::IN_PROGRESS->value) {
+            $task->started_at = now();
+        }
+        if ($status === TaskStatus::COMPLETED->value) {
+            $task->completed_at = now();
+        }
         $task->save();
         $this->syncRoomHousekeepingStatus($task->room_id, completed: $status === TaskStatus::COMPLETED->value);
 
-        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+        if ($request->wantsJson() && ! $request->header('X-Inertia')) {
             return response()->json(['data' => ['id' => $task->id, 'status' => $status]]);
         }
 
@@ -334,7 +378,7 @@ class HousekeepingTaskController extends Controller
         $task->delete();
         $this->syncRoomHousekeepingStatus($roomId, abandoned: $isActive);
 
-        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+        if ($request->wantsJson() && ! $request->header('X-Inertia')) {
             return response()->json(['message' => 'Task deleted successfully']);
         }
 

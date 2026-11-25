@@ -110,6 +110,14 @@ export function StaffTable() {
                             label: "Housekeeper",
                             value: "HOUSEKEEPER",
                         },
+                        {
+                            label: "Security Guard",
+                            value: "SECURITY_GUARD",
+                        },
+                        {
+                            label: "Waiter",
+                            value: "WAITER",
+                        },
                     ],
                 },
             ]}

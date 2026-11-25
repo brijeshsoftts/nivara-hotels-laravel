@@ -22,7 +22,8 @@ class InvoiceController extends Controller
 
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:100'],
-            'status' => ['nullable', Rule::in(array_column(InvoiceStatus::cases(), 'value'))],
+            'status' => ['nullable', Rule::in([...array_column(InvoiceStatus::cases(), 'value'), 'OUTSTANDING'])],
+            'issuedThisMonth' => ['nullable', 'boolean'],
             'page' => ['nullable', 'integer', 'min:1'],
             'limit' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
@@ -31,19 +32,31 @@ class InvoiceController extends Controller
         $query = Invoice::with(['customer', 'booking.customer', 'booking.bookingRooms.roomType', 'booking.bookingRooms.room', 'payments']);
 
         if ($role === UserRole::CUSTOMER->value) {
-            $query->where(fn($invoices) => $invoices
+            $query->where(fn ($invoices) => $invoices
                 ->where('customer_id', $user->id)
-                ->orWhereHas('booking', fn($bookings) => $bookings->where('customer_id', $user->id)));
+                ->orWhereHas('booking', fn ($bookings) => $bookings->where('customer_id', $user->id)));
         }
-        if (!empty($filters['status'])) {
-            $query->where('status', $filters['status']);
+        if (! empty($filters['status'])) {
+            if ($filters['status'] === 'OUTSTANDING') {
+                $query->whereIn('status', [
+                    InvoiceStatus::UNPAID->value,
+                    InvoiceStatus::PARTIALLY_PAID->value,
+                ]);
+            } else {
+                $query->where('status', $filters['status']);
+            }
         }
-        if (!empty($filters['search'])) {
+        if ($request->boolean('issuedThisMonth')) {
+            $monthStart = now()->startOfMonth();
+            $query->where('issued_at', '>=', $monthStart)
+                ->where('issued_at', '<', $monthStart->copy()->addMonth());
+        }
+        if (! empty($filters['search'])) {
             $search = trim($filters['search']);
             $query->where(function ($invoices) use ($search) {
                 $invoices->where('invoice_number', 'like', "%{$search}%")
-                    ->orWhereHas('booking', fn($bookings) => $bookings->where('booking_reference', 'like', "%{$search}%"))
-                    ->orWhereHas('customer', fn($customers) => $customers
+                    ->orWhereHas('booking', fn ($bookings) => $bookings->where('booking_reference', 'like', "%{$search}%"))
+                    ->orWhereHas('customer', fn ($customers) => $customers
                         ->where('full_name', 'like', "%{$search}%")
                         ->orWhere('name', 'like', "%{$search}%")
                         ->orWhere('email', 'like', "%{$search}%"));
@@ -55,7 +68,7 @@ class InvoiceController extends Controller
             ->skip(($page - 1) * $limit)
             ->take($limit)
             ->get()
-            ->map(fn(Invoice $invoice) => $role === UserRole::CUSTOMER->value
+            ->map(fn (Invoice $invoice) => $role === UserRole::CUSTOMER->value
                 ? $this->mapCustomerInvoice($invoice)
                 : $this->mapInvoiceItem($invoice));
         $meta = [
@@ -66,7 +79,7 @@ class InvoiceController extends Controller
         ];
         $stats = $this->getStats($role === UserRole::CUSTOMER->value ? $user : null);
 
-        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+        if ($request->wantsJson() && ! $request->header('X-Inertia')) {
             return response()->json(['data' => $invoices, 'meta' => $meta]);
         }
 
@@ -95,12 +108,12 @@ class InvoiceController extends Controller
             'booking.customer',
             'booking.bookingRooms.roomType',
             'booking.bookingRooms.room',
-            'payments' => fn($payments) => $payments->orderByDesc('created_at'),
+            'payments' => fn ($payments) => $payments->orderByDesc('created_at'),
         ]);
         if ($role === UserRole::CUSTOMER->value) {
-            $query->where(fn($invoices) => $invoices
+            $query->where(fn ($invoices) => $invoices
                 ->where('customer_id', $user->id)
-                ->orWhereHas('booking', fn($bookings) => $bookings->where('customer_id', $user->id)));
+                ->orWhereHas('booking', fn ($bookings) => $bookings->where('customer_id', $user->id)));
         }
 
         $invoice = $query->findOrFail($id);
@@ -121,7 +134,7 @@ class InvoiceController extends Controller
 
         $result = DB::transaction(function () use ($id, $amounts) {
             $invoice = Invoice::with('payments')->lockForUpdate()->findOrFail($id);
-            $hasSettledPayments = $invoice->payments->contains(fn(Payment $payment) => in_array(
+            $hasSettledPayments = $invoice->payments->contains(fn (Payment $payment) => in_array(
                 $this->enumValue($payment->payment_status),
                 [PaymentStatus::COMPLETED->value, PaymentStatus::REFUNDED->value],
                 true,
@@ -151,7 +164,7 @@ class InvoiceController extends Controller
             return compact('id', 'subtotal', 'taxAmount', 'discountAmount', 'totalAmount');
         });
 
-        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+        if ($request->wantsJson() && ! $request->header('X-Inertia')) {
             return response()->json(['data' => $result, 'message' => 'Invoice updated successfully.']);
         }
 
@@ -169,7 +182,7 @@ class InvoiceController extends Controller
                 return;
             }
             abort_if(
-                $invoice->payments->contains(fn(Payment $payment) => $this->enumValue($payment->payment_status) === PaymentStatus::COMPLETED->value),
+                $invoice->payments->contains(fn (Payment $payment) => $this->enumValue($payment->payment_status) === PaymentStatus::COMPLETED->value),
                 409,
                 'Refund completed payments before cancelling this invoice.',
             );
@@ -185,7 +198,7 @@ class InvoiceController extends Controller
             $invoice->update(['status' => InvoiceStatus::REFUNDED->value]);
         });
 
-        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+        if ($request->wantsJson() && ! $request->header('X-Inertia')) {
             return response()->json(['data' => ['id' => $id], 'message' => 'Invoice cancelled successfully.']);
         }
 
@@ -196,9 +209,9 @@ class InvoiceController extends Controller
     {
         $baseQuery = Invoice::query();
         if ($customer) {
-            $baseQuery->where(fn($invoices) => $invoices
+            $baseQuery->where(fn ($invoices) => $invoices
                 ->where('customer_id', $customer->id)
-                ->orWhereHas('booking', fn($bookings) => $bookings->where('customer_id', $customer->id)));
+                ->orWhereHas('booking', fn ($bookings) => $bookings->where('customer_id', $customer->id)));
         }
 
         $monthStart = now()->startOfMonth();
@@ -212,14 +225,14 @@ class InvoiceController extends Controller
             ->whereIn('invoice_id', (clone $openInvoices)->select('id'))
             ->sum('amount');
 
-        $formatAmount = fn(int $amount) => '₹' . number_format($amount);
+        $formatAmount = fn (int $amount) => '₹'.number_format($amount);
         $link = '/dashboard/invoices';
 
         return [
-            ['label' => 'Invoiced This Month', 'value' => $formatAmount((int) (clone $baseQuery)->whereBetween('issued_at', [$monthStart, $nextMonthStart])->sum('total_amount')), 'link' => $link, 'icon' => 'IndianRupee'],
-            ['label' => 'Paid Invoices', 'value' => number_format((clone $baseQuery)->where('status', InvoiceStatus::PAID->value)->count()), 'link' => $link, 'icon' => 'CheckCircle'],
-            ['label' => 'Partially Paid', 'value' => number_format((clone $baseQuery)->where('status', InvoiceStatus::PARTIALLY_PAID->value)->count()), 'link' => $link, 'icon' => 'Clock'],
-            ['label' => 'Outstanding Balance', 'value' => $formatAmount(max(0, $openTotal - $paidOnOpen)), 'link' => $link, 'icon' => 'Wallet'],
+            ['label' => 'Invoiced This Month', 'value' => $formatAmount((int) (clone $baseQuery)->whereBetween('issued_at', [$monthStart, $nextMonthStart])->sum('total_amount')), 'link' => $link.'?issuedThisMonth=1', 'icon' => 'IndianRupee'],
+            ['label' => 'Paid Invoices', 'value' => number_format((clone $baseQuery)->where('status', InvoiceStatus::PAID->value)->count()), 'link' => $link.'?status='.InvoiceStatus::PAID->value, 'icon' => 'CheckCircle'],
+            ['label' => 'Partially Paid', 'value' => number_format((clone $baseQuery)->where('status', InvoiceStatus::PARTIALLY_PAID->value)->count()), 'link' => $link.'?status='.InvoiceStatus::PARTIALLY_PAID->value, 'icon' => 'Clock'],
+            ['label' => 'Outstanding Balance', 'value' => $formatAmount(max(0, $openTotal - $paidOnOpen)), 'link' => $link.'?status=OUTSTANDING', 'icon' => 'Wallet'],
         ];
     }
 
@@ -288,7 +301,7 @@ class InvoiceController extends Controller
                 'taxAmount' => (int) $invoice->tax_amount,
                 'totalAmount' => (int) $invoice->total_amount,
             ],
-            'payments' => $invoice->payments->map(fn(Payment $payment) => [
+            'payments' => $invoice->payments->map(fn (Payment $payment) => [
                 'id' => $payment->id,
                 'paymentReference' => $payment->payment_reference,
                 'transactionId' => $payment->transaction_id,
@@ -306,7 +319,7 @@ class InvoiceController extends Controller
     private function paidAmount(Invoice $invoice): int
     {
         return (int) $invoice->payments
-            ->filter(fn(Payment $payment) => $this->enumValue($payment->payment_status) === PaymentStatus::COMPLETED->value)
+            ->filter(fn (Payment $payment) => $this->enumValue($payment->payment_status) === PaymentStatus::COMPLETED->value)
             ->sum('amount');
     }
 
@@ -334,7 +347,7 @@ class InvoiceController extends Controller
     {
         abort_unless(
             in_array($role, [UserRole::ADMIN->value, UserRole::MANAGER->value, UserRole::STAFF->value, UserRole::CUSTOMER->value], true)
-                && !($role === UserRole::STAFF->value && $category === 'HOUSEKEEPER'),
+                && ! ($role === UserRole::STAFF->value && $category === 'HOUSEKEEPER'),
             403,
         );
     }
