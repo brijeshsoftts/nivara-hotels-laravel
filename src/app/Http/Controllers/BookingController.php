@@ -37,19 +37,15 @@ class BookingController extends Controller
         $query = Booking::with([
             'customer.avatar',
             'bookingRooms.room.roomType',
-            'bookingRooms.room.housekeepingTasks' => fn ($query) => $query->whereIn('status', [
-                TaskStatus::PENDING->value,
-                TaskStatus::IN_PROGRESS->value,
-            ]),
             'bookingRooms.roomType',
-            'invoices.payments' => fn ($query) => $query->where('payment_status', PaymentStatus::COMPLETED->value),
+            'invoices.payments' => fn($query) => $query->where('payment_status', PaymentStatus::COMPLETED->value),
         ])->orderByDesc('booked_at');
 
         if ($request->filled('status')) {
             $query->where('status', $request->input('status'));
         }
         if ($request->filled('invoiceStatus')) {
-            $query->whereHas('invoices', fn ($invoiceQuery) => $invoiceQuery->where('status', $request->input('invoiceStatus')));
+            $query->whereHas('invoices', fn($invoiceQuery) => $invoiceQuery->where('status', $request->input('invoiceStatus')));
         }
         if ($request->filled('paymentMethod')) {
             $query->where('payment_method', $request->input('paymentMethod'));
@@ -61,11 +57,11 @@ class BookingController extends Controller
                     ->orWhere('guest_name', 'like', "%{$s}%")
                     ->orWhere('guest_email', 'like', "%{$s}%")
                     ->orWhere('guest_phone', 'like', "%{$s}%")
-                    ->orWhereHas('customer', fn ($customerQuery) => $customerQuery
+                    ->orWhereHas('customer', fn($customerQuery) => $customerQuery
                         ->where('full_name', 'like', "%{$s}%")
                         ->orWhere('email', 'like', "%{$s}%")
                         ->orWhere('phone', 'like', "%{$s}%"))
-                    ->orWhereHas('bookingRooms.room', fn ($roomQuery) => $roomQuery->where('room_number', 'like', "%{$s}%"));
+                    ->orWhereHas('bookingRooms.room', fn($roomQuery) => $roomQuery->where('room_number', 'like', "%{$s}%"));
             });
         }
 
@@ -75,20 +71,9 @@ class BookingController extends Controller
             $bookingRoom = $booking->bookingRooms->first();
             $room = $bookingRoom?->room;
             $invoice = $booking->invoices->first();
-            $completedPayments = $invoice?->payments->sum('amount') ?? 0;
             $status = $booking->status instanceof \BackedEnum ? $booking->status->value : (string) $booking->status;
-            $roomOccupancy = $room?->occupancy_status instanceof \BackedEnum ? $room->occupancy_status->value : $room?->occupancy_status;
-            $housekeepingStatus = $room?->housekeeping_status instanceof \BackedEnum ? $room->housekeeping_status->value : $room?->housekeeping_status;
             $invoiceStatus = $invoice?->status instanceof \BackedEnum ? $invoice->status->value : $invoice?->status;
-            $canCheckIn = $status === BookingStatus::CONFIRMED->value
-                && $invoiceStatus === InvoiceStatus::PAID->value
-                && (int) ($invoice?->total_amount ?? 0) > 0
-                && $completedPayments >= (int) ($invoice?->total_amount ?? 0)
-                && $booking->check_in_date?->toDateString() === $today
-                && $room?->is_active === true
-                && in_array($roomOccupancy, [OccupancyStatus::VACANT->value, OccupancyStatus::RESERVED->value], true)
-                && $housekeepingStatus === HousekeepingStatus::CLEAN->value
-                && ($room?->housekeepingTasks->isEmpty() ?? false);
+            $canCheckIn = $this->canCheckIn($booking, $today);
 
             return [
                 'id' => $booking->id,
@@ -150,6 +135,24 @@ class BookingController extends Controller
         ]);
     }
 
+    private function canCheckIn(Booking $booking, string $today): bool
+    {
+        $bookingRoom = $booking->bookingRooms->first();
+        $room = $bookingRoom?->room;
+        $invoice = $booking->invoices->first();
+        $status = $booking->status instanceof \BackedEnum ? $booking->status->value : (string) $booking->status;
+        $invoiceStatus = $invoice?->status instanceof \BackedEnum ? $invoice->status->value : $invoice?->status;
+        $completedPayments = $invoice?->payments->sum('amount') ?? 0;
+
+        return $status === BookingStatus::CONFIRMED->value
+            && $invoiceStatus === InvoiceStatus::PAID->value
+            && (int) ($invoice?->total_amount ?? 0) > 0
+            && $completedPayments >= (int) ($invoice?->total_amount ?? 0)
+            && $booking->check_in_date?->toDateString() === $today
+            && $bookingRoom !== null
+            && $room?->is_active === true;
+    }
+
     public function show(Request $request, string $id)
     {
         $user = $request->user();
@@ -190,8 +193,8 @@ class BookingController extends Controller
                 'checkIn' => $booking->check_in_date?->toIso8601String(),
                 'checkOut' => $booking->check_out_date?->toIso8601String(),
                 'duration' => max(0, $booking->check_in_date->diffInDays($booking->check_out_date)),
-                'adults' => $booking->bookingGuests->filter(fn ($guest) => $guest->age === null || $guest->age >= 18)->count(),
-                'children' => $booking->bookingGuests->filter(fn ($guest) => $guest->age !== null && $guest->age < 18)->count(),
+                'adults' => $booking->bookingGuests->filter(fn($guest) => $guest->age === null || $guest->age >= 18)->count(),
+                'children' => $booking->bookingGuests->filter(fn($guest) => $guest->age !== null && $guest->age < 18)->count(),
                 'bookedOn' => $booking->booked_at?->toIso8601String(),
             ]]);
         }
@@ -203,7 +206,7 @@ class BookingController extends Controller
         $customerProfile = $customer?->customer;
         $creator = $booking->createdBy;
         $invoice = $booking->invoices->first();
-        $enumValue = fn ($value) => $value instanceof \BackedEnum ? $value->value : $value;
+        $enumValue = fn($value) => $value instanceof \BackedEnum ? $value->value : $value;
 
         return response()->json(['data' => [
             'id' => $booking->id,
@@ -255,10 +258,10 @@ class BookingController extends Controller
                     'name' => $room->name,
                     'floor' => (int) $room->floor,
                     'housekeepers' => $room->roomAssignments
-                        ->filter(fn ($assignment) => $assignment->is_active)
-                        ->map(fn ($assignment) => $assignment->user)
+                        ->filter(fn($assignment) => $assignment->is_active)
+                        ->map(fn($assignment) => $assignment->user)
                         ->filter()
-                        ->map(fn ($housekeeper) => [
+                        ->map(fn($housekeeper) => [
                             'id' => $housekeeper->id,
                             'fullName' => $housekeeper->full_name ?? $housekeeper->name,
                             'email' => $housekeeper->email ?? '',
@@ -277,7 +280,7 @@ class BookingController extends Controller
                 ] : null,
                 'pricePerNight' => (int) $bookingRoom->price_per_night,
             ] : null,
-            'bookingGuests' => $booking->bookingGuests->map(fn ($guest) => [
+            'bookingGuests' => $booking->bookingGuests->map(fn($guest) => [
                 'id' => $guest->id,
                 'fullName' => $guest->full_name,
                 'age' => $guest->age,
@@ -294,7 +297,7 @@ class BookingController extends Controller
                 'paymentMethod' => $enumValue($booking->payment_method),
                 'status' => $enumValue($invoice->status),
                 'issuedAt' => $invoice->issued_at?->toIso8601String(),
-                'payments' => $invoice->payments->map(fn ($payment) => [
+                'payments' => $invoice->payments->map(fn($payment) => [
                     'id' => $payment->id,
                     'paymentReference' => $payment->payment_reference,
                     'transactionId' => $payment->transaction_id,
@@ -337,7 +340,7 @@ class BookingController extends Controller
                 'value' => number_format($confirmed),
                 'description' => 'Ready for arrival',
                 'icon' => 'CheckCircle',
-                'link' => '/dashboard/bookings?status='.BookingStatus::CONFIRMED->value,
+                'link' => '/dashboard/bookings?status=' . BookingStatus::CONFIRMED->value,
                 'tone' => 'emerald',
             ],
             [
@@ -347,14 +350,14 @@ class BookingController extends Controller
                 'value' => number_format($pending),
                 'description' => 'Awaiting confirmation',
                 'icon' => 'Clock3',
-                'link' => '/dashboard/bookings?status='.BookingStatus::PENDING->value,
+                'link' => '/dashboard/bookings?status=' . BookingStatus::PENDING->value,
                 'tone' => 'gold',
             ],
             [
                 'id' => 'booking-revenue',
                 'title' => 'Booking Revenue',
                 'label' => 'Booking Revenue',
-                'value' => '₹'.number_format($revenue),
+                'value' => '₹' . number_format($revenue),
                 'description' => 'Confirmed & active bookings',
                 'icon' => 'IndianRupee',
                 'link' => '/dashboard/bookings',
@@ -367,10 +370,10 @@ class BookingController extends Controller
     {
         $roomTypes = RoomType::where('is_active', true)->with(['amenities', 'images'])->get();
         $availableRooms = $this->availableRoomQuery()->get()->map(
-            fn (Room $room) => $this->mapAvailableRoom($room)
+            fn(Room $room) => $this->mapAvailableRoom($room)
         );
 
-        $customers = Customer::with('user')->take(20)->get()->map(fn ($c) => [
+        $customers = Customer::with('user')->take(20)->get()->map(fn($c) => [
             'id' => $c->id,
             'fullName' => $c->user?->name ?? 'Guest',
             'email' => $c->user?->email,
@@ -404,7 +407,7 @@ class BookingController extends Controller
         $totalGuests = $validated['adults'] + $validated['children'];
         $rooms = $this->availableRoomQuery($totalGuests, $checkIn, $checkOut)
             ->get()
-            ->map(fn (Room $room) => $this->mapAvailableRoom($room));
+            ->map(fn(Room $room) => $this->mapAvailableRoom($room));
 
         return response()->json(['data' => $rooms]);
     }
@@ -427,7 +430,7 @@ class BookingController extends Controller
                     $statuses->orWhere(function ($occupied) use ($checkIn) {
                         $occupied
                             ->where('occupancy_status', OccupancyStatus::OCCUPIED->value)
-                            ->whereHas('bookingRooms.booking', fn ($bookings) => $bookings
+                            ->whereHas('bookingRooms.booking', fn($bookings) => $bookings
                                 ->whereNotIn('status', [
                                     BookingStatus::CANCELLED->value,
                                     BookingStatus::NO_SHOW->value,
@@ -437,14 +440,14 @@ class BookingController extends Controller
                     });
                 }
             })
-            ->whereHas('roomType', fn ($roomTypes) => $roomTypes
+            ->whereHas('roomType', fn($roomTypes) => $roomTypes
                 ->where('is_active', true)
                 ->where('max_guests', '>=', $totalGuests));
 
         if ($checkIn && $checkOut) {
             $overlappingRoomIds = BookingRoom::query()
                 ->whereNotNull('assigned_room_id')
-                ->whereHas('booking', fn ($bookings) => $bookings
+                ->whereHas('booking', fn($bookings) => $bookings
                     ->whereNotIn('status', [
                         BookingStatus::CANCELLED->value,
                         BookingStatus::NO_SHOW->value,
@@ -483,7 +486,7 @@ class BookingController extends Controller
                     'url' => $image->url,
                     'altText' => $image->alt_text,
                 ] : null,
-                'amenities' => $roomType?->amenities->map(fn ($amenity) => [
+                'amenities' => $roomType?->amenities->map(fn($amenity) => [
                     'id' => $amenity->id,
                     'name' => $amenity->name,
                     'icon' => $amenity->icon,
@@ -537,7 +540,7 @@ class BookingController extends Controller
         $paymentMethod = $validated['paymentMethod'];
 
         return DB::transaction(function () use ($request, $validated, $guestDetails, $hasGuestDetails, $paymentMethod) {
-            $ref = 'BK-'.strtoupper(Str::random(8));
+            $ref = 'BK-' . strtoupper(Str::random(8));
             $checkIn = Carbon::parse($validated['checkInDate']);
             $checkOut = Carbon::parse($validated['checkOutDate']);
             $days = max(1, (int) $checkIn->diffInDays($checkOut));
@@ -624,7 +627,7 @@ class BookingController extends Controller
             $room->save();
 
             $inv = Invoice::create([
-                'invoice_number' => 'INV-'.strtoupper(Str::random(8)),
+                'invoice_number' => 'INV-' . strtoupper(Str::random(8)),
                 'booking_id' => $booking->id,
                 'customer_id' => $userCustomerId,
                 'subtotal' => $subtotal,
@@ -654,7 +657,7 @@ class BookingController extends Controller
     {
         return BookingRoom::query()
             ->where('assigned_room_id', $roomId)
-            ->whereHas('booking', fn ($bookings) => $bookings
+            ->whereHas('booking', fn($bookings) => $bookings
                 ->whereNotIn('status', [
                     BookingStatus::CANCELLED->value,
                     BookingStatus::NO_SHOW->value,
@@ -669,7 +672,7 @@ class BookingController extends Controller
     {
         return BookingRoom::query()
             ->where('assigned_room_id', $roomId)
-            ->whereHas('booking', fn ($bookings) => $bookings
+            ->whereHas('booking', fn($bookings) => $bookings
                 ->whereNotIn('status', [
                     BookingStatus::CANCELLED->value,
                     BookingStatus::NO_SHOW->value,
@@ -681,8 +684,16 @@ class BookingController extends Controller
 
     public function updateStatus(Request $request, string $id)
     {
-        $booking = Booking::with('bookingRooms')->findOrFail($id);
+        $booking = Booking::with([
+            'bookingRooms.room',
+            'invoices.payments' => fn($query) => $query->where('payment_status', PaymentStatus::COMPLETED->value),
+        ])->findOrFail($id);
         $newStatus = $request->input('status');
+
+        if ($newStatus === BookingStatus::CHECKED_IN->value) {
+            $today = Carbon::today(config('app.timezone'))->toDateString();
+            abort_unless($this->canCheckIn($booking, $today), 422, 'This booking is not eligible for check-in today.');
+        }
 
         $booking->update(['status' => $newStatus]);
 

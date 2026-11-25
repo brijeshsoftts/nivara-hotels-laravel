@@ -6,9 +6,11 @@ use App\Enums\BookingStatus;
 use App\Enums\HousekeepingStatus;
 use App\Enums\InvoiceStatus;
 use App\Enums\OccupancyStatus;
+use App\Enums\PaymentStatus;
 use App\Models\Booking;
 use App\Models\HousekeepingTask;
 use App\Models\Invoice;
+use App\Models\Payment;
 use App\Models\Room;
 use App\Services\DashboardService;
 use Illuminate\Http\Request;
@@ -83,61 +85,7 @@ class DashboardController extends Controller
             'total' => max($totalRooms, 15),
         ];
 
-        $days = [];
-        for ($i = 6; $i >= 0; $i--) {
-            $date = Carbon::today()->subDays($i);
-            $days[] = [
-                'date' => $date->format('M d'),
-                'revenue' => rand(18000, 48000),
-                'bookings' => rand(2, 6),
-            ];
-        }
-
-        $bookingStatus = [
-            ['status' => 'CONFIRMED', 'count' => max(Booking::where('status', BookingStatus::CONFIRMED->value)->count(), 14)],
-            ['status' => 'CHECKED_IN', 'count' => max(Booking::where('status', BookingStatus::CHECKED_IN->value)->count(), 4)],
-            ['status' => 'CHECKED_OUT', 'count' => max(Booking::where('status', BookingStatus::CHECKED_OUT->value)->count(), 8)],
-            ['status' => 'CANCELLED', 'count' => Booking::where('status', BookingStatus::CANCELLED->value)->count()],
-            ['status' => 'PENDING', 'count' => Booking::where('status', BookingStatus::PENDING->value)->count()],
-        ];
-
-        $todayStr = Carbon::today()->format('Y-m-d');
-        $nextStr = Carbon::today()->addDays(2)->format('Y-m-d');
-        $prevStr = Carbon::today()->subDays(3)->format('Y-m-d');
-
-        $stays = [
-            'arrivals' => [
-                'total' => 1,
-                'items' => [
-                    [
-                        'bookingId' => 'b-arr-1',
-                        'bookingReference' => 'BK-ARR-001',
-                        'customerName' => 'Vikram Malhotra',
-                        'roomNumber' => '201',
-                        'roomTypeName' => 'Deluxe Room',
-                        'checkIn' => $todayStr,
-                        'checkOut' => $nextStr,
-                        'bookingStatus' => 'CONFIRMED',
-                    ],
-                ],
-            ],
-            'departures' => [
-                'total' => 1,
-                'items' => [
-                    [
-                        'bookingId' => 'b-dep-1',
-                        'bookingReference' => 'BK-DEP-001',
-                        'customerName' => 'Rohit Roy',
-                        'roomNumber' => '104',
-                        'roomTypeName' => 'Luxury Suite',
-                        'checkIn' => $prevStr,
-                        'checkOut' => $todayStr,
-                        'paymentStatus' => 'PAID',
-                        'outstandingBalance' => 0,
-                    ],
-                ],
-            ],
-        ];
+        $stays = $this->buildStays();
 
         $tasks = HousekeepingTask::with('room')->get()->map(fn($t) => [
             'id' => $t->id,
@@ -150,8 +98,8 @@ class DashboardController extends Controller
         return Inertia::render('protect/Dashboard', [
             'stats' => $stats,
             'roomStatus' => $roomStatus,
-            'revenueTrend' => $days,
-            'bookingStatus' => $bookingStatus,
+            'revenueTrend' => $this->buildRevenueTrend(28),
+            'bookingStatus' => $this->buildBookingStatus(),
             'stays' => $stays,
             'tasks' => $tasks,
         ]);
@@ -215,68 +163,145 @@ class DashboardController extends Controller
                 'occupied' => $occupied,
                 'maintenance' => $maintenance,
                 'total' => $total,
-            ]
+            ],
         ]);
     }
 
-    public function revenueTrend()
+    public function revenueTrend(Request $request)
     {
-        $days = [];
-        for ($i = 6; $i >= 0; $i--) {
-            $date = Carbon::today()->subDays($i);
-            $days[] = [
+        $validated = $request->validate([
+            'range' => ['sometimes', 'in:7d,14d,28d'],
+        ]);
+        $days = (int) rtrim($validated['range'] ?? '7d', 'd');
+
+        return response()->json(['data' => $this->buildRevenueTrend($days)]);
+    }
+
+    private function buildRevenueTrend(int $days): array
+    {
+        $today = Carbon::today();
+        $startDate = $today->copy()->subDays($days - 1);
+        $revenueByDate = Payment::query()
+            ->where('payment_status', PaymentStatus::COMPLETED->value)
+            ->whereNotNull('paid_at')
+            ->whereBetween('paid_at', [$startDate->copy()->startOfDay(), $today->copy()->endOfDay()])
+            ->selectRaw('DATE(paid_at) as paid_date, SUM(amount) as total')
+            ->groupBy('paid_date')
+            ->pluck('total', 'paid_date');
+
+        $trend = [];
+        for ($offset = 0; $offset < $days; $offset++) {
+            $date = $startDate->copy()->addDays($offset);
+            $trend[] = [
                 'date' => $date->format('M d'),
-                'revenue' => rand(18000, 48000),
-                'bookings' => rand(2, 6),
+                'value' => (int) ($revenueByDate[$date->toDateString()] ?? 0),
             ];
         }
-        return response()->json(['data' => $days]);
+
+        return $trend;
     }
 
-    public function bookingStatus()
+    public function bookingStatus(Request $request)
     {
-        return response()->json([
-            'data' => [
-                'confirmed' => max(Booking::where('status', BookingStatus::CONFIRMED->value)->count(), 14),
-                'checkedIn' => max(Booking::where('status', BookingStatus::CHECKED_IN->value)->count(), 4),
-                'checkedOut' => max(Booking::where('status', BookingStatus::CHECKED_OUT->value)->count(), 8),
-                'cancelled' => Booking::where('status', BookingStatus::CANCELLED->value)->count(),
-                'pending' => Booking::where('status', BookingStatus::PENDING->value)->count(),
-            ]
+        $validated = $request->validate([
+            'range' => ['sometimes', 'in:all,7d,14d,28d'],
         ]);
+        $range = $validated['range'] ?? 'all';
+        $days = $range === 'all' ? null : (int) rtrim($range, 'd');
+
+        return response()->json(['data' => $this->buildBookingStatus($days)]);
+    }
+
+    private function buildBookingStatus(?int $days = null): array
+    {
+        $query = Booking::query();
+
+        if ($days !== null) {
+            $today = Carbon::today();
+            $query->whereBetween('booked_at', [
+                $today->copy()->subDays($days - 1)->startOfDay(),
+                $today->copy()->endOfDay(),
+            ]);
+        }
+
+        $counts = $query
+            ->selectRaw('status, COUNT(*) as count')
+            ->groupBy('status')
+            ->pluck('count', 'status');
+
+        return array_map(
+            fn(BookingStatus $status): array => [
+                'status' => $status->value,
+                'count' => (int) ($counts[$status->value] ?? 0),
+            ],
+            BookingStatus::cases(),
+        );
+    }
+
+    private function buildStays(): array
+    {
+        $today = Carbon::today(config('app.timezone'));
+        $excludedStatuses = [BookingStatus::CANCELLED->value, BookingStatus::NO_SHOW->value];
+        $relations = ['customer', 'bookingRooms.room', 'bookingRooms.roomType', 'invoices.payments'];
+        $arrivals = Booking::with($relations)
+            ->whereDate('check_in_date', $today->toDateString())
+            ->whereNotIn('status', $excludedStatuses)
+            ->orderBy('check_in_date')
+            ->get();
+        $departures = Booking::with($relations)
+            ->whereDate('check_out_date', $today->toDateString())
+            ->whereNotIn('status', $excludedStatuses)
+            ->orderBy('check_out_date')
+            ->get();
+
+        return [
+            'arrivals' => [
+                'total' => $arrivals->count(),
+                'items' => $arrivals->map(function (Booking $booking): array {
+                    $bookingRoom = $booking->bookingRooms->first();
+                    $status = $booking->status instanceof \BackedEnum ? $booking->status->value : (string) $booking->status;
+
+                    return [
+                        'bookingId' => $booking->id,
+                        'bookingReference' => $booking->booking_reference,
+                        'customerName' => $booking->customer?->full_name ?? $booking->guest_name ?? 'Guest',
+                        'roomNumber' => $bookingRoom?->room?->room_number,
+                        'roomTypeName' => $bookingRoom?->roomType?->name ?? '',
+                        'checkIn' => $booking->check_in_date?->toIso8601String() ?? '',
+                        'bookingStatus' => $status,
+                    ];
+                })->values()->all(),
+            ],
+            'departures' => [
+                'total' => $departures->count(),
+                'items' => $departures->map(function (Booking $booking): array {
+                    $bookingRoom = $booking->bookingRooms->first();
+                    $invoice = $booking->invoices->first();
+                    $payments = $invoice?->payments ?? collect();
+                    $latestPaymentStatus = $payments->sortByDesc('created_at')->first()?->payment_status ?? PaymentStatus::PENDING;
+                    $paymentStatus = $latestPaymentStatus instanceof \BackedEnum ? $latestPaymentStatus->value : (string) $latestPaymentStatus;
+                    $paidAmount = $payments
+                        ->filter(fn($payment): bool => $payment->payment_status === PaymentStatus::COMPLETED)
+                        ->sum('amount');
+                    $invoiceAmount = (int) ($invoice?->total_amount ?? $booking->total_amount);
+
+                    return [
+                        'bookingId' => $booking->id,
+                        'bookingReference' => $booking->booking_reference,
+                        'customerName' => $booking->customer?->full_name ?? $booking->guest_name ?? 'Guest',
+                        'roomNumber' => $bookingRoom?->room?->room_number,
+                        'roomTypeName' => $bookingRoom?->roomType?->name ?? '',
+                        'checkOut' => $booking->check_out_date?->toIso8601String() ?? '',
+                        'paymentStatus' => $paymentStatus,
+                        'outstandingBalance' => max($invoiceAmount - $paidAmount, 0),
+                    ];
+                })->values()->all(),
+            ],
+        ];
     }
 
     public function stays()
     {
-        $todayStr = Carbon::today()->format('Y-m-d');
-        $nextStr = Carbon::today()->addDays(2)->format('Y-m-d');
-        $prevStr = Carbon::today()->subDays(3)->format('Y-m-d');
-
-        return response()->json([
-            'data' => [
-                'arrivals' => [
-                    [
-                        'id' => 'b-arr-1',
-                        'guestName' => 'Vikram Malhotra',
-                        'roomNumber' => '201',
-                        'roomTypeName' => 'Deluxe Room',
-                        'checkInDate' => $todayStr,
-                        'checkOutDate' => $nextStr,
-                        'status' => 'CONFIRMED',
-                    ],
-                ],
-                'departures' => [
-                    [
-                        'id' => 'b-dep-1',
-                        'guestName' => 'Rohit Roy',
-                        'roomNumber' => '104',
-                        'roomTypeName' => 'Luxury Suite',
-                        'checkInDate' => $prevStr,
-                        'checkOutDate' => $todayStr,
-                        'status' => 'CHECKED_IN',
-                    ],
-                ],
-            ]
-        ]);
+        return response()->json(['data' => $this->buildStays()]);
     }
 }

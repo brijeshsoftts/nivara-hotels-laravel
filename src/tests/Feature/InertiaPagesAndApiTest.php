@@ -4,18 +4,25 @@ namespace Tests\Feature;
 
 use App\Enums\BookingStatus;
 use App\Enums\Category;
+use App\Enums\HousekeepingStatus;
+use App\Enums\InvoiceStatus;
 use App\Enums\OccupancyStatus;
 use App\Enums\PaymentMethod;
+use App\Enums\PaymentStatus;
 use App\Enums\TaskStatus;
 use App\Enums\UserRole;
 use App\Models\Booking;
+use App\Models\BookingRoom;
 use App\Models\Customer;
 use App\Models\HousekeepingTask;
+use App\Models\Invoice;
+use App\Models\Payment;
 use App\Models\Room;
 use App\Models\Staff;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -34,34 +41,34 @@ class InertiaPagesAndApiTest extends TestCase
     {
         $this->get(route('home'))
             ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page->component('public/Home'));
+            ->assertInertia(fn(Assert $page) => $page->component('public/Home'));
 
         $this->get(route('about'))
             ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page->component('public/About'));
+            ->assertInertia(fn(Assert $page) => $page->component('public/About'));
 
         $this->get(route('rooms.index'))
             ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page->component('public/Rooms'));
+            ->assertInertia(fn(Assert $page) => $page->component('public/Rooms'));
 
         $this->get(route('contact'))
             ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page->component('public/Contact'));
+            ->assertInertia(fn(Assert $page) => $page->component('public/Contact'));
 
         $this->get(route('rooms.show', ['slug' => 'deluxe-room']))
             ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
+            ->assertInertia(fn(Assert $page) => $page
                 ->component('public/RoomDetails')
                 ->where('slug', 'deluxe-room')
                 ->has('room.availability'));
 
         $this->get(route('checkout'))
             ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page->component('public/Checkout'));
+            ->assertInertia(fn(Assert $page) => $page->component('public/Checkout'));
 
         $this->get(route('rooms.book', ['slug' => 'deluxe-room']))
             ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
+            ->assertInertia(fn(Assert $page) => $page
                 ->component('public/Checkout')
                 ->where('slug', 'deluxe-room')
                 ->where('selectedRoom.slug', 'deluxe-room')
@@ -103,7 +110,7 @@ class InertiaPagesAndApiTest extends TestCase
 
         $this->get(route('checkout'))
             ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
+            ->assertInertia(fn(Assert $page) => $page
                 ->where('booking.id', $booking->id)
                 ->where('booking.bookingReference', $booking->booking_reference)
                 ->where('booking.checkoutToken', $checkoutToken));
@@ -223,11 +230,257 @@ class InertiaPagesAndApiTest extends TestCase
             $this->actingAs($admin)
                 ->get(route($routeName))
                 ->assertOk()
-                ->assertInertia(fn (Assert $page) => $page->component(
+                ->assertInertia(fn(Assert $page) => $page->component(
                     $componentName,
                     $routeName !== 'dashboard.users'
                 ));
         }
+    }
+
+    public function test_dashboard_revenue_trend_uses_completed_payments_and_chart_shape(): void
+    {
+        $admin = User::where('role', UserRole::ADMIN->value)->firstOrFail();
+        $customer = Customer::with('user')->firstOrFail();
+        $paidAt = now()->subDays(2)->setTime(15, 0);
+        $booking = Booking::create([
+            'booking_reference' => 'BK-DASH-REVENUE-1',
+            'customer_id' => $customer->user_id,
+            'guest_name' => 'Revenue Trend Guest',
+            'guest_email' => 'revenue-trend@example.com',
+            'guest_phone' => '+91 9876543210',
+            'check_in_date' => now(),
+            'check_out_date' => now()->addDays(2),
+            'total_guests' => 1,
+            'total_amount' => 2000,
+            'payment_method' => PaymentMethod::CASH->value,
+            'status' => BookingStatus::CONFIRMED->value,
+            'booked_at' => now(),
+        ]);
+        $invoice = Invoice::create([
+            'invoice_number' => 'INV-DASH-REVENUE-1',
+            'booking_id' => $booking->id,
+            'customer_id' => $customer->user_id,
+            'subtotal' => 2000,
+            'tax_amount' => 0,
+            'discount_amount' => 0,
+            'total_amount' => 2000,
+            'status' => 'UNPAID',
+            'issued_at' => now(),
+        ]);
+
+        foreach (
+            [
+                ['COMPLETED', 1200],
+                ['COMPLETED', 300],
+                ['PENDING', 900],
+            ] as $index => [$status, $amount]
+        ) {
+            Payment::create([
+                'payment_reference' => 'PAY-DASH-REVENUE-' . $index,
+                'invoice_id' => $invoice->id,
+                'booking_id' => $booking->id,
+                'customer_id' => $customer->user_id,
+                'amount' => $amount,
+                'currency' => 'INR',
+                'payment_method' => PaymentMethod::CASH->value,
+                'payment_status' => PaymentStatus::from($status)->value,
+                'paid_at' => $paidAt,
+            ]);
+        }
+
+        $this->actingAs($admin)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertInertia(fn(Assert $page) => $page
+                ->where('revenueTrend.25.date', $paidAt->format('M d'))
+                ->where('revenueTrend.25.value', 1500)
+                ->missing('revenueTrend.25.revenue'));
+
+        $this->actingAs($admin)
+            ->getJson(route('dashboard.revenue-trend', ['range' => '7d']))
+            ->assertOk()
+            ->assertJsonCount(7, 'data')
+            ->assertJsonPath('data.4.value', 1500);
+    }
+
+    public function test_dashboard_booking_status_filter_uses_booking_date_range(): void
+    {
+        $admin = User::where('role', UserRole::ADMIN->value)->firstOrFail();
+        $customer = Customer::with('user')->firstOrFail();
+        $createBooking = function (string $reference, BookingStatus $status, Carbon $bookedAt) use ($customer): Booking {
+            return Booking::create([
+                'booking_reference' => $reference,
+                'customer_id' => $customer->user_id,
+                'guest_name' => 'Booking Status Guest',
+                'guest_email' => 'booking-status@example.com',
+                'guest_phone' => '+91 9876543210',
+                'check_in_date' => now(),
+                'check_out_date' => now()->addDays(2),
+                'total_guests' => 1,
+                'total_amount' => 2000,
+                'payment_method' => PaymentMethod::CASH->value,
+                'status' => $status->value,
+                'booked_at' => $bookedAt,
+            ]);
+        };
+
+        $beforeSevenDays = collect(
+            $this->actingAs($admin)
+                ->getJson(route('dashboard.booking-status', ['range' => '7d']))
+                ->assertOk()
+                ->json('data'),
+        )->mapWithKeys(fn(array $item): array => [$item['status'] => $item['count']]);
+        $beforeAllTime = collect(
+            $this->getJson(route('dashboard.booking-status', ['range' => 'all']))
+                ->assertOk()
+                ->json('data'),
+        )->mapWithKeys(fn(array $item): array => [$item['status'] => $item['count']]);
+
+        $createBooking('BK-DASH-STATUS-RECENT-1', BookingStatus::CONFIRMED, now()->subDays(2));
+        $createBooking('BK-DASH-STATUS-RECENT-2', BookingStatus::PENDING, now()->subDays(6));
+        $createBooking('BK-DASH-STATUS-OLD', BookingStatus::CANCELLED, now()->subDays(8));
+
+        $afterSevenDays = collect(
+            $this->getJson(route('dashboard.booking-status', ['range' => '7d']))
+                ->assertOk()
+                ->json('data'),
+        )->mapWithKeys(fn(array $item): array => [$item['status'] => $item['count']]);
+        $afterAllTime = collect(
+            $this->getJson(route('dashboard.booking-status', ['range' => 'all']))
+                ->assertOk()
+                ->json('data'),
+        )->mapWithKeys(fn(array $item): array => [$item['status'] => $item['count']]);
+
+        $this->assertSame($beforeSevenDays['CONFIRMED'] + 1, $afterSevenDays['CONFIRMED']);
+        $this->assertSame($beforeSevenDays['PENDING'] + 1, $afterSevenDays['PENDING']);
+        $this->assertSame($beforeSevenDays['CANCELLED'], $afterSevenDays['CANCELLED']);
+        $this->assertSame($beforeAllTime['CANCELLED'] + 1, $afterAllTime['CANCELLED']);
+    }
+
+    public function test_dashboard_stays_use_real_booking_ids_that_open_in_details(): void
+    {
+        $admin = User::where('role', UserRole::ADMIN->value)->firstOrFail();
+        $customer = Customer::with('user')->firstOrFail();
+        $today = Carbon::today();
+        $createBooking = function (string $reference, BookingStatus $status, Carbon $checkIn, Carbon $checkOut) use ($customer): Booking {
+            return Booking::create([
+                'booking_reference' => $reference,
+                'customer_id' => $customer->user_id,
+                'guest_name' => 'Dashboard Stay Guest',
+                'guest_email' => 'dashboard-stay@example.com',
+                'guest_phone' => '+91 9876543210',
+                'check_in_date' => $checkIn,
+                'check_out_date' => $checkOut,
+                'total_guests' => 1,
+                'total_amount' => 2000,
+                'payment_method' => PaymentMethod::CASH->value,
+                'status' => $status->value,
+                'booked_at' => now(),
+            ]);
+        };
+
+        $arrival = $createBooking(
+            'BK-DASH-ARRIVAL-1',
+            BookingStatus::CONFIRMED,
+            $today->copy()->setTime(15, 0),
+            $today->copy()->addDay()->setTime(11, 0),
+        );
+        $departure = $createBooking(
+            'BK-DASH-DEPARTURE-1',
+            BookingStatus::CHECKED_IN,
+            $today->copy()->subDays(2)->setTime(15, 0),
+            $today->copy()->setTime(11, 0),
+        );
+
+        $this->actingAs($admin)
+            ->getJson(route('dashboard.stays'))
+            ->assertOk()
+            ->assertJsonFragment(['bookingId' => $arrival->id])
+            ->assertJsonFragment(['bookingId' => $departure->id]);
+
+        $this->getJson("/bookings/{$arrival->id}")
+            ->assertOk()
+            ->assertJsonPath('data.id', $arrival->id);
+        $this->getJson("/bookings/{$departure->id}")
+            ->assertOk()
+            ->assertJsonPath('data.id', $departure->id);
+    }
+
+    public function test_confirmed_paid_booking_can_only_check_in_on_its_start_date(): void
+    {
+        $admin = User::where('role', UserRole::ADMIN->value)->firstOrFail();
+        $customer = Customer::with('user')->firstOrFail();
+        $room = Room::query()
+            ->where('is_active', true)
+            ->where('occupancy_status', OccupancyStatus::VACANT->value)
+            ->where('housekeeping_status', HousekeepingStatus::CLEAN->value)
+            ->whereDoesntHave('housekeepingTasks', fn($query) => $query->whereIn('status', [
+                TaskStatus::PENDING->value,
+                TaskStatus::IN_PROGRESS->value,
+            ]))
+            ->firstOrFail();
+        $booking = Booking::create([
+            'booking_reference' => 'BK-DASH-CHECKIN-1',
+            'customer_id' => $customer->user_id,
+            'guest_name' => 'Check-in Eligibility Guest',
+            'guest_email' => 'checkin-eligibility@example.com',
+            'guest_phone' => '+91 9876543210',
+            'check_in_date' => Carbon::today(config('app.timezone'))->addDay()->setTime(15, 0),
+            'check_out_date' => Carbon::today(config('app.timezone'))->addDays(2)->setTime(11, 0),
+            'total_guests' => 1,
+            'total_amount' => 2000,
+            'payment_method' => PaymentMethod::CASH->value,
+            'status' => BookingStatus::CONFIRMED->value,
+            'booked_at' => now(),
+        ]);
+        BookingRoom::create([
+            'booking_id' => $booking->id,
+            'room_type_id' => $room->room_type_id,
+            'assigned_room_id' => $room->id,
+            'price_per_night' => 2000,
+        ]);
+        $invoice = Invoice::create([
+            'invoice_number' => 'INV-DASH-CHECKIN-1',
+            'booking_id' => $booking->id,
+            'customer_id' => $customer->user_id,
+            'subtotal' => 2000,
+            'tax_amount' => 0,
+            'discount_amount' => 0,
+            'total_amount' => 2000,
+            'status' => InvoiceStatus::PAID->value,
+            'issued_at' => now(),
+        ]);
+        Payment::create([
+            'payment_reference' => 'PAY-DASH-CHECKIN-1',
+            'invoice_id' => $invoice->id,
+            'booking_id' => $booking->id,
+            'customer_id' => $customer->user_id,
+            'amount' => 2000,
+            'currency' => 'INR',
+            'payment_method' => PaymentMethod::CASH->value,
+            'payment_status' => PaymentStatus::COMPLETED->value,
+            'paid_at' => now(),
+        ]);
+
+        $this->actingAs($admin)
+            ->patchJson("/bookings/{$booking->id}/status", ['status' => BookingStatus::CHECKED_IN->value])
+            ->assertUnprocessable()
+            ->assertJsonPath('message', 'This booking is not eligible for check-in today.');
+
+        $booking->update([
+            'check_in_date' => Carbon::today(config('app.timezone'))->setTime(15, 0),
+        ]);
+        $room->update(['occupancy_status' => OccupancyStatus::OCCUPIED->value]);
+
+        $this->getJson('/bookings?search=' . $booking->booking_reference)
+            ->assertOk()
+            ->assertJsonPath('data.0.canCheckIn', true);
+
+        $this->patchJson("/bookings/{$booking->id}/status", ['status' => BookingStatus::CHECKED_IN->value])
+            ->assertOk()
+            ->assertJsonPath('data.status', BookingStatus::CHECKED_IN->value);
+
+        $this->assertSame(OccupancyStatus::OCCUPIED, $room->fresh()->occupancy_status);
     }
 
     public function test_users_page_displays_managed_account_stats(): void
@@ -253,7 +506,7 @@ class InertiaPagesAndApiTest extends TestCase
         $this->actingAs($admin)
             ->get(route('dashboard.users'))
             ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
+            ->assertInertia(fn(Assert $page) => $page
                 ->component('protect/users', false)
                 ->has('stats', 4)
                 ->where('stats.0.label', 'Total Accounts')
@@ -270,10 +523,10 @@ class InertiaPagesAndApiTest extends TestCase
     public function test_staff_page_displays_live_stats_and_excludes_soft_deleted_staff(): void
     {
         $admin = User::where('role', UserRole::ADMIN->value)->firstOrFail();
-        $visibleStaff = Staff::whereHas('user', fn ($query) => $query->whereNull('soft_deleted_at'));
+        $visibleStaff = Staff::whereHas('user', fn($query) => $query->whereNull('soft_deleted_at'));
         $baselineTotal = (clone $visibleStaff)->count();
-        $baselineActive = (clone $visibleStaff)->whereHas('user', fn ($query) => $query->where('is_active', true))->count();
-        $baselineInactive = (clone $visibleStaff)->whereHas('user', fn ($query) => $query->where('is_active', false))->count();
+        $baselineActive = (clone $visibleStaff)->whereHas('user', fn($query) => $query->where('is_active', true))->count();
+        $baselineInactive = (clone $visibleStaff)->whereHas('user', fn($query) => $query->where('is_active', false))->count();
 
         $createStaff = function (Category $category, bool $isActive = true, bool $isDeleted = false): void {
             $user = User::factory()->create([
@@ -286,7 +539,7 @@ class InertiaPagesAndApiTest extends TestCase
                 'user_id' => $user->id,
                 'father_name' => 'Test Father',
                 'mother_name' => 'Test Mother',
-                'id_proof_number' => 'TEST-'.$user->id,
+                'id_proof_number' => 'TEST-' . $user->id,
                 'qualification' => 'Test qualification',
                 'experience' => '1 year',
                 'category' => $category->value,
@@ -299,13 +552,13 @@ class InertiaPagesAndApiTest extends TestCase
         $createStaff(Category::HOUSEKEEPER, false);
         $createStaff(Category::SECURITY_GUARD, false, true);
         $housekeeperTotal = Staff::where('category', Category::HOUSEKEEPER->value)
-            ->whereHas('user', fn ($query) => $query->whereNull('soft_deleted_at'))
+            ->whereHas('user', fn($query) => $query->whereNull('soft_deleted_at'))
             ->count();
 
         $this->actingAs($admin)
             ->get(route('dashboard.staff'))
             ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
+            ->assertInertia(fn(Assert $page) => $page
                 ->component('protect/staff/index')
                 ->has('stats', 4)
                 ->where('stats.0.label', 'Total Staff')
@@ -321,12 +574,12 @@ class InertiaPagesAndApiTest extends TestCase
 
         $this->actingAs($admin)
             ->get(route('dashboard.staff', ['isActive' => '0']))
-            ->assertInertia(fn (Assert $page) => $page
+            ->assertInertia(fn(Assert $page) => $page
                 ->where('staff.meta.total', $baselineInactive + 1));
 
         $this->actingAs($admin)
             ->get(route('dashboard.staff', ['category' => Category::HOUSEKEEPER->value]))
-            ->assertInertia(fn (Assert $page) => $page
+            ->assertInertia(fn(Assert $page) => $page
                 ->where('staff.meta.total', $housekeeperTotal));
 
         $this->actingAs($admin)
@@ -350,7 +603,7 @@ class InertiaPagesAndApiTest extends TestCase
         $this->actingAs($admin)
             ->get(route('dashboard.tasks'))
             ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
+            ->assertInertia(fn(Assert $page) => $page
                 ->component('protect/tasks/index')
                 ->has('stats', 4)
                 ->where('stats.0.value', number_format($pending + $inProgress + $completed))
@@ -391,7 +644,7 @@ class InertiaPagesAndApiTest extends TestCase
         $total = (clone $customerUsers)->count();
         $active = (clone $customerUsers)->where('is_active', true)->count();
         $withActiveBooking = (clone $customerUsers)
-            ->whereHas('bookings', fn ($query) => $query->whereIn('status', $activeBookingStatuses))
+            ->whereHas('bookings', fn($query) => $query->whereIn('status', $activeBookingStatuses))
             ->count();
         $newCustomers = (clone $customerUsers)
             ->where('created_at', '>=', now()->subDays(30))
@@ -400,7 +653,7 @@ class InertiaPagesAndApiTest extends TestCase
         $this->actingAs($admin)
             ->get(route('dashboard.customers'))
             ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
+            ->assertInertia(fn(Assert $page) => $page
                 ->component('protect/customers/index')
                 ->has('stats', 4)
                 ->where('stats.0.label', 'Total Customers')
@@ -420,8 +673,8 @@ class InertiaPagesAndApiTest extends TestCase
 
         $this->actingAs($admin)
             ->get(route('dashboard.customers', ['isActive' => '1']))
-            ->assertInertia(fn (Assert $page) => $page
-                ->where('customers.meta.total', Customer::whereHas('user', fn ($query) => $query
+            ->assertInertia(fn(Assert $page) => $page
+                ->where('customers.meta.total', Customer::whereHas('user', fn($query) => $query
                     ->where('role', UserRole::CUSTOMER->value)
                     ->whereNull('soft_deleted_at')
                     ->where('is_active', true))
@@ -429,13 +682,13 @@ class InertiaPagesAndApiTest extends TestCase
 
         $this->actingAs($admin)
             ->get(route('dashboard.customers', ['hasActiveBooking' => '1']))
-            ->assertInertia(fn (Assert $page) => $page
+            ->assertInertia(fn(Assert $page) => $page
                 ->where('customers.meta.total', $withActiveBooking));
 
         $this->actingAs($admin)
             ->get(route('dashboard.customers', ['createdWithinDays' => '30']))
-            ->assertInertia(fn (Assert $page) => $page
-                ->where('customers.meta.total', Customer::whereHas('user', fn ($query) => $query
+            ->assertInertia(fn(Assert $page) => $page
+                ->where('customers.meta.total', Customer::whereHas('user', fn($query) => $query
                     ->where('role', UserRole::CUSTOMER->value)
                     ->whereNull('soft_deleted_at')
                     ->where('created_at', '>=', now()->subDays(30)))
