@@ -19,28 +19,28 @@ class StaffController extends Controller
         $page = (int) $request->input('page', 1);
         $limit = (int) $request->input('limit', 10);
         $query = Staff::with(['user', 'user.avatar'])
-            ->whereHas('user', fn ($q) => $q->whereNull('soft_deleted_at'))
+            ->whereHas('user', fn($q) => $q->whereNull('soft_deleted_at'))
             ->orderByDesc('created_at');
 
         if ($request->filled('category')) {
             $query->where('category', $request->input('category'));
         }
         if ($request->filled('isActive')) {
-            $query->whereHas('user', fn ($q) => $q->where('is_active', $request->boolean('isActive')));
+            $query->whereHas('user', fn($q) => $q->where('is_active', $request->boolean('isActive')));
         }
         if ($request->filled('search')) {
             $s = $request->input('search');
-            $query->whereHas('user', fn ($q) => $q->where('name', 'like', "%{$s}%")
+            $query->whereHas('user', fn($q) => $q->where('name', 'like', "%{$s}%")
                 ->orWhere('email', 'like', "%{$s}%")
                 ->orWhere('phone', 'like', "%{$s}%"));
         }
 
         $total = $query->count();
-        $staff = $query->skip(($page - 1) * $limit)->take($limit)->get()->map(fn ($st) => [
+        $staff = $query->skip(($page - 1) * $limit)->take($limit)->get()->map(fn($st) => [
             'id' => $st->id,
             'userId' => $st->user_id,
             'name' => $st->user?->name ?? 'Staff',
-            'fullName' => $st->user?->full_name ?? $st->user?->name ?? 'Staff',
+            'fullName' => $st->user?->name ?? 'Staff',
             'email' => $st->user?->email,
             'phone' => $st->user?->phone,
             'category' => $st->category instanceof \BackedEnum ? $st->category->value : (string) $st->category,
@@ -91,20 +91,20 @@ class StaffController extends Controller
     private function getStats(): array
     {
         $visibleStaff = Staff::query()
-            ->whereHas('user', fn ($query) => $query->whereNull('soft_deleted_at'));
+            ->whereHas('user', fn($query) => $query->whereNull('soft_deleted_at'));
         $total = (clone $visibleStaff)->count();
         $active = (clone $visibleStaff)
-            ->whereHas('user', fn ($query) => $query->where('is_active', true))
+            ->whereHas('user', fn($query) => $query->where('is_active', true))
             ->count();
         $inactive = (clone $visibleStaff)
-            ->whereHas('user', fn ($query) => $query->where('is_active', false))
+            ->whereHas('user', fn($query) => $query->where('is_active', false))
             ->count();
         $categoryCounts = (clone $visibleStaff)
             ->selectRaw('category, COUNT(*) as aggregate')
             ->groupBy('category')
             ->pluck('aggregate', 'category');
         $topCategory = collect(Category::cases())
-            ->map(fn (Category $category) => [
+            ->map(fn(Category $category) => [
                 'category' => $category,
                 'count' => (int) $categoryCounts->get($category->value, 0),
             ])
@@ -134,10 +134,10 @@ class StaffController extends Controller
                 'icon' => 'UserX',
             ],
             [
-                'id' => 'staff-'.strtolower($topCategory['category']->value),
+                'id' => 'staff-' . strtolower($topCategory['category']->value),
                 'label' => $this->getCategoryLabel($topCategory['category']),
                 'value' => number_format($topCategory['count']),
-                'link' => '/dashboard/staff?category='.$topCategory['category']->value,
+                'link' => '/dashboard/staff?category=' . $topCategory['category']->value,
                 'icon' => 'Users',
             ],
         ];
@@ -148,8 +148,6 @@ class StaffController extends Controller
         return match ($category) {
             Category::RECEPTIONIST => 'Receptionists',
             Category::HOUSEKEEPER => 'Housekeepers',
-            Category::SECURITY_GUARD => 'Security Guards',
-            Category::WAITER => 'Waiters',
         };
     }
 
@@ -172,12 +170,11 @@ class StaffController extends Controller
         return DB::transaction(function () use ($validated, $name, $request) {
             $user = User::create([
                 'name' => $name,
-                'full_name' => $name,
                 'email' => $validated['email'],
                 'phone' => $validated['phone'],
                 'role' => UserRole::STAFF->value,
+                'category' => $validated['category'],
                 'password' => Hash::make($validated['password'] ?? 'Secret123!'),
-                'password_hash' => Hash::make($validated['password'] ?? 'Secret123!'),
                 'is_active' => true,
             ]);
 
@@ -186,7 +183,7 @@ class StaffController extends Controller
                 'category' => $validated['category'],
                 'father_name' => $validated['fatherName'] ?? 'N/A',
                 'mother_name' => $validated['motherName'] ?? 'N/A',
-                'id_proof_number' => $validated['idProofNumber'] ?? ('ID_'.strtoupper(Str::random(8))),
+                'id_proof_number' => $validated['idProofNumber'] ?? ('ID_' . strtoupper(Str::random(8))),
                 'qualification' => $validated['qualification'] ?? 'Graduate',
                 'experience' => $validated['experience'] ?? '1 year',
                 'emergency_contact' => $validated['emergencyContact'] ?? $validated['phone'],
@@ -209,7 +206,7 @@ class StaffController extends Controller
             'idProofImage',
             'signatureImage',
         ])
-            ->whereHas('user', fn ($query) => $query->whereNull('soft_deleted_at'))
+            ->whereHas('user', fn($query) => $query->whereNull('soft_deleted_at'))
             ->findOrFail($id);
 
         return response()->json([
@@ -235,7 +232,7 @@ class StaffController extends Controller
                 ] : null,
                 'user' => [
                     'id' => $st->user->id,
-                    'fullName' => $st->user->full_name ?? $st->user->name,
+                    'fullName' => $st->user->name,
                     'email' => $st->user->email,
                     'phone' => $st->user->phone,
                     'isActive' => (bool) $st->user->is_active,
@@ -246,7 +243,7 @@ class StaffController extends Controller
                     ] : null,
                 ],
                 'assignedTasks' => $st->user->assignedHousekeepingTasks
-                    ->map(fn ($task) => [
+                    ->map(fn($task) => [
                         'id' => $task->id,
                         'taskType' => $task->task_type instanceof \BackedEnum ? $task->task_type->value : (string) $task->task_type,
                         'status' => $task->status instanceof \BackedEnum ? $task->status->value : (string) $task->status,
@@ -285,8 +282,10 @@ class StaffController extends Controller
         $staff->save();
 
         if ($staff->user) {
+            if (isset($validated['category'])) {
+                $staff->user->category = $validated['category'];
+            }
             if (isset($validated['fullName'])) {
-                $staff->user->full_name = $validated['fullName'];
                 $staff->user->name = $validated['fullName'];
             }
             if (isset($validated['phone'])) {

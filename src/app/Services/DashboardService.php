@@ -138,7 +138,7 @@ class DashboardService
                     return [
                         'bookingId' => $booking->id,
                         'bookingReference' => $booking->booking_reference,
-                        'customerName' => $booking->customer?->full_name ?? $booking->guest_name ?? 'Guest',
+                        'customerName' => $booking->customer?->name ?? $booking->guest_name ?? 'Guest',
                         'roomTypeName' => $bookingRoom?->roomType?->name ?? 'Unassigned',
                         'roomNumber' => $bookingRoom?->room?->room_number,
                         'checkIn' => $booking->check_in_date?->toISOString() ?? '',
@@ -166,7 +166,7 @@ class DashboardService
                     return [
                         'bookingId' => $booking->id,
                         'bookingReference' => $booking->booking_reference,
-                        'customerName' => $booking->customer?->full_name ?? $booking->guest_name ?? 'Guest',
+                        'customerName' => $booking->customer?->name ?? $booking->guest_name ?? 'Guest',
                         'roomTypeName' => $bookingRoom?->roomType?->name ?? 'Unassigned',
                         'roomNumber' => $bookingRoom?->room?->room_number,
                         'checkOut' => $booking->check_out_date?->toISOString() ?? '',
@@ -289,7 +289,7 @@ class DashboardService
                     'invoiceId' => $invoice->id,
                     'bookingId' => $booking?->id,
                     'bookingReference' => $booking?->booking_reference ?? '',
-                    'guestName' => $booking?->customer?->full_name ?? $booking?->guest_name ?? 'Guest',
+                    'guestName' => $booking?->customer?->name ?? $booking?->guest_name ?? 'Guest',
                     'total' => (int) $invoice->total_amount,
                     'due' => max(0, (int) $invoice->total_amount - (int) $paidAmount),
                     'status' => $this->enumValue($invoice->status),

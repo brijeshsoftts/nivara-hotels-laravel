@@ -30,12 +30,10 @@ class UserFactory extends Factory
 
         return [
             'name' => $name,
-            'full_name' => $name,
             'email' => fake()->unique()->safeEmail(),
             'phone' => fake()->e164PhoneNumber(),
             'email_verified_at' => now(),
             'password' => $password,
-            'password_hash' => $password,
             'role' => UserRole::CUSTOMER->value,
             'is_active' => true,
             'remember_token' => Str::random(10),

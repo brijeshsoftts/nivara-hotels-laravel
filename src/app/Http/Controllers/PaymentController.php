@@ -51,20 +51,20 @@ class PaymentController extends Controller
             $search = trim((string) $request->input('search'));
             $query->where(function ($payments) use ($search) {
                 $payments->where('payment_reference', 'like', "%{$search}%")
-                    ->orWhereHas('booking', fn ($bookings) => $bookings->where('booking_reference', 'like', "%{$search}%"))
-                    ->orWhereHas('customer', fn ($customers) => $customers->where('full_name', 'like', "%{$search}%"));
+                    ->orWhereHas('booking', fn($bookings) => $bookings->where('booking_reference', 'like', "%{$search}%"))
+                    ->orWhereHas('customer', fn($customers) => $customers->where('name', 'like', "%{$search}%"));
             });
         }
 
         $total = (clone $query)->count();
         $payments = $query->skip(($page - 1) * $limit)->take($limit)->get()
-            ->map(fn (Payment $payment) => $role === UserRole::CUSTOMER
+            ->map(fn(Payment $payment) => $role === UserRole::CUSTOMER
                 ? $this->mapCustomerPayment($payment)
                 : $this->mapPayment($payment));
 
         $invoices = Invoice::whereNotIn('status', [InvoiceStatus::PAID->value, InvoiceStatus::REFUNDED->value])
-            ->when($role === UserRole::CUSTOMER, fn ($invoices) => $invoices->where('customer_id', $user->id))
-            ->get()->map(fn ($i) => [
+            ->when($role === UserRole::CUSTOMER, fn($invoices) => $invoices->where('customer_id', $user->id))
+            ->get()->map(fn($i) => [
                 'id' => $i->id,
                 'invoiceNumber' => $i->invoice_number,
                 'totalAmount' => (float) $i->total_amount,
@@ -342,14 +342,14 @@ class PaymentController extends Controller
 
         $expectedSignature = hash_hmac(
             'sha256',
-            $validated['razorpayOrderId'].'|'.$validated['razorpayPaymentId'],
+            $validated['razorpayOrderId'] . '|' . $validated['razorpayPaymentId'],
             $keySecret
         );
         abort_unless(hash_equals($expectedSignature, $validated['razorpaySignature']), 422, 'Payment signature is invalid.');
 
         $response = Http::withBasicAuth($keyId, $keySecret)
             ->timeout(15)
-            ->get('https://api.razorpay.com/v1/payments/'.rawurlencode($validated['razorpayPaymentId']));
+            ->get('https://api.razorpay.com/v1/payments/' . rawurlencode($validated['razorpayPaymentId']));
         abort_unless($response->successful(), 502, 'Could not verify the payment with the gateway.');
         $gatewayPayment = $response->json();
         abort_unless(
@@ -564,10 +564,10 @@ class PaymentController extends Controller
         $refundedAmount = (clone $refunded)->sum('amount');
 
         return [
-            ['id' => 'total-collected', 'icon' => 'IndianRupee', 'title' => 'Total Collected', 'label' => 'Total Collected', 'value' => '₹'.number_format($completedAmount), 'description' => 'From completed payments', 'link' => '/dashboard/payments?paymentStatus='.PaymentStatus::COMPLETED->value, 'tone' => 'emerald'],
-            ['id' => 'pending-payments', 'icon' => 'Clock', 'title' => 'Pending Payments', 'label' => 'Pending Payments', 'value' => '₹'.number_format($pendingAmount), 'description' => number_format((clone $pending)->count()).' awaiting confirmation', 'link' => '/dashboard/payments?paymentStatus='.PaymentStatus::PENDING->value, 'tone' => 'gold'],
-            ['id' => 'refunded-payments', 'icon' => 'RefreshCw', 'title' => 'Refunded', 'label' => 'Refunded', 'value' => '₹'.number_format($refundedAmount), 'description' => 'Total amount refunded', 'link' => '/dashboard/payments?paymentStatus='.PaymentStatus::REFUNDED->value, 'tone' => 'rose'],
-            ['id' => 'completed-payments', 'icon' => 'CheckCircle', 'title' => 'Completed Payments', 'label' => 'Completed Payments', 'value' => number_format((clone $completed)->count()), 'description' => 'Successfully collected transactions', 'link' => '/dashboard/payments?paymentStatus='.PaymentStatus::COMPLETED->value, 'tone' => 'sky'],
+            ['id' => 'total-collected', 'icon' => 'IndianRupee', 'title' => 'Total Collected', 'label' => 'Total Collected', 'value' => '₹' . number_format($completedAmount), 'description' => 'From completed payments', 'link' => '/dashboard/payments?paymentStatus=' . PaymentStatus::COMPLETED->value, 'tone' => 'emerald'],
+            ['id' => 'pending-payments', 'icon' => 'Clock', 'title' => 'Pending Payments', 'label' => 'Pending Payments', 'value' => '₹' . number_format($pendingAmount), 'description' => number_format((clone $pending)->count()) . ' awaiting confirmation', 'link' => '/dashboard/payments?paymentStatus=' . PaymentStatus::PENDING->value, 'tone' => 'gold'],
+            ['id' => 'refunded-payments', 'icon' => 'RefreshCw', 'title' => 'Refunded', 'label' => 'Refunded', 'value' => '₹' . number_format($refundedAmount), 'description' => 'Total amount refunded', 'link' => '/dashboard/payments?paymentStatus=' . PaymentStatus::REFUNDED->value, 'tone' => 'rose'],
+            ['id' => 'completed-payments', 'icon' => 'CheckCircle', 'title' => 'Completed Payments', 'label' => 'Completed Payments', 'value' => number_format((clone $completed)->count()), 'description' => 'Successfully collected transactions', 'link' => '/dashboard/payments?paymentStatus=' . PaymentStatus::COMPLETED->value, 'tone' => 'sky'],
         ];
     }
 
@@ -580,13 +580,13 @@ class PaymentController extends Controller
             'transactionId' => $payment->transaction_id,
             'invoiceNumber' => $payment->invoice?->invoice_number ?? '',
             'bookingReference' => $payment->booking?->booking_reference ?? $payment->invoice?->booking?->booking_reference ?? '',
-            'customerName' => $payment->customer?->full_name ?? $payment->customer?->name ?? $payment->booking?->guest_name ?? 'Guest',
+            'customerName' => $payment->customer?->name ?? $payment->booking?->guest_name ?? 'Guest',
             'amount' => (int) $payment->amount,
             'currency' => $payment->currency ?? 'INR',
             'paymentMethod' => $payment->payment_method instanceof \BackedEnum ? $payment->payment_method->value : (string) $payment->payment_method,
             'paymentStatus' => $payment->payment_status instanceof \BackedEnum ? $payment->payment_status->value : (string) $payment->payment_status,
             'paidAt' => $payment->paid_at?->toIso8601String(),
-            'recordedByName' => $payment->receivedBy?->full_name ?? $payment->receivedBy?->name,
+            'recordedByName' => $payment->receivedBy?->name,
             'createdAt' => $payment->created_at?->toIso8601String(),
         ];
     }
@@ -780,7 +780,7 @@ class PaymentController extends Controller
                 [(string) $customerId],
                 NotificationType::PAYMENT_RECEIVED,
                 'Payment received',
-                'INR '.number_format((int) $payment->amount, 0, '.', ',')." received via {$payment->payment_method->value}. Reference {$payment->payment_reference} for booking {$booking->booking_reference}.",
+                'INR ' . number_format((int) $payment->amount, 0, '.', ',') . " received via {$payment->payment_method->value}. Reference {$payment->payment_reference} for booking {$booking->booking_reference}.",
                 'PAYMENT',
                 $payment->id,
             );
@@ -789,7 +789,7 @@ class PaymentController extends Controller
                 [UserRole::ADMIN, UserRole::MANAGER],
                 NotificationType::PAYMENT_RECEIVED,
                 'Payment received',
-                'INR '.number_format((int) $payment->amount, 0, '.', ',')." received for booking {$booking->booking_reference}.",
+                'INR ' . number_format((int) $payment->amount, 0, '.', ',') . " received for booking {$booking->booking_reference}.",
                 'PAYMENT',
                 $payment->id,
                 $payment->recorded_by ? [(string) $payment->recorded_by] : [],
@@ -852,6 +852,6 @@ class PaymentController extends Controller
 
     private function createPaymentReference(): string
     {
-        return 'PAY-'.now()->timestamp.'-'.Str::upper(Str::random(5));
+        return 'PAY-' . now()->timestamp . '-' . Str::upper(Str::random(5));
     }
 }

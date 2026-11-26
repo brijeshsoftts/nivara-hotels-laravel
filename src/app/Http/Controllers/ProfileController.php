@@ -81,11 +81,9 @@ class ProfileController extends Controller
         ]);
 
         if (isset($validated['fullName'])) {
-            $user->full_name = $validated['fullName'];
             $user->name = $validated['fullName'];
         } elseif (isset($validated['name'])) {
             $user->name = $validated['name'];
-            $user->full_name = $validated['name'];
         }
         if (isset($validated['phone'])) {
             $user->phone = $validated['phone'];
@@ -121,7 +119,6 @@ class ProfileController extends Controller
 
         $passwordHash = Hash::make($validated['newPassword']);
         $user->password = $passwordHash;
-        $user->password_hash = $passwordHash;
         $user->save();
 
         if ($request->wantsJson() && !$request->header('X-Inertia')) {
@@ -137,14 +134,16 @@ class ProfileController extends Controller
             'avatar' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
         ]);
         $user = $request->user();
+        /** @var \Illuminate\Filesystem\FilesystemAdapter $publicDisk */
+        $publicDisk = Storage::disk('public');
         $oldAvatar = $user->avatar;
         $path = $validated['avatar']->storePublicly('avatars', 'public');
 
         try {
-            DB::transaction(function () use ($user, $oldAvatar, $path): void {
+            DB::transaction(function () use ($user, $oldAvatar, $path, $publicDisk): void {
                 $avatar = Image::create([
-                    'url' => Storage::disk('public')->url($path),
-                    'alt_text' => ($user->full_name ?? $user->name) . ' avatar',
+                    'url' => $publicDisk->url($path),
+                    'alt_text' => $user->name . ' avatar',
                 ]);
                 $user->profile_id = $avatar->id;
                 $user->save();
@@ -191,12 +190,12 @@ class ProfileController extends Controller
     {
         return [
             'id' => $user->id,
-            'fullName' => $user->full_name ?? $user->name,
+            'fullName' => $user->name,
             'name' => $user->name,
             'email' => $user->email,
             'phone' => $user->phone,
             'role' => $user->role instanceof \BackedEnum ? $user->role->value : (string) $user->role,
-            'category' => $user->staff?->category instanceof \BackedEnum ? $user->staff->category->value : ($user->staff?->category ? (string) $user->staff->category : null),
+            'category' => $user->category,
             'avatar' => $user->avatar ? [
                 'id' => $user->avatar->id,
                 'url' => $user->avatar->url,
@@ -235,9 +234,11 @@ class ProfileController extends Controller
 
     private function deleteStoredImage(Image $image): void
     {
-        $publicUrl = rtrim(Storage::disk('public')->url(''), '/');
+        /** @var \Illuminate\Filesystem\FilesystemAdapter $publicDisk */
+        $publicDisk = Storage::disk('public');
+        $publicUrl = rtrim($publicDisk->url(''), '/');
         if (str_starts_with($image->url, $publicUrl . '/')) {
-            Storage::disk('public')->delete(substr($image->url, strlen($publicUrl) + 1));
+            $publicDisk->delete(substr($image->url, strlen($publicUrl) + 1));
         }
     }
 }

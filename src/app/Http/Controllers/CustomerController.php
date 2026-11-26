@@ -23,16 +23,16 @@ class CustomerController extends Controller
         $page = (int) $request->input('page', 1);
         $limit = (int) $request->input('limit', 10);
         $query = Customer::with(['user.avatar', 'bookings'])
-            ->whereHas('user', fn ($q) => $q
+            ->whereHas('user', fn($q) => $q
                 ->where('role', UserRole::CUSTOMER->value)
                 ->whereNull('soft_deleted_at'))
             ->orderByDesc('created_at');
 
         if ($request->filled('isActive')) {
-            $query->whereHas('user', fn ($q) => $q->where('is_active', $request->boolean('isActive')));
+            $query->whereHas('user', fn($q) => $q->where('is_active', $request->boolean('isActive')));
         }
         if ($request->filled('hasActiveBooking')) {
-            $bookingFilter = fn ($q) => $q->whereIn('status', self::ACTIVE_BOOKING_STATUSES);
+            $bookingFilter = fn($q) => $q->whereIn('status', self::ACTIVE_BOOKING_STATUSES);
             $request->boolean('hasActiveBooking')
                 ? $query->whereHas('bookings', $bookingFilter)
                 : $query->whereDoesntHave('bookings', $bookingFilter);
@@ -41,7 +41,7 @@ class CustomerController extends Controller
             $days = filter_var($request->input('createdWithinDays'), FILTER_VALIDATE_INT);
             if ($days !== false && $days > 0) {
                 $cutoff = now()->subDays(min($days, 3650));
-                $query->whereHas('user', fn ($q) => $q->where('created_at', '>=', $cutoff));
+                $query->whereHas('user', fn($q) => $q->where('created_at', '>=', $cutoff));
             }
         }
 
@@ -49,18 +49,18 @@ class CustomerController extends Controller
             $s = $request->input('search');
             $query->where(function ($q) use ($s) {
                 $q->where('id_proof_number', 'like', "%{$s}%")
-                    ->orWhereHas('user', fn ($uq) => $uq->where('name', 'like', "%{$s}%")
+                    ->orWhereHas('user', fn($uq) => $uq->where('name', 'like', "%{$s}%")
                         ->orWhere('email', 'like', "%{$s}%")
                         ->orWhere('phone', 'like', "%{$s}%"));
             });
         }
 
         $total = $query->count();
-        $customers = $query->skip(($page - 1) * $limit)->take($limit)->get()->map(fn ($c) => [
+        $customers = $query->skip(($page - 1) * $limit)->take($limit)->get()->map(fn($c) => [
             'id' => $c->id,
             'userId' => $c->user_id,
             'name' => $c->user?->name ?? 'Guest',
-            'fullName' => $c->user?->full_name ?? $c->user?->name ?? 'Guest',
+            'fullName' => $c->user?->name ?? 'Guest',
             'email' => $c->user?->email,
             'phone' => $c->user?->phone,
             'idProofType' => $c->id_proof_type,
@@ -70,7 +70,7 @@ class CustomerController extends Controller
             'country' => $c->country ?? 'India',
             'status' => $c->status,
             'totalBookings' => $c->bookings->count(),
-            'activeBooking' => $c->bookings->contains(fn ($booking) => in_array(
+            'activeBooking' => $c->bookings->contains(fn($booking) => in_array(
                 $booking->status instanceof \BackedEnum ? $booking->status->value : (string) $booking->status,
                 self::ACTIVE_BOOKING_STATUSES,
                 true,
@@ -121,7 +121,7 @@ class CustomerController extends Controller
 
     private function getStats(): array
     {
-        $customerQuery = fn () => User::where('role', UserRole::CUSTOMER->value)
+        $customerQuery = fn() => User::where('role', UserRole::CUSTOMER->value)
             ->whereNull('soft_deleted_at');
         $activeBookingStatuses = [
             BookingStatus::PENDING->value,
@@ -131,7 +131,7 @@ class CustomerController extends Controller
         $total = $customerQuery()->count();
         $active = $customerQuery()->where('is_active', true)->count();
         $withActiveBooking = $customerQuery()
-            ->whereHas('bookings', fn ($query) => $query->whereIn('status', $activeBookingStatuses))
+            ->whereHas('bookings', fn($query) => $query->whereIn('status', $activeBookingStatuses))
             ->count();
         $newCustomers = $customerQuery()
             ->where('created_at', '>=', now()->subDays(30))
@@ -186,18 +186,17 @@ class CustomerController extends Controller
         $s = $request->input('q', $request->input('search', ''));
         $customers = Customer::with('user')
             ->where(function ($query) use ($s) {
-                $query->whereHas('user', fn ($q) => $q
+                $query->whereHas('user', fn($q) => $q
                     ->where('name', 'like', "%{$s}%")
-                    ->orWhere('full_name', 'like', "%{$s}%")
                     ->orWhere('email', 'like', "%{$s}%")
                     ->orWhere('phone', 'like', "%{$s}%"))
                     ->orWhere('id_proof_number', 'like', "%{$s}%");
             })
             ->take(10)
             ->get()
-            ->map(fn ($c) => [
+            ->map(fn($c) => [
                 'id' => $c->id,
-                'fullName' => $c->user?->full_name ?? $c->user?->name ?? 'Guest',
+                'fullName' => $c->user?->name ?? 'Guest',
                 'email' => $c->user?->email,
                 'phone' => $c->user?->phone,
                 'idProofType' => $c->id_proof_type,
@@ -216,7 +215,7 @@ class CustomerController extends Controller
                 'id' => $c->id,
                 'userId' => $c->user_id,
                 'name' => $c->user?->name ?? 'Guest',
-                'fullName' => $c->user?->full_name ?? $c->user?->name ?? 'Guest',
+                'fullName' => $c->user?->name ?? 'Guest',
                 'email' => $c->user?->email,
                 'phone' => $c->user?->phone,
                 'idProofType' => $c->id_proof_type,
@@ -268,18 +267,16 @@ class CustomerController extends Controller
                 ['email' => $validated['email']],
                 [
                     'name' => $name,
-                    'full_name' => $name,
                     'phone' => $validated['phone'],
                     'role' => UserRole::CUSTOMER->value,
                     'password' => Hash::make(Str::random(16)),
-                    'password_hash' => Hash::make(Str::random(16)),
                     'is_active' => true,
                 ]
             );
 
             $customer = Customer::create([
                 'user_id' => $user->id,
-                'id_proof_number' => $validated['idProofNumber'] ?? ('ID_'.strtoupper(Str::random(8))),
+                'id_proof_number' => $validated['idProofNumber'] ?? ('ID_' . strtoupper(Str::random(8))),
                 'address' => $validated['address'] ?? ($validated['city'] ?? 'Nivara Residence'),
             ]);
 
@@ -319,7 +316,6 @@ class CustomerController extends Controller
 
         if ($customer->user) {
             if (isset($validated['fullName'])) {
-                $customer->user->full_name = $validated['fullName'];
                 $customer->user->name = $validated['fullName'];
             }
             if (isset($validated['phone'])) {

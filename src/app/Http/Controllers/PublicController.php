@@ -58,7 +58,7 @@ class PublicController extends Controller
                         'url' => $primaryImg?->url ?? 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304',
                         'altText' => $primaryImg?->alt_text ?? $rt->name,
                     ],
-                    'amenities' => $rt->amenities->map(fn ($a) => [
+                    'amenities' => $rt->amenities->map(fn($a) => [
                         'id' => $a->id,
                         'name' => $a->name,
                         'icon' => $a->icon,
@@ -66,7 +66,7 @@ class PublicController extends Controller
                 ];
             });
 
-        $amenities = Amenity::where('is_active', true)->get()->map(fn ($a) => [
+        $amenities = Amenity::where('is_active', true)->get()->map(fn($a) => [
             'id' => $a->id,
             'name' => $a->name,
             'description' => $a->description,
@@ -92,7 +92,7 @@ class PublicController extends Controller
 
     public function about(Request $request): Response
     {
-        $amenities = Amenity::where('is_active', true)->get()->map(fn ($a) => [
+        $amenities = Amenity::where('is_active', true)->get()->map(fn($a) => [
             'id' => $a->id,
             'name' => $a->name,
             'description' => $a->description,
@@ -176,7 +176,7 @@ class PublicController extends Controller
                     'url' => $primaryImg?->url ?? 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304',
                     'altText' => $primaryImg?->alt_text ?? $rt->name,
                 ],
-                'amenities' => $rt->amenities->map(fn ($a) => [
+                'amenities' => $rt->amenities->map(fn($a) => [
                     'id' => $a->id,
                     'name' => $a->name,
                     'icon' => $a->icon,
@@ -184,7 +184,7 @@ class PublicController extends Controller
             ];
         });
 
-        $amenities = Amenity::where('is_active', true)->get()->map(fn ($a) => [
+        $amenities = Amenity::where('is_active', true)->get()->map(fn($a) => [
             'id' => $a->id,
             'name' => $a->name,
             'icon' => $a->icon,
@@ -276,13 +276,13 @@ class PublicController extends Controller
             'bedCount' => $roomType->bed_count,
             'availableRooms' => $availableRooms,
             'availability' => ['isAvailable' => $availableRooms > 0],
-            'images' => $roomType->images->map(fn ($img) => [
+            'images' => $roomType->images->map(fn($img) => [
                 'id' => $img->id,
                 'url' => $img->url,
                 'altText' => $img->alt_text ?? $roomType->name,
                 'isPrimary' => (bool) $img->is_primary,
             ]),
-            'amenities' => $roomType->amenities->map(fn ($a) => [
+            'amenities' => $roomType->amenities->map(fn($a) => [
                 'id' => $a->id,
                 'name' => $a->name,
                 'icon' => $a->icon,
@@ -324,13 +324,13 @@ class PublicController extends Controller
                     'url' => $primaryImg?->url ?? 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304',
                     'altText' => $primaryImg?->alt_text ?? $rt->name,
                 ],
-                'images' => $rt->images->map(fn ($image) => [
+                'images' => $rt->images->map(fn($image) => [
                     'id' => $image->id,
                     'url' => $image->url,
                     'altText' => $image->alt_text ?? $rt->name,
                     'isPrimary' => (bool) $image->is_primary,
                 ])->values(),
-                'amenities' => $rt->amenities->map(fn ($amenity) => [
+                'amenities' => $rt->amenities->map(fn($amenity) => [
                     'id' => $amenity->id,
                     'name' => $amenity->name,
                     'icon' => $amenity->icon,
@@ -375,7 +375,6 @@ class PublicController extends Controller
                 ['email' => $validated['email']],
                 [
                     'name' => $validated['fullName'],
-                    'full_name' => $validated['fullName'],
                     'phone' => $validated['phone'],
                     'role' => UserRole::CUSTOMER->value,
                     'password' => Hash::make(Str::random(16)),
@@ -387,7 +386,7 @@ class PublicController extends Controller
                 ['user_id' => $user->id],
                 [
                     'id_proof_type' => 'PASSPORT',
-                    'id_proof_number' => 'ONLINE_'.strtoupper(Str::random(8)),
+                    'id_proof_number' => 'ONLINE_' . strtoupper(Str::random(8)),
                     'status' => 'ACTIVE',
                 ]
             );
@@ -416,7 +415,7 @@ class PublicController extends Controller
             $totalAmount = $subtotal + $tax;
 
             $booking = Booking::create([
-                'booking_reference' => 'BK-'.strtoupper(Str::random(8)),
+                'booking_reference' => 'BK-' . strtoupper(Str::random(8)),
                 'customer_id' => $user->id,
                 'check_in' => $checkIn->toDateString(),
                 'check_out' => $checkOut->toDateString(),
@@ -445,7 +444,7 @@ class PublicController extends Controller
             ]);
 
             Invoice::create([
-                'invoice_number' => 'INV-'.strtoupper(Str::random(8)),
+                'invoice_number' => 'INV-' . strtoupper(Str::random(8)),
                 'booking_id' => $booking->id,
                 'customer_id' => $user->id,
                 'subtotal' => $subtotal,
@@ -525,7 +524,7 @@ class PublicController extends Controller
                     ])->orWhere(function ($occupied) use ($checkIn) {
                         $occupied
                             ->where('occupancy_status', OccupancyStatus::OCCUPIED->value)
-                            ->whereHas('bookingRooms.booking', fn ($bookings) => $bookings
+                            ->whereHas('bookingRooms.booking', fn($bookings) => $bookings
                                 ->whereNotIn('status', [
                                     BookingStatus::CANCELLED->value,
                                     BookingStatus::NO_SHOW->value,
@@ -540,7 +539,7 @@ class PublicController extends Controller
 
             $hasOverlappingBooking = BookingRoom::query()
                 ->where('assigned_room_id', $room->id)
-                ->whereHas('booking', fn ($bookings) => $bookings
+                ->whereHas('booking', fn($bookings) => $bookings
                     ->whereNotIn('status', [
                         BookingStatus::CANCELLED->value,
                         BookingStatus::NO_SHOW->value,
@@ -567,7 +566,7 @@ class PublicController extends Controller
             Customer::firstOrCreate(
                 ['user_id' => $guest->id],
                 [
-                    'id_proof_number' => 'ONLINE_'.strtoupper(Str::random(8)),
+                    'id_proof_number' => 'ONLINE_' . strtoupper(Str::random(8)),
                     'address' => '',
                 ]
             );
@@ -579,7 +578,7 @@ class PublicController extends Controller
             $checkoutExpiresAt = now()->addMinutes(30);
 
             $booking = Booking::create([
-                'booking_reference' => 'BK-'.strtoupper(Str::random(8)),
+                'booking_reference' => 'BK-' . strtoupper(Str::random(8)),
                 'customer_id' => $guest->id,
                 'guest_name' => $validated['guestName'],
                 'guest_email' => $validated['guestEmail'],
@@ -614,7 +613,7 @@ class PublicController extends Controller
             }
 
             Invoice::create([
-                'invoice_number' => 'INV-'.strtoupper(Str::random(8)),
+                'invoice_number' => 'INV-' . strtoupper(Str::random(8)),
                 'booking_id' => $booking->id,
                 'customer_id' => $guest->id,
                 'subtotal' => $subtotal,
@@ -652,7 +651,7 @@ class PublicController extends Controller
 
     public function amenitiesApi(Request $request)
     {
-        $amenities = Amenity::where('is_active', true)->get()->map(fn ($a) => [
+        $amenities = Amenity::where('is_active', true)->get()->map(fn($a) => [
             'id' => $a->id,
             'name' => $a->name,
             'icon' => $a->icon,

@@ -15,32 +15,14 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'full_name', 'email', 'phone', 'password', 'password_hash', 'profile_id', 'role', 'is_active', 'last_login_at', 'soft_deleted_at'])]
-#[Hidden(['password', 'password_hash', 'remember_token'])]
+#[Fillable(['name', 'email', 'phone', 'password', 'profile_id', 'role', 'category', 'is_active', 'last_login_at', 'soft_deleted_at'])]
+#[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
     use HasCuid, HasFactory, Notifiable;
 
-    protected static function booted(): void
-    {
-        static::saving(function (User $user) {
-            if ($user->password && empty($user->password_hash)) {
-                $user->password_hash = $user->password;
-            }
-        });
-    }
-
     protected $with = ['staff', 'avatar'];
-    protected $appends = ['category'];
-
-    public function getCategoryAttribute(): ?string
-    {
-        return $this->staff?->category instanceof \BackedEnum
-            ? $this->staff->category->value
-            : ($this->staff?->category ? (string) $this->staff->category : null);
-    }
-
     /**
      * Get the attributes that should be cast.
      *
@@ -51,7 +33,6 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
-            'password_hash' => 'hashed',
             'is_active' => 'boolean',
             'last_login_at' => 'datetime',
             'soft_deleted_at' => 'datetime',

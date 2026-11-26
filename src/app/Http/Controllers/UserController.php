@@ -39,7 +39,7 @@ class UserController extends Controller
         $users = $query->skip(($page - 1) * $limit)->take($limit)->get()->map(fn($u) => [
             'id' => $u->id,
             'name' => $u->name,
-            'fullName' => $u->full_name ?? $u->name,
+            'fullName' => $u->name,
             'email' => $u->email,
             'phone' => $u->phone,
             'role' => $u->role instanceof \BackedEnum ? $u->role->value : (string) $u->role,
@@ -148,7 +148,6 @@ class UserController extends Controller
 
         $user = User::create([
             'name' => $name,
-            'full_name' => $name,
             'email' => $validated['email'],
             'phone' => $validated['phone'] ?? null,
             'role' => $validated['role'] ?? UserRole::STAFF->value,
@@ -171,7 +170,7 @@ class UserController extends Controller
             'data' => [
                 'id' => $u->id,
                 'name' => $u->name,
-                'fullName' => $u->full_name ?? $u->name,
+                'fullName' => $u->name,
                 'email' => $u->email,
                 'phone' => $u->phone,
                 'role' => $u->role instanceof \BackedEnum ? $u->role->value : (string) $u->role,
@@ -194,11 +193,9 @@ class UserController extends Controller
 
         $updates = [];
         if (isset($validated['fullName'])) {
-            $updates['full_name'] = $validated['fullName'];
             $updates['name'] = $validated['fullName'];
         } elseif (isset($validated['name'])) {
             $updates['name'] = $validated['name'];
-            $updates['full_name'] = $validated['name'];
         }
         if (isset($validated['phone'])) {
             $updates['phone'] = $validated['phone'];

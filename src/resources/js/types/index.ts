@@ -2,7 +2,6 @@ export interface User {
     id: number;
     name: string;
     email: string;
-    full_name?: string;
     phone?: string;
     role?: string;
     category?: string | null;
@@ -31,4 +30,3 @@ export * from "./shared.types";
 export * from "./api.types";
 export * from "./enum.types";
 export * from "./room.types";
-

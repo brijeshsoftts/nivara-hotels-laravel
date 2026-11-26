@@ -25,7 +25,7 @@ class AuditLogController extends Controller
         $page = (int) ($filters['page'] ?? 1);
         $limit = (int) ($filters['limit'] ?? 20);
         $query = AuditLog::query()
-            ->with('user:id,full_name,email')
+            ->with('user:id,name,email')
             ->orderByDesc('created_at')
             ->orderByDesc('id');
 
@@ -42,7 +42,7 @@ class AuditLogController extends Controller
                     ->orWhere('entity_id', 'like', "%{$search}%")
                     ->orWhereHas('user', function (Builder $userQuery) use ($search): void {
                         $userQuery
-                            ->where('full_name', 'like', "%{$search}%")
+                            ->where('name', 'like', "%{$search}%")
                             ->orWhere('email', 'like', "%{$search}%");
                     });
             });
@@ -60,7 +60,7 @@ class AuditLogController extends Controller
             'createdAt' => $log->created_at?->toIso8601String(),
             'user' => $log->user ? [
                 'id' => $log->user->id,
-                'fullName' => $log->user->full_name,
+                'fullName' => $log->user->name,
                 'email' => $log->user->email,
             ] : null,
         ]);

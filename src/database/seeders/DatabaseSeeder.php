@@ -50,10 +50,8 @@ class DatabaseSeeder extends Seeder
             ['email' => 'admin@gmail.com'],
             [
                 'name' => 'Admin Officer',
-                'full_name' => 'General Administration',
                 'phone' => '+91 98765 43210',
                 'password' => $passwordHash,
-                'password_hash' => $passwordHash,
                 'role' => UserRole::ADMIN->value,
                 'is_active' => true,
             ]
@@ -63,10 +61,8 @@ class DatabaseSeeder extends Seeder
             ['email' => 'manager@nivarahotels.com'],
             [
                 'name' => 'Operations Manager',
-                'full_name' => 'Hotel Operations Manager',
                 'phone' => '+91 98765 43211',
                 'password' => $passwordHash,
-                'password_hash' => $passwordHash,
                 'role' => UserRole::MANAGER->value,
                 'is_active' => true,
             ]
@@ -76,11 +72,10 @@ class DatabaseSeeder extends Seeder
             ['email' => 'receptionist@nivarahotels.com'],
             [
                 'name' => 'Front Desk Executive',
-                'full_name' => 'Reception Team',
                 'phone' => '+91 98765 43212',
                 'password' => $passwordHash,
-                'password_hash' => $passwordHash,
                 'role' => UserRole::STAFF->value,
+                'category' => Category::RECEPTIONIST->value,
                 'is_active' => true,
             ]
         );
@@ -89,11 +84,10 @@ class DatabaseSeeder extends Seeder
             ['email' => 'housekeeper@nivarahotels.com'],
             [
                 'name' => 'Housekeeping Staff',
-                'full_name' => 'Lead Housekeeper',
                 'phone' => '+91 98765 43213',
                 'password' => $passwordHash,
-                'password_hash' => $passwordHash,
                 'role' => UserRole::STAFF->value,
+                'category' => Category::HOUSEKEEPER->value,
                 'is_active' => true,
             ]
         );
@@ -102,10 +96,8 @@ class DatabaseSeeder extends Seeder
             ['email' => 'customer@example.com'],
             [
                 'name' => 'Saim Khan',
-                'full_name' => 'Saim Khan',
                 'phone' => '+91 98765 00001',
                 'password' => $passwordHash,
-                'password_hash' => $passwordHash,
                 'role' => UserRole::CUSTOMER->value,
                 'is_active' => true,
             ]

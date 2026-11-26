@@ -48,12 +48,12 @@ class IssueController extends Controller
             $query->where(function ($issues) use ($search) {
                 $issues->where('reference', 'like', "%{$search}%")
                     ->orWhere('title', 'like', "%{$search}%")
-                    ->orWhereHas('room', fn ($rooms) => $rooms->where('room_number', 'like', "%{$search}%"));
+                    ->orWhereHas('room', fn($rooms) => $rooms->where('room_number', 'like', "%{$search}%"));
             });
         }
 
         $total = (clone $query)->count();
-        $issues = $query->skip(($page - 1) * $limit)->take($limit)->get()->map(fn ($i) => [
+        $issues = $query->skip(($page - 1) * $limit)->take($limit)->get()->map(fn($i) => [
             'id' => $i->id,
             'reference' => $i->reference,
             'title' => $i->title,
@@ -66,17 +66,17 @@ class IssueController extends Controller
             ] : null,
             'reporter' => $i->reportedBy ? [
                 'id' => $i->reportedBy->id,
-                'fullName' => $i->reportedBy->full_name ?? $i->reportedBy->name,
+                'fullName' => $i->reportedBy->name,
             ] : null,
             'assignee' => $i->assignedTo ? [
                 'id' => $i->assignedTo->id,
-                'fullName' => $i->assignedTo->full_name ?? $i->assignedTo->name,
+                'fullName' => $i->assignedTo->name,
             ] : null,
             'reportedAt' => $i->reported_at?->toIso8601String(),
         ]);
 
-        $rooms = Room::all()->map(fn ($r) => ['id' => $r->id, 'roomNumber' => $r->room_number, 'name' => $r->name]);
-        $staff = Staff::with('user')->get()->map(fn ($s) => ['id' => $s->id, 'name' => $s->user?->name ?? 'Staff']);
+        $rooms = Room::all()->map(fn($r) => ['id' => $r->id, 'roomNumber' => $r->room_number, 'name' => $r->name]);
+        $staff = Staff::with('user')->get()->map(fn($s) => ['id' => $s->id, 'name' => $s->user?->name ?? 'Staff']);
 
         $stats = $this->getStats($request);
 
@@ -147,11 +147,11 @@ class IssueController extends Controller
             ],
             'reporter' => [
                 'id' => $issue->reportedBy->id,
-                'fullName' => $issue->reportedBy->full_name ?? $issue->reportedBy->name,
+                'fullName' => $issue->reportedBy->name,
             ],
             'assignee' => $issue->assignedTo ? [
                 'id' => $issue->assignedTo->id,
-                'fullName' => $issue->assignedTo->full_name ?? $issue->assignedTo->name,
+                'fullName' => $issue->assignedTo->name,
             ] : null,
             'image' => $issue->image ? [
                 'id' => $issue->image->id,
@@ -258,7 +258,7 @@ class IssueController extends Controller
         abort_if(! $roomId, 422, 'A room is required to report an issue.');
 
         $issue = Issue::create([
-            'reference' => 'ISS-'.now()->timestamp.'-'.Str::upper(Str::random(5)),
+            'reference' => 'ISS-' . now()->timestamp . '-' . Str::upper(Str::random(5)),
             'title' => $validated['title'],
             'description' => $validated['description'],
             'category' => $validated['category'],
@@ -274,7 +274,7 @@ class IssueController extends Controller
             [UserRole::ADMIN, UserRole::MANAGER],
             NotificationType::ISSUE_CREATED,
             "New issue: {$issue->reference}",
-            "{$issue->title} ({$issue->category->value}, {$issue->priority->value}): ".substr($issue->description, 0, 240).'. Reported by '.($request->user()->full_name ?? $request->user()->name).'.',
+            "{$issue->title} ({$issue->category->value}, {$issue->priority->value}): " . substr($issue->description, 0, 240) . '. Reported by ' . $request->user()->name . '.',
             'ISSUE',
             $issue->id,
             [(string) $request->user()->id],
@@ -292,7 +292,7 @@ class IssueController extends Controller
                     'priority' => $issue->priority->value,
                     'status' => $issue->status->value,
                     'room' => ['id' => $issue->room->id, 'roomNumber' => $issue->room->room_number],
-                    'reporter' => ['id' => $issue->reportedBy->id, 'fullName' => $issue->reportedBy->full_name ?? $issue->reportedBy->name],
+                    'reporter' => ['id' => $issue->reportedBy->id, 'fullName' => $issue->reportedBy->name],
                     'reportedAt' => $issue->reported_at?->toIso8601String(),
                 ],
                 'message' => 'Issue reported successfully',
@@ -352,7 +352,7 @@ class IssueController extends Controller
                 [(string) $issue->assigned_to_id],
                 NotificationType::ISSUE_ASSIGNED,
                 'Issue assigned to you',
-                "Issue {$issue->reference}: {$issue->title} ({$issue->category->value}, {$issue->priority->value}) was assigned to you by ".($request->user()->full_name ?? $request->user()->name).'.',
+                "Issue {$issue->reference}: {$issue->title} ({$issue->category->value}, {$issue->priority->value}) was assigned to you by " . $request->user()->name . '.',
                 'ISSUE',
                 $issue->id,
             );
@@ -361,14 +361,14 @@ class IssueController extends Controller
         $updatedFields = array_diff($changedFields, ['assigned_to_id']);
         $stakeholderIds = array_values(array_unique(array_filter(
             [$issue->reported_by_id, $issue->assigned_to_id],
-            fn ($userId): bool => $userId !== null && (string) $userId !== $updaterId,
+            fn($userId): bool => $userId !== null && (string) $userId !== $updaterId,
         )));
         if ($updatedFields !== [] && $stakeholderIds !== []) {
             $this->notificationService->createForUsers(
                 array_map('strval', $stakeholderIds),
                 NotificationType::ISSUE_UPDATED,
                 "Issue updated: {$issue->reference}",
-                "{$issue->title} is {$issue->status->value} with {$issue->priority->value} priority. Updated by ".($request->user()->full_name ?? $request->user()->name).': '.implode(', ', $updatedFields).'.',
+                "{$issue->title} is {$issue->status->value} with {$issue->priority->value} priority. Updated by " . $request->user()->name . ': ' . implode(', ', $updatedFields) . '.',
                 'ISSUE',
                 $issue->id,
             );

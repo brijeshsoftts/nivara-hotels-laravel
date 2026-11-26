@@ -32,9 +32,9 @@ class InvoiceController extends Controller
         $query = Invoice::with(['customer', 'booking.customer', 'booking.bookingRooms.roomType', 'booking.bookingRooms.room', 'payments']);
 
         if ($role === UserRole::CUSTOMER->value) {
-            $query->where(fn ($invoices) => $invoices
+            $query->where(fn($invoices) => $invoices
                 ->where('customer_id', $user->id)
-                ->orWhereHas('booking', fn ($bookings) => $bookings->where('customer_id', $user->id)));
+                ->orWhereHas('booking', fn($bookings) => $bookings->where('customer_id', $user->id)));
         }
         if (! empty($filters['status'])) {
             if ($filters['status'] === 'OUTSTANDING') {
@@ -55,10 +55,9 @@ class InvoiceController extends Controller
             $search = trim($filters['search']);
             $query->where(function ($invoices) use ($search) {
                 $invoices->where('invoice_number', 'like', "%{$search}%")
-                    ->orWhereHas('booking', fn ($bookings) => $bookings->where('booking_reference', 'like', "%{$search}%"))
-                    ->orWhereHas('customer', fn ($customers) => $customers
-                        ->where('full_name', 'like', "%{$search}%")
-                        ->orWhere('name', 'like', "%{$search}%")
+                    ->orWhereHas('booking', fn($bookings) => $bookings->where('booking_reference', 'like', "%{$search}%"))
+                    ->orWhereHas('customer', fn($customers) => $customers
+                        ->where('name', 'like', "%{$search}%")
                         ->orWhere('email', 'like', "%{$search}%"));
             });
         }
@@ -68,7 +67,7 @@ class InvoiceController extends Controller
             ->skip(($page - 1) * $limit)
             ->take($limit)
             ->get()
-            ->map(fn (Invoice $invoice) => $role === UserRole::CUSTOMER->value
+            ->map(fn(Invoice $invoice) => $role === UserRole::CUSTOMER->value
                 ? $this->mapCustomerInvoice($invoice)
                 : $this->mapInvoiceItem($invoice));
         $meta = [
@@ -108,12 +107,12 @@ class InvoiceController extends Controller
             'booking.customer',
             'booking.bookingRooms.roomType',
             'booking.bookingRooms.room',
-            'payments' => fn ($payments) => $payments->orderByDesc('created_at'),
+            'payments' => fn($payments) => $payments->orderByDesc('created_at'),
         ]);
         if ($role === UserRole::CUSTOMER->value) {
-            $query->where(fn ($invoices) => $invoices
+            $query->where(fn($invoices) => $invoices
                 ->where('customer_id', $user->id)
-                ->orWhereHas('booking', fn ($bookings) => $bookings->where('customer_id', $user->id)));
+                ->orWhereHas('booking', fn($bookings) => $bookings->where('customer_id', $user->id)));
         }
 
         $invoice = $query->findOrFail($id);
@@ -134,7 +133,7 @@ class InvoiceController extends Controller
 
         $result = DB::transaction(function () use ($id, $amounts) {
             $invoice = Invoice::with('payments')->lockForUpdate()->findOrFail($id);
-            $hasSettledPayments = $invoice->payments->contains(fn (Payment $payment) => in_array(
+            $hasSettledPayments = $invoice->payments->contains(fn(Payment $payment) => in_array(
                 $this->enumValue($payment->payment_status),
                 [PaymentStatus::COMPLETED->value, PaymentStatus::REFUNDED->value],
                 true,
@@ -182,7 +181,7 @@ class InvoiceController extends Controller
                 return;
             }
             abort_if(
-                $invoice->payments->contains(fn (Payment $payment) => $this->enumValue($payment->payment_status) === PaymentStatus::COMPLETED->value),
+                $invoice->payments->contains(fn(Payment $payment) => $this->enumValue($payment->payment_status) === PaymentStatus::COMPLETED->value),
                 409,
                 'Refund completed payments before cancelling this invoice.',
             );
@@ -209,9 +208,9 @@ class InvoiceController extends Controller
     {
         $baseQuery = Invoice::query();
         if ($customer) {
-            $baseQuery->where(fn ($invoices) => $invoices
+            $baseQuery->where(fn($invoices) => $invoices
                 ->where('customer_id', $customer->id)
-                ->orWhereHas('booking', fn ($bookings) => $bookings->where('customer_id', $customer->id)));
+                ->orWhereHas('booking', fn($bookings) => $bookings->where('customer_id', $customer->id)));
         }
 
         $monthStart = now()->startOfMonth();
@@ -225,14 +224,14 @@ class InvoiceController extends Controller
             ->whereIn('invoice_id', (clone $openInvoices)->select('id'))
             ->sum('amount');
 
-        $formatAmount = fn (int $amount) => '₹'.number_format($amount);
+        $formatAmount = fn(int $amount) => '₹' . number_format($amount);
         $link = '/dashboard/invoices';
 
         return [
-            ['label' => 'Invoiced This Month', 'value' => $formatAmount((int) (clone $baseQuery)->whereBetween('issued_at', [$monthStart, $nextMonthStart])->sum('total_amount')), 'link' => $link.'?issuedThisMonth=1', 'icon' => 'IndianRupee'],
-            ['label' => 'Paid Invoices', 'value' => number_format((clone $baseQuery)->where('status', InvoiceStatus::PAID->value)->count()), 'link' => $link.'?status='.InvoiceStatus::PAID->value, 'icon' => 'CheckCircle'],
-            ['label' => 'Partially Paid', 'value' => number_format((clone $baseQuery)->where('status', InvoiceStatus::PARTIALLY_PAID->value)->count()), 'link' => $link.'?status='.InvoiceStatus::PARTIALLY_PAID->value, 'icon' => 'Clock'],
-            ['label' => 'Outstanding Balance', 'value' => $formatAmount(max(0, $openTotal - $paidOnOpen)), 'link' => $link.'?status=OUTSTANDING', 'icon' => 'Wallet'],
+            ['label' => 'Invoiced This Month', 'value' => $formatAmount((int) (clone $baseQuery)->whereBetween('issued_at', [$monthStart, $nextMonthStart])->sum('total_amount')), 'link' => $link . '?issuedThisMonth=1', 'icon' => 'IndianRupee'],
+            ['label' => 'Paid Invoices', 'value' => number_format((clone $baseQuery)->where('status', InvoiceStatus::PAID->value)->count()), 'link' => $link . '?status=' . InvoiceStatus::PAID->value, 'icon' => 'CheckCircle'],
+            ['label' => 'Partially Paid', 'value' => number_format((clone $baseQuery)->where('status', InvoiceStatus::PARTIALLY_PAID->value)->count()), 'link' => $link . '?status=' . InvoiceStatus::PARTIALLY_PAID->value, 'icon' => 'Clock'],
+            ['label' => 'Outstanding Balance', 'value' => $formatAmount(max(0, $openTotal - $paidOnOpen)), 'link' => $link . '?status=OUTSTANDING', 'icon' => 'Wallet'],
         ];
     }
 
@@ -277,7 +276,7 @@ class InvoiceController extends Controller
             ...$this->mapInvoiceItem($invoice),
             'customer' => [
                 'id' => $customer?->id ?? $invoice->customer_id ?? $booking->customer_id ?? '',
-                'fullName' => $customer?->full_name ?? $customer?->name ?? $booking->guest_name ?? 'Guest',
+                'fullName' => $customer?->name ?? $booking->guest_name ?? 'Guest',
                 'email' => $customer?->email ?? $booking->guest_email ?? '',
                 'phone' => $customer?->phone ?? $booking->guest_phone ?? '',
             ],
@@ -301,7 +300,7 @@ class InvoiceController extends Controller
                 'taxAmount' => (int) $invoice->tax_amount,
                 'totalAmount' => (int) $invoice->total_amount,
             ],
-            'payments' => $invoice->payments->map(fn (Payment $payment) => [
+            'payments' => $invoice->payments->map(fn(Payment $payment) => [
                 'id' => $payment->id,
                 'paymentReference' => $payment->payment_reference,
                 'transactionId' => $payment->transaction_id,
@@ -319,7 +318,7 @@ class InvoiceController extends Controller
     private function paidAmount(Invoice $invoice): int
     {
         return (int) $invoice->payments
-            ->filter(fn (Payment $payment) => $this->enumValue($payment->payment_status) === PaymentStatus::COMPLETED->value)
+            ->filter(fn(Payment $payment) => $this->enumValue($payment->payment_status) === PaymentStatus::COMPLETED->value)
             ->sum('amount');
     }
 
@@ -327,7 +326,7 @@ class InvoiceController extends Controller
     {
         $customer = $invoice->customer ?? $invoice->booking->customer;
 
-        return $customer?->full_name ?? $customer?->name ?? $invoice->booking->guest_name ?? 'Guest';
+        return $customer?->name ?? $invoice->booking->guest_name ?? 'Guest';
     }
 
     private function enumValue(mixed $value): string
