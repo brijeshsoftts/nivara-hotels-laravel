@@ -23,7 +23,7 @@ export type Customer = {
 
 export type CustomerDetails = {
     id: string;
-    fullName: string;
+    name: string;
     email: string;
     phone: string;
     isActive: boolean;
@@ -48,7 +48,7 @@ export type CustomerDetails = {
 
 export type SearchCustomer = {
     id: string;
-    fullName: string;
+    name: string;
     email: string;
     phone: string;
 };

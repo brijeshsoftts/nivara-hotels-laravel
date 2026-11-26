@@ -136,17 +136,17 @@ export function ViewStaffDetails({
                 {staff?.user.profileImage && (
                   <AvatarImage
                     src={staff.user.profileImage.url}
-                    alt={staff.user.profileImage.altText || staff.user.fullName}
+                    alt={staff.user.profileImage.altText || staff.user.name}
                   />
                 )}
                 <AvatarFallback className="text-xl font-semibold">
-                  {getInitials(staff?.user.fullName)}
+                  {getInitials(staff?.user.name)}
                 </AvatarFallback>
               </Avatar>
 
               <div className="min-w-0 flex-1">
                 <h3 className="text-lg font-semibold wrap-break-word">
-                  {staff?.user.fullName}
+                  {staff?.user.name}
                 </h3>
 
                 <p className="mt-1 text-sm break-all text-muted-foreground">

@@ -248,7 +248,7 @@ export function ContactForm() {
     const form = useForm<ContactMessageInput>({
         resolver: zodResolver(contactMessageSchema),
         defaultValues: {
-            fullName: "",
+            name: "",
             email: "",
             phone: "",
             message: "",
@@ -310,17 +310,17 @@ export function ContactForm() {
                         </Label>
                         <Input
                             aria-invalid={Boolean(
-                                form.formState.errors.fullName,
+                                form.formState.errors.name,
                             )}
                             autoComplete="name"
                             className="h-11 bg-card pl-10"
                             id="contact-name"
                             placeholder="Full name *"
-                            {...form.register("fullName")}
+                            {...form.register("name")}
                         />
                     </div>
                     <FieldError>
-                        {form.formState.errors.fullName?.message}
+                        {form.formState.errors.name?.message}
                     </FieldError>
                 </div>
 

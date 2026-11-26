@@ -13,7 +13,7 @@ export const TODAYS_ARRIVALS: TodaysArrival[] = [
     },
     customer: {
       id: DEMO_CUSTOMERS.saimKhan.id,
-      fullName: DEMO_CUSTOMERS.saimKhan.fullName,
+      name: DEMO_CUSTOMERS.saimKhan.name,
     },
     roomNumber: "101",
     checkInDate: "2026-11-02",
@@ -26,7 +26,7 @@ export const TODAYS_ARRIVALS: TodaysArrival[] = [
     },
     customer: {
       id: DEMO_CUSTOMERS.priyaSrivastava.id,
-      fullName: DEMO_CUSTOMERS.priyaSrivastava.fullName,
+      name: DEMO_CUSTOMERS.priyaSrivastava.name,
     },
     roomNumber: "204",
     checkInDate: "2026-11-02",
@@ -39,7 +39,7 @@ export const TODAYS_ARRIVALS: TodaysArrival[] = [
     },
     customer: {
       id: DEMO_CUSTOMERS.ankitMishra.id,
-      fullName: DEMO_CUSTOMERS.ankitMishra.fullName,
+      name: DEMO_CUSTOMERS.ankitMishra.name,
     },
     roomNumber: "301",
     checkInDate: "2026-11-02",
@@ -52,7 +52,7 @@ export const TODAYS_ARRIVALS: TodaysArrival[] = [
     },
     customer: {
       id: DEMO_CUSTOMERS.nehaGupta.id,
-      fullName: DEMO_CUSTOMERS.nehaGupta.fullName,
+      name: DEMO_CUSTOMERS.nehaGupta.name,
     },
     roomNumber: "402",
     checkInDate: "2026-11-02",
@@ -65,7 +65,7 @@ export const TODAYS_ARRIVALS: TodaysArrival[] = [
     },
     customer: {
       id: DEMO_CUSTOMERS.arjunPandey.id,
-      fullName: DEMO_CUSTOMERS.arjunPandey.fullName,
+      name: DEMO_CUSTOMERS.arjunPandey.name,
     },
     roomNumber: "403",
     checkInDate: "2026-11-02",
@@ -81,7 +81,7 @@ export const TODAYS_DEPARTURES: TodaysDeparture[] = [
     },
     customer: {
       id: DEMO_CUSTOMERS.poojaShukla.id,
-      fullName: DEMO_CUSTOMERS.poojaShukla.fullName,
+      name: DEMO_CUSTOMERS.poojaShukla.name,
     },
     roomNumber: "102",
     checkOutDate: "2026-11-02",
@@ -94,7 +94,7 @@ export const TODAYS_DEPARTURES: TodaysDeparture[] = [
     },
     customer: {
       id: DEMO_CUSTOMERS.rohitYadav.id,
-      fullName: DEMO_CUSTOMERS.rohitYadav.fullName,
+      name: DEMO_CUSTOMERS.rohitYadav.name,
     },
     roomNumber: "202",
     checkOutDate: "2026-11-02",
@@ -107,7 +107,7 @@ export const TODAYS_DEPARTURES: TodaysDeparture[] = [
     },
     customer: {
       id: DEMO_CUSTOMERS.kavitaVerma.id,
-      fullName: DEMO_CUSTOMERS.kavitaVerma.fullName,
+      name: DEMO_CUSTOMERS.kavitaVerma.name,
     },
     roomNumber: "302",
     checkOutDate: "2026-11-02",
@@ -120,7 +120,7 @@ export const TODAYS_DEPARTURES: TodaysDeparture[] = [
     },
     customer: {
       id: DEMO_CUSTOMERS.amanTripathi.id,
-      fullName: DEMO_CUSTOMERS.amanTripathi.fullName,
+      name: DEMO_CUSTOMERS.amanTripathi.name,
     },
     roomNumber: "103",
     checkOutDate: "2026-11-02",
@@ -133,7 +133,7 @@ export const TODAYS_DEPARTURES: TodaysDeparture[] = [
     },
     customer: {
       id: DEMO_CUSTOMERS.shreyaSrivastava.id,
-      fullName: DEMO_CUSTOMERS.shreyaSrivastava.fullName,
+      name: DEMO_CUSTOMERS.shreyaSrivastava.name,
     },
     roomNumber: "201",
     checkOutDate: "2026-11-02",

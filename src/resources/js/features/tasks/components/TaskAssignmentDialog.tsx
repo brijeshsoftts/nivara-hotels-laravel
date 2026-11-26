@@ -83,18 +83,18 @@ export function TaskAssignmentDialog({
                 {(housekeeper: HousekeeperLookupItem) => (
                   <ComboboxItem
                     key={housekeeper.id}
-                    value={housekeeper.fullName}
+                    value={housekeeper.name}
                     onClick={() => setSelected(housekeeper)}
                   >
-                    {housekeeper.fullName}
+                    {housekeeper.name}
                   </ComboboxItem>
                 )}
               </ComboboxList>
             </ComboboxContent>
           </Combobox>
           <p className="text-sm text-muted-foreground">
-            Current: {task.assignee.fullName}
-            {selected ? ` · Selected: ${selected.fullName}` : ""}
+            Current: {task.assignee.name}
+            {selected ? ` · Selected: ${selected.name}` : ""}
           </p>
         </div>
 

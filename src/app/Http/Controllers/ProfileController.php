@@ -74,15 +74,12 @@ class ProfileController extends Controller
         }
 
         $validated = $request->validate([
-            'fullName' => ['sometimes', 'required', 'string', 'min:2', 'max:100'],
             'name' => ['sometimes', 'required', 'string', 'min:2', 'max:100'],
             'email' => ['sometimes', 'required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
             'phone' => ['sometimes', 'required', 'string', 'min:7', 'max:20'],
         ]);
 
-        if (isset($validated['fullName'])) {
-            $user->name = $validated['fullName'];
-        } elseif (isset($validated['name'])) {
+        if (isset($validated['name'])) {
             $user->name = $validated['name'];
         }
         if (isset($validated['phone'])) {
@@ -190,7 +187,6 @@ class ProfileController extends Controller
     {
         return [
             'id' => $user->id,
-            'fullName' => $user->name,
             'name' => $user->name,
             'email' => $user->email,
             'phone' => $user->phone,

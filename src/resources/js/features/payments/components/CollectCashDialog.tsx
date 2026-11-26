@@ -113,7 +113,7 @@ export function CollectCashDialog({
                         </dd>
                         <dt className="text-muted-foreground">Guest</dt>
                         <dd className="text-right font-medium">
-                            {booking.customer.fullName}
+                            {booking.customer.name}
                         </dd>
                         <dt className="text-muted-foreground">
                             Invoice number

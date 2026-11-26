@@ -296,7 +296,7 @@ export function ViewInvoiceDetails({
                   <DetailItem
                     icon={UserRound}
                     label="Full name"
-                    value={invoice.customer.fullName}
+                    value={invoice.customer.name}
                   />
 
                   <DetailItem

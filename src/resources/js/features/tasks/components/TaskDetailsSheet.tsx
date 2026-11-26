@@ -53,7 +53,7 @@ export function TaskDetailsSheet({
               <UserRound className="size-4 text-muted-foreground" />
               Assignment
             </h3>
-            <Detail label="Housekeeper" value={task.assignee.fullName} />
+            <Detail label="Housekeeper" value={task.assignee.name} />
             <Detail label="Assignee ID" value={task.assignee.id} />
           </section>
           <Separator />

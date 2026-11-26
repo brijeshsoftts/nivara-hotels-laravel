@@ -136,7 +136,7 @@ export function AppSidebar() {
                                     <AvatarImage
                                         src={user.avatar.url}
                                         alt={
-                                            user.avatar.altText ?? user.fullName
+                                            user.avatar.altText ?? user.name
                                         }
                                     />
                                 )}
@@ -180,7 +180,7 @@ export function AppSidebar() {
                                             src={user.avatar.url}
                                             alt={
                                                 user.avatar.altText ??
-                                                user.fullName
+                                                user.name
                                             }
                                         />
                                     )}

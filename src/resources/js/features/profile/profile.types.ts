@@ -2,7 +2,7 @@ import type { Category, UserRole } from "@/types/enum.types";
 
 export type Profile = {
   id: string;
-  fullName: string;
+  name: string;
   email: string;
   phone: string;
   role: UserRole;

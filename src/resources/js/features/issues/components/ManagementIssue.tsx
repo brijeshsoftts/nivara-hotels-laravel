@@ -41,12 +41,12 @@ function IssueTable() {
     {
       key: "reporter",
       header: "Reported By",
-      cell: (row) => row.reporter?.fullName ?? "-",
+      cell: (row) => row.reporter?.name ?? "-",
     },
     {
       key: "assignee",
       header: "Assigned To",
-      cell: (row) => row.assignee?.fullName ?? "-",
+      cell: (row) => row.assignee?.name ?? "-",
     },
     {
       key: "priority",

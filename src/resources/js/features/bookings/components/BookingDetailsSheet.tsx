@@ -276,7 +276,7 @@ export function BookingDetailsSheet({
 
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold">
-                      {booking.customer.fullName}
+                      {booking.customer.name}
                     </p>
 
                     <p className="truncate text-xs text-muted-foreground">
@@ -435,7 +435,7 @@ export function BookingDetailsSheet({
                             (housekeeper: any) => (
                               <div key={housekeeper.id} className="space-y-1">
                                 <p className="text-sm font-medium">
-                                  {housekeeper.fullName}
+                                  {housekeeper.name}
                                 </p>
                                 {housekeeper.email && (
                                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -504,7 +504,7 @@ export function BookingDetailsSheet({
                       {booking.bookingGuests.map((guest: any) => (
                         <tr key={guest.id} className="border-b last:border-0">
                           <td className="px-3 py-3 font-medium">
-                            {guest.fullName}
+                            {guest.name}
                           </td>
 
                           <td className="px-3 py-3 text-muted-foreground">

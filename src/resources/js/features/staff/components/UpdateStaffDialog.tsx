@@ -98,9 +98,9 @@ export function UpdateStaffDialog({
                   placeholder="Enter full name"
                   autoComplete="name"
 
-                  error={errors.fullName?.message}
+                  error={errors.name?.message}
                   disabled={isPending}
-                  {...register("fullName", { value: staff?.user.fullName })}
+                  {...register("name", { value: staff?.user.name })}
                 />
                 <InputField
                   label="Email"

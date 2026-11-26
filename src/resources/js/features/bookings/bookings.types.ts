@@ -8,7 +8,7 @@ import type {
 
 export interface BookingDetailsCustomer {
     id: string;
-    fullName: string;
+    name: string;
     email: string;
     phone: string;
     profileImage?: {
@@ -44,7 +44,7 @@ export interface BookingDetailsRoom {
 
 export interface BookingDetailsGuest {
     id: string;
-    fullName: string;
+    name: string;
     age: number;
     gender: Gender;
     idProofNumber?: string;
@@ -64,7 +64,7 @@ export interface BookingDetailsPayment {
 
     recordedBy?: {
         id: string;
-        fullName: string;
+        name: string;
     };
 }
 
@@ -96,7 +96,7 @@ export type BookingListItem = {
     bookedAt: string;
     customer: Pick<
         BookingDetailsCustomer,
-        "id" | "fullName" | "email" | "phone"
+        "id" | "name" | "email" | "phone"
     >;
     bookingRoom: {
         id: string;
@@ -129,7 +129,7 @@ export type BookingDetails = {
 
     customer: {
         id: string;
-        fullName: string;
+        name: string;
         email: string;
         phone: string;
         profileImage?: {
@@ -143,7 +143,7 @@ export type BookingDetails = {
     };
     creator: {
         id: string;
-        fullName: string;
+        name: string;
         email: string;
         phone: string;
         profileImage?: {
@@ -160,7 +160,7 @@ export type BookingDetails = {
             floor: number;
             housekeepers: {
                 id: string;
-                fullName: string;
+                name: string;
                 email: string;
                 phone: string;
             }[];
@@ -179,7 +179,7 @@ export type BookingDetails = {
     } | null;
     bookingGuests: {
         id: string;
-        fullName: string;
+        name: string;
         age: number | null;
         gender?: string;
         idProofNumber?: string;
@@ -205,7 +205,7 @@ export type BookingDetails = {
             createdAt: string;
             recordedBy?: {
                 id: string;
-                fullName: string;
+                name: string;
             };
         }[];
     } | null;
@@ -226,14 +226,14 @@ export type UpdateBookingStatusInput = {
 };
 
 export type BookingGuestInput = {
-    fullName: string;
+    name: string;
     age: number;
     gender: Gender;
     idProofNumber?: string;
 };
 
 export type PublicBookingGuestInput = {
-    fullName: string;
+    name: string;
 };
 
 export type AvailableBookingRoom = {

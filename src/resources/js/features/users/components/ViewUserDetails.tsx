@@ -128,17 +128,17 @@ export function ViewUserDetails({
                 <Avatar className="size-20 shrink-0 border">
                   <AvatarImage
                     src={user.avatar?.url || undefined}
-                    alt={user.avatar?.altText || user.fullName}
+                    alt={user.avatar?.altText || user.name}
                   />
 
                   <AvatarFallback className="text-xl font-semibold">
-                    {getInitials(user.fullName)}
+                    {getInitials(user.name)}
                   </AvatarFallback>
                 </Avatar>
 
                 <div className="min-w-0 flex-1">
                   <h3 className="text-lg font-semibold wrap-break-word">
-                    {user.fullName}
+                    {user.name}
                   </h3>
 
                   <p className="mt-1 text-sm break-all text-muted-foreground">
@@ -172,7 +172,7 @@ export function ViewUserDetails({
                   <DetailItem
                     icon={UserRound}
                     label="Full name"
-                    value={user.fullName}
+                    value={user.name}
                   />
 
                   <DetailItem

@@ -13,7 +13,7 @@ export type TaskItem = {
   completedAt: string | null;
   assignee: {
     id: string;
-    fullName: string;
+    name: string;
   };
 };
 
@@ -35,7 +35,7 @@ export type TaskDetails = TaskItem & {
   };
   assignee: {
     id: string;
-    fullName: string;
+    name: string;
     email: string;
     phone: string;
   };
@@ -45,18 +45,18 @@ export type TaskDetails = TaskItem & {
     createdAt: string;
     housekeeper: {
       id: string;
-      fullName: string;
+      name: string;
     };
     assignedBy: {
       id: string;
-      fullName: string;
+      name: string;
     };
   };
 };
 
 export type HousekeeperLookupItem = {
   id: string;
-  fullName: string;
+  name: string;
   phone: string;
 };
 

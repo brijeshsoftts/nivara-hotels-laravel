@@ -53,8 +53,8 @@ export function CreateUserDialog({ children }: { children: ReactNode }) {
               label="Full name"
               placeholder="Enter full name"
               autoComplete="name"
-              error={errors.fullName?.message}
-              {...register("fullName")}
+              error={errors.name?.message}
+              {...register("name")}
               disabled={isPending}
             />
 

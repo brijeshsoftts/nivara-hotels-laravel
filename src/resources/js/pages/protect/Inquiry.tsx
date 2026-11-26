@@ -72,13 +72,13 @@ export default function InquiryPage() {
       ),
     },
     {
-      key: "fullName",
+      key: "name",
       header: "Contact",
       className: "w-56",
       cell: (inquiry) => (
         <div className="min-w-0">
           <p className="truncate text-sm font-medium text-foreground">
-            {inquiry.fullName}
+            {inquiry.name}
           </p>
           <p className="truncate text-xs text-muted-foreground">
             {inquiry.email}
@@ -168,7 +168,7 @@ function ActionDropdownMenu({ inquiry }: { inquiry: Inquiry }) {
             size="sm"
             variant="ghost"
             shape="square"
-            aria-label={`Actions for inquiry from ${inquiry.fullName}`}
+            aria-label={`Actions for inquiry from ${inquiry.name}`}
           >
             <EllipsisVertical />
           </IconBtn>
@@ -193,7 +193,7 @@ function ActionDropdownMenu({ inquiry }: { inquiry: Inquiry }) {
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
         <DialogContent className="max-h-[min(90vh,48rem)] overflow-y-auto sm:max-w-xl">
           <DialogHeader>
-            <DialogTitle>Inquiry from {inquiry.fullName}</DialogTitle>
+            <DialogTitle>Inquiry from {inquiry.name}</DialogTitle>
             <DialogDescription>
               Submitted {formatTimestamp(inquiry.createdAt)}
             </DialogDescription>

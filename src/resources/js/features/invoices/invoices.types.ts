@@ -24,7 +24,7 @@ export type InvoiceDetails = {
     issuedAt: string;
     customer: {
         id: string;
-        fullName: string;
+        name: string;
         email: string;
         phone: string;
     };

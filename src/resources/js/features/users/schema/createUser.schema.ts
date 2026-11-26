@@ -2,7 +2,7 @@ import z from "zod";
 
 export const CreateUserSchema = z
   .object({
-    fullName: z
+    name: z
       .string()
       .trim()
       .min(2, "Full name must be at least 2 characters")

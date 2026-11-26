@@ -279,10 +279,10 @@ function HousekeeperSelect({
             {(item: HousekeeperLookupItem) => (
               <ComboboxItem
                 key={item.id}
-                value={item.fullName}
+                value={item.name}
                 onClick={() => onSelect(item.id)}
               >
-                {item.fullName}
+                {item.name}
               </ComboboxItem>
             )}
           </ComboboxList>

@@ -40,7 +40,6 @@ class StaffController extends Controller
             'id' => $st->id,
             'userId' => $st->user_id,
             'name' => $st->user?->name ?? 'Staff',
-            'fullName' => $st->user?->name ?? 'Staff',
             'email' => $st->user?->email,
             'phone' => $st->user?->phone,
             'category' => $st->category instanceof \BackedEnum ? $st->category->value : (string) $st->category,
@@ -154,7 +153,6 @@ class StaffController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'fullName' => ['nullable', 'string', 'max:255'],
             'name' => ['nullable', 'string', 'max:255'],
             'email' => ['required', 'email', 'unique:users,email'],
             'phone' => ['required', 'string'],
@@ -165,7 +163,7 @@ class StaffController extends Controller
             'motherName' => ['nullable', 'string'],
         ]);
 
-        $name = $validated['fullName'] ?? $validated['name'] ?? 'Staff Member';
+        $name = $validated['name'] ?? 'Staff Member';
 
         return DB::transaction(function () use ($validated, $name, $request) {
             $user = User::create([
@@ -232,7 +230,7 @@ class StaffController extends Controller
                 ] : null,
                 'user' => [
                     'id' => $st->user->id,
-                    'fullName' => $st->user->name,
+                    'name' => $st->user->name,
                     'email' => $st->user->email,
                     'phone' => $st->user->phone,
                     'isActive' => (bool) $st->user->is_active,
@@ -266,7 +264,7 @@ class StaffController extends Controller
             'category' => ['nullable', 'string'],
             'salary' => ['nullable', 'numeric'],
             'employmentStatus' => ['nullable', 'string'],
-            'fullName' => ['nullable', 'string', 'max:255'],
+            'name' => ['nullable', 'string', 'max:255'],
             'phone' => ['nullable', 'string'],
         ]);
 
@@ -285,8 +283,8 @@ class StaffController extends Controller
             if (isset($validated['category'])) {
                 $staff->user->category = $validated['category'];
             }
-            if (isset($validated['fullName'])) {
-                $staff->user->name = $validated['fullName'];
+            if (isset($validated['name'])) {
+                $staff->user->name = $validated['name'];
             }
             if (isset($validated['phone'])) {
                 $staff->user->phone = $validated['phone'];

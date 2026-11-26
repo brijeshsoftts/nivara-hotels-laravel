@@ -60,7 +60,7 @@ class AuditLogController extends Controller
             'createdAt' => $log->created_at?->toIso8601String(),
             'user' => $log->user ? [
                 'id' => $log->user->id,
-                'fullName' => $log->user->name,
+                'name' => $log->user->name,
                 'email' => $log->user->email,
             ] : null,
         ]);

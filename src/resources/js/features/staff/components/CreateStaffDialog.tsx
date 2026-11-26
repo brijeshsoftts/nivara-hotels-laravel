@@ -83,9 +83,9 @@ export function CreateStaffDialog({ children }: { children: React.ReactNode }) {
                   placeholder="Enter full name"
                   autoComplete="name"
 
-                  error={errors.fullName?.message}
+                  error={errors.name?.message}
                   disabled={isPending}
-                  {...register("fullName")}
+                  {...register("name")}
                 />
                 <InputField
                   label="Email"

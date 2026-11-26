@@ -33,15 +33,13 @@ export const DropdownProfile = ({
                                 {user?.avatar?.url ? (
                                     <AvatarImage
                                         src={user?.avatar?.url}
-                                        alt={user?.fullName ?? user?.name}
+                                        alt={user?.name}
                                     />
                                 ) : (
                                     <AvatarFallback
                                         className={"bg-primary text-background"}
                                     >
-                                        {getInitials(
-                                            user?.fullName ?? user?.name,
-                                        )}
+                                        {getInitials(user?.name)}
                                     </AvatarFallback>
                                 )}
                             </Avatar>
@@ -56,19 +54,19 @@ export const DropdownProfile = ({
                             {user?.avatar?.url ? (
                                 <AvatarImage
                                     src={user?.avatar?.url}
-                                    alt={user?.fullName ?? user?.name}
+                                    alt={user?.name}
                                 />
                             ) : (
                                 <AvatarFallback
                                     className={"bg-primary text-background"}
                                 >
-                                    {getInitials(user?.fullName ?? user?.name)}
+                                    {getInitials(user?.name)}
                                 </AvatarFallback>
                             )}
                         </Avatar>
                         <div className="flex flex-1 flex-col">
                             <span className="text-popover-foreground">
-                                {user?.fullName ?? user?.name}
+                                {user?.name}
                             </span>
                             <span className="text-xs text-muted-foreground">
                                 {user?.email}

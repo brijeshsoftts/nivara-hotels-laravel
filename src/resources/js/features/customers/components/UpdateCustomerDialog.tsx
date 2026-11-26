@@ -65,8 +65,8 @@ export function UpdateCustomerDialog({
               required
               placeholder="Enter full name"
               autoComplete="name"
-              error={errors.fullName?.message}
-              {...register("fullName", { value: data?.fullName })}
+              error={errors.name?.message}
+              {...register("name", { value: data?.name })}
               disabled={isPending}
             />
 

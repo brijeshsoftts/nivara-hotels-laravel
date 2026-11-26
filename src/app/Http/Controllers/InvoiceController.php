@@ -276,7 +276,7 @@ class InvoiceController extends Controller
             ...$this->mapInvoiceItem($invoice),
             'customer' => [
                 'id' => $customer?->id ?? $invoice->customer_id ?? $booking->customer_id ?? '',
-                'fullName' => $customer?->name ?? $booking->guest_name ?? 'Guest',
+                'name' => $customer?->name ?? $booking->guest_name ?? 'Guest',
                 'email' => $customer?->email ?? $booking->guest_email ?? '',
                 'phone' => $customer?->phone ?? $booking->guest_phone ?? '',
             ],

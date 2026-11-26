@@ -39,9 +39,9 @@ export const customerKpiData: KpiItem[] = [
 
 export const dummyCustomerList: SearchCustomer[] = Object.values(
   DEMO_CUSTOMERS
-).map(({ id, fullName, email, phone }) => ({
+).map(({ id, name, email, phone }) => ({
   id,
-  fullName,
+  name,
   email,
   phone,
 }));

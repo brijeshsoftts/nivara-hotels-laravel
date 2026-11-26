@@ -20,7 +20,7 @@ export const BOOKING_DETAILS: BookingDetails = {
 
   customer: {
     id: DEMO_CUSTOMERS.saimKhan.id,
-    fullName: DEMO_CUSTOMERS.saimKhan.fullName,
+    name: DEMO_CUSTOMERS.saimKhan.name,
     email: DEMO_CUSTOMERS.saimKhan.email,
     phone: DEMO_CUSTOMERS.saimKhan.phone,
     profile: {
@@ -31,7 +31,7 @@ export const BOOKING_DETAILS: BookingDetails = {
 
   creator: {
     id: DEMO_STAFF.receptionist.id,
-    fullName: DEMO_STAFF.receptionist.fullName,
+    name: DEMO_STAFF.receptionist.name,
     email: DEMO_STAFF.receptionist.email,
     phone: DEMO_STAFF.receptionist.phone,
   },
@@ -46,7 +46,7 @@ export const BOOKING_DETAILS: BookingDetails = {
       housekeepers: [
         {
           id: DEMO_STAFF.housekeeper.id,
-          fullName: DEMO_STAFF.housekeeper.fullName,
+          name: DEMO_STAFF.housekeeper.name,
           email: DEMO_STAFF.housekeeper.email,
           phone: DEMO_STAFF.housekeeper.phone,
         },
@@ -68,14 +68,14 @@ export const BOOKING_DETAILS: BookingDetails = {
   bookingGuests: [
     {
       id: "guest-001",
-      fullName: DEMO_CUSTOMERS.saimKhan.fullName,
+      name: DEMO_CUSTOMERS.saimKhan.name,
       age: 32,
       gender: "MALE",
       idProofNumber: "XXXX-XXXX-4821",
     },
     {
       id: "guest-002",
-      fullName: "Aisha Khan",
+      name: "Aisha Khan",
       age: 29,
       gender: "FEMALE",
       idProofNumber: "XXXX-XXXX-7294",

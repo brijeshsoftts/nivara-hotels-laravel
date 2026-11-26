@@ -140,7 +140,7 @@ export function RecordQrPaymentDialog({
                             </dd>
                             <dt className="text-muted-foreground">Customer</dt>
                             <dd className="text-right font-medium">
-                                {booking.customer.fullName}
+                                {booking.customer.name}
                             </dd>
                             <dt className="text-muted-foreground">
                                 Invoice number

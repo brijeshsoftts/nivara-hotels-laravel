@@ -60,7 +60,7 @@ export function ViewCustomerDialog({
             <div className="flex items-start justify-between gap-4 pr-6">
               <div className="space-y-1">
                 <DialogTitle className="text-lg font-semibold tracking-tight">
-                  {customer.fullName}
+                  {customer.name}
                 </DialogTitle>
                 <DialogDescription className="flex flex-wrap gap-x-4 gap-y-1">
                   <span className="inline-flex items-center gap-1.5">
@@ -105,7 +105,7 @@ export function ViewCustomerDialog({
                 {customer.profile?.url ? (
                   <img
                     src={customer.profile.url}
-                    alt={customer.profile.altText ?? customer.fullName}
+                    alt={customer.profile.altText ?? customer.name}
                     className="size-16 rounded-full border object-cover"
                   />
                 ) : (
@@ -114,7 +114,7 @@ export function ViewCustomerDialog({
                   </span>
                 )}
                 <div className="space-y-2">
-                  <p className="font-medium">{customer.fullName}</p>
+                  <p className="font-medium">{customer.name}</p>
                   <StatusBadge value={customer.isActive} />
                 </div>
               </div>

@@ -16,7 +16,7 @@ export const imageSchema = z
 
 export const CreateCustomerSchema = z
   .object({
-    fullName: requiredString("Full name is required").max(
+    name: requiredString("Full name is required").max(
       100,
       "Full name must be 100 characters or less"
     ),

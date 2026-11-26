@@ -60,7 +60,6 @@ class CustomerController extends Controller
             'id' => $c->id,
             'userId' => $c->user_id,
             'name' => $c->user?->name ?? 'Guest',
-            'fullName' => $c->user?->name ?? 'Guest',
             'email' => $c->user?->email,
             'phone' => $c->user?->phone,
             'idProofType' => $c->id_proof_type,
@@ -196,7 +195,7 @@ class CustomerController extends Controller
             ->get()
             ->map(fn($c) => [
                 'id' => $c->id,
-                'fullName' => $c->user?->name ?? 'Guest',
+                'name' => $c->user?->name ?? 'Guest',
                 'email' => $c->user?->email,
                 'phone' => $c->user?->phone,
                 'idProofType' => $c->id_proof_type,
@@ -215,7 +214,6 @@ class CustomerController extends Controller
                 'id' => $c->id,
                 'userId' => $c->user_id,
                 'name' => $c->user?->name ?? 'Guest',
-                'fullName' => $c->user?->name ?? 'Guest',
                 'email' => $c->user?->email,
                 'phone' => $c->user?->phone,
                 'idProofType' => $c->id_proof_type,
@@ -249,7 +247,6 @@ class CustomerController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'fullName' => ['nullable', 'string', 'max:255'],
             'name' => ['nullable', 'string', 'max:255'],
             'email' => ['required', 'email'],
             'phone' => ['required', 'string'],
@@ -260,7 +257,7 @@ class CustomerController extends Controller
             'country' => ['nullable', 'string'],
         ]);
 
-        $name = $validated['fullName'] ?? $validated['name'] ?? 'Guest';
+        $name = $validated['name'] ?? 'Guest';
 
         return DB::transaction(function () use ($validated, $name, $request) {
             $user = User::firstOrCreate(
@@ -292,7 +289,7 @@ class CustomerController extends Controller
     {
         $customer = Customer::findOrFail($id);
         $validated = $request->validate([
-            'fullName' => ['nullable', 'string'],
+            'name' => ['nullable', 'string'],
             'phone' => ['nullable', 'string'],
             'idProofType' => ['nullable', 'string'],
             'idProofNumber' => ['nullable', 'string'],
@@ -315,8 +312,8 @@ class CustomerController extends Controller
         $customer->save();
 
         if ($customer->user) {
-            if (isset($validated['fullName'])) {
-                $customer->user->name = $validated['fullName'];
+            if (isset($validated['name'])) {
+                $customer->user->name = $validated['name'];
             }
             if (isset($validated['phone'])) {
                 $customer->user->phone = $validated['phone'];

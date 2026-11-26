@@ -42,14 +42,14 @@ const stepLabels = [
 ];
 
 const defaultGuest = () => ({
-  fullName: "",
+  name: "",
   age: 30,
   gender: "MALE" as const,
   idProofNumber: "",
 });
 
 const buildPrimaryGuest = (customer?: CustomerSearchResult | null) => ({
-  fullName: customer?.fullName ?? "",
+  name: customer?.name ?? "",
   age: 30,
   gender: "MALE" as const,
   idProofNumber: "",
@@ -63,7 +63,7 @@ type BookingFormState = {
   children: number;
   roomId: string;
   guests: Array<{
-    fullName: string;
+    name: string;
     age: number;
     gender: "MALE" | "FEMALE" | "OTHER";
     idProofNumber?: string;
@@ -182,7 +182,7 @@ export default function NewBookingPage() {
         ? booking.guests.length === totalGuests &&
          booking.guests.every(
            (guest) =>
-             guest.fullName.trim() &&
+             guest.name.trim() &&
              guest.age > 0 &&
              guest.gender,
          )
@@ -206,9 +206,9 @@ export default function NewBookingPage() {
         ? [
            {
              ...current.guests[0],
-             fullName:
-               current.guests[0]?.fullName?.trim() ||
-               primaryGuest.fullName,
+             name:
+               current.guests[0]?.name?.trim() ||
+               primaryGuest.name,
              age: current.guests[0]?.age || primaryGuest.age,
              gender:
                current.guests[0]?.gender || primaryGuest.gender,
@@ -282,7 +282,7 @@ export default function NewBookingPage() {
     if (
       booking.guests.some(
         (guest) =>
-          !guest.fullName.trim() || guest.age <= 0 || !guest.gender,
+          !guest.name.trim() || guest.age <= 0 || !guest.gender,
       )
     ) {
       window.alert(
@@ -299,7 +299,7 @@ export default function NewBookingPage() {
         children: booking.children,
         roomId: booking.roomId,
         guests: booking.guests.map((guest) => ({
-          fullName: guest.fullName.trim(),
+          name: guest.name.trim(),
           age: guest.age,
           gender: guest.gender,
           idProofNumber: guest.idProofNumber?.trim() || undefined,
@@ -344,7 +344,7 @@ export default function NewBookingPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <h3 className="font-semibold">
-                        {selectedCustomer.fullName}
+                        {selectedCustomer.name}
                       </h3>
                       <Badge className="gap-1">
                         <CheckCircle2 className="h-3 w-3" />{" "}
@@ -871,17 +871,17 @@ export default function NewBookingPage() {
                         </span>
                       </FieldLabel>
                       <Input
-                        value={guest.fullName}
+                        value={guest.name}
                         placeholder={
                           index === 0
-                            ? selectedCustomer?.fullName ||
+                            ? selectedCustomer?.name ||
                              "Enter full name"
                             : "Enter full name"
                         }
                         onChange={(event) =>
                           handleGuestChange(
                             index,
-                            "fullName",
+                            "name",
                             event.target.value,
                           )
                         }
@@ -1025,7 +1025,7 @@ export default function NewBookingPage() {
                         Customer
                       </p>
                       <p className="mt-1 font-medium">
-                        {selectedCustomer?.fullName ??
+                        {selectedCustomer?.name ??
                           "—"}
                       </p>
                     </div>
@@ -1268,7 +1268,7 @@ export default function NewBookingPage() {
                         Customer
                       </p>
                       <p className="mt-1 font-semibold">
-                        {selectedCustomer?.fullName ??
+                        {selectedCustomer?.name ??
                           "—"}
                       </p>
                       <p className="mt-1 text-xs text-muted-foreground">
@@ -1362,11 +1362,11 @@ export default function NewBookingPage() {
                   <div className="space-y-3">
                     {booking.guests.map((guest, index) => (
                       <div
-                        key={`${index}-${guest.fullName || "guest"}`}
+                        key={`${index}-${guest.name || "guest"}`}
                         className="flex items-center gap-3"
                       >
                         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold">
-                          {guest.fullName
+                          {guest.name
                             .trim()
                             .split(/\s+/)
                             .map((part) => part[0])
@@ -1377,7 +1377,7 @@ export default function NewBookingPage() {
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-medium">
-                            {guest.fullName ||
+                            {guest.name ||
                               "Name not provided"}
                           </p>
                           <p className="text-xs text-muted-foreground">
@@ -1633,7 +1633,7 @@ export default function NewBookingPage() {
                     booking.guests.length === totalGuests &&
                     booking.guests.every(
                       (guest) =>
-                        guest.fullName.trim() &&
+                        guest.name.trim() &&
                         guest.age > 0,
                     ),
                 },

@@ -17,11 +17,11 @@ export type IssueItem = {
   };
   reporter?: {
     id: string;
-    fullName: string;
+    name: string;
   };
   assignee?: {
     id: string;
-    fullName: string;
+    name: string;
   };
   reportedAt: string;
 };
@@ -58,11 +58,11 @@ export type IssueDetails = {
   };
   reporter: {
     id: string;
-    fullName: string;
+    name: string;
   };
   assignee: {
     id: string;
-    fullName: string;
+    name: string;
   } | null;
   image: {
     id: string;

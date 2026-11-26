@@ -15,7 +15,7 @@ export type TodaysArrival = {
   };
   customer: {
     id: string;
-    fullName: string;
+    name: string;
   };
   roomNumber: string;
   checkInDate: string;
@@ -29,7 +29,7 @@ export type TodaysDeparture = {
   };
   customer: {
     id: string;
-    fullName: string;
+    name: string;
   };
   roomNumber: string;
   checkOutDate: string;

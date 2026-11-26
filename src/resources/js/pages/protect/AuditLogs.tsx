@@ -165,7 +165,7 @@ export default function AuditLogsPage() {
                 log.user ? (
                     <div className="min-w-0">
                         <p className="truncate text-sm font-medium text-foreground">
-                            {log.user.fullName}
+                            {log.user.name}
                         </p>
                         <p className="truncate text-xs text-muted-foreground">
                             {log.user.email}
@@ -288,7 +288,7 @@ export default function AuditLogsPage() {
                                     ? ` · ${selectedLog.entityId}`
                                     : ""}
                                 {selectedLog.user
-                                    ? ` · ${selectedLog.user.fullName}`
+                                    ? ` · ${selectedLog.user.name}`
                                     : " · System"}
                             </DialogDescription>
                         </DialogHeader>

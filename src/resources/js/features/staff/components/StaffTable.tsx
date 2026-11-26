@@ -24,18 +24,18 @@ import { ViewStaffDetails } from "./ViewStaffDetails";
 
 const columns: ColumnDef<StaffItem>[] = [
     {
-        key: "fullName",
+        key: "name",
         header: "Staff Member",
         cell: (staff) => (
             <div className="flex items-center gap-3">
                 <Avatar>
                     <AvatarFallback>
-                        {getInitials(staff.fullName)}
+                        {getInitials(staff.name)}
                     </AvatarFallback>
                 </Avatar>
 
                 <div className="flex flex-col">
-                    <span className="font-medium">{staff.fullName}</span>
+                    <span className="font-medium">{staff.name}</span>
                 </div>
             </div>
         ),
@@ -82,7 +82,7 @@ export function StaffTable() {
             data={data?.data || []}
             columns={columns}
             searchPlaceholder="Search staff..."
-            searchableKeys={["fullName", "staffId", "email"]}
+            searchableKeys={["name", "staffId", "email"]}
             filters={[
                 {
                     key: "isActive",
@@ -155,7 +155,7 @@ function ActionDropdownMenu({ staff }: { staff: StaffItem }) {
                     <IconBtn
                         size="sm"
                         variant="ghost"
-                        aria-label={`Actions for ${staff.fullName}`}
+                        aria-label={`Actions for ${staff.name}`}
                     >
                         <EllipsisVertical />
                     </IconBtn>

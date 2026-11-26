@@ -6,12 +6,12 @@ const guestNameSchema = z
   .min(2, "Enter the guest's full name.")
   .max(120, "Name cannot exceed 120 characters.");
 
-const additionalGuestSchema = z.object({ fullName: guestNameSchema }).strict();
+const additionalGuestSchema = z.object({ name: guestNameSchema }).strict();
 
 export function createPublicCheckoutSchema(adults: number, children: number) {
   return z
     .object({
-      fullName: guestNameSchema,
+      name: guestNameSchema,
       email: z.email("Enter a valid email address.").trim().toLowerCase(),
       phone: z
         .string()

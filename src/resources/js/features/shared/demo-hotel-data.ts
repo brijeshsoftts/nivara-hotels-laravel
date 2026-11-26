@@ -1,7 +1,7 @@
 export const DEMO_CUSTOMERS = {
   saimKhan: {
     id: "customer-001",
-    fullName: "Saim Khan",
+    name: "Saim Khan",
     email: "saim.khan@example.com",
     phone: "+91 90000 00101",
     address:
@@ -9,7 +9,7 @@ export const DEMO_CUSTOMERS = {
   },
   priyaSrivastava: {
     id: "customer-002",
-    fullName: "Priya Srivastava",
+    name: "Priya Srivastava",
     email: "priya.srivastava@example.com",
     phone: "+91 90000 00102",
     address:
@@ -17,14 +17,14 @@ export const DEMO_CUSTOMERS = {
   },
   ankitMishra: {
     id: "customer-003",
-    fullName: "Ankit Mishra",
+    name: "Ankit Mishra",
     email: "ankit.mishra@example.com",
     phone: "+91 90000 00103",
     address: "Flat 7A, Indira Nagar, Lucknow, Uttar Pradesh, India - 226016",
   },
   nehaGupta: {
     id: "customer-004",
-    fullName: "Neha Gupta",
+    name: "Neha Gupta",
     email: "neha.gupta@example.com",
     phone: "+91 90000 00104",
     address:
@@ -32,7 +32,7 @@ export const DEMO_CUSTOMERS = {
   },
   arjunPandey: {
     id: "customer-005",
-    fullName: "Arjun Pandey",
+    name: "Arjun Pandey",
     email: "arjun.pandey@example.com",
     phone: "+91 90000 00105",
     address:
@@ -40,35 +40,35 @@ export const DEMO_CUSTOMERS = {
   },
   poojaShukla: {
     id: "customer-006",
-    fullName: "Pooja Shukla",
+    name: "Pooja Shukla",
     email: "pooja.shukla@example.com",
     phone: "+91 90000 00106",
     address: "House 39, Hazratganj, Lucknow, Uttar Pradesh, India - 226001",
   },
   rohitYadav: {
     id: "customer-007",
-    fullName: "Rohit Yadav",
+    name: "Rohit Yadav",
     email: "rohit.yadav@example.com",
     phone: "+91 90000 00107",
     address: "Flat 11, Jankipuram, Lucknow, Uttar Pradesh, India - 226021",
   },
   kavitaVerma: {
     id: "customer-008",
-    fullName: "Kavita Verma",
+    name: "Kavita Verma",
     email: "kavita.verma@example.com",
     phone: "+91 90000 00108",
     address: "House 22, Alambagh, Lucknow, Uttar Pradesh, India - 226005",
   },
   amanTripathi: {
     id: "customer-009",
-    fullName: "Aman Tripathi",
+    name: "Aman Tripathi",
     email: "aman.tripathi@example.com",
     phone: "+91 90000 00109",
     address: "Flat 5D, Aminabad, Lucknow, Uttar Pradesh, India - 226018",
   },
   shreyaSrivastava: {
     id: "customer-010",
-    fullName: "Shreya Srivastava",
+    name: "Shreya Srivastava",
     email: "shreya.srivastava@example.com",
     phone: "+91 90000 00110",
     address:
@@ -79,25 +79,25 @@ export const DEMO_CUSTOMERS = {
 export const DEMO_STAFF = {
   admin: {
     id: "user-admin-001",
-    fullName: "Varun Sharma",
+    name: "Varun Sharma",
     email: "varun.sharma@example.com",
     phone: "+91 90000 00201",
   },
   manager: {
     id: "user-manager-001",
-    fullName: "Vikash Verma",
+    name: "Vikash Verma",
     email: "vikash.verma@example.com",
     phone: "+91 90000 00202",
   },
   receptionist: {
     id: "user-reception-001",
-    fullName: "Rahul Singh",
+    name: "Rahul Singh",
     email: "rahul.singh@example.com",
     phone: "+91 90000 00203",
   },
   housekeeper: {
     id: "user-housekeeping-001",
-    fullName: "Vishal Yadav",
+    name: "Vishal Yadav",
     email: "vishal.yadav@example.com",
     phone: "+91 90000 00204",
   },

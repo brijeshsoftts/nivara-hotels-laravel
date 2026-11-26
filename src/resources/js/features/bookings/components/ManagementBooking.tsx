@@ -62,7 +62,7 @@ export function ManagementBooking() {
             header: "Customer",
             cell: (booking) => (
                 <div className="min-w-40">
-                    <p className="font-medium">{booking.customer.fullName}</p>
+                    <p className="font-medium">{booking.customer.name}</p>
                     <p className="mt-1 text-xs text-muted-foreground">
                         {booking.customer.phone}
                     </p>

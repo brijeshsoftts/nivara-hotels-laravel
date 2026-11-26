@@ -4,7 +4,7 @@ import { imageSchema } from "@/features/customers/schema/createCustomer.schema";
 
 export const CreateStaffSchema = z
   .object({
-    fullName: z
+    name: z
       .string("Full name is required")
       .trim()
       .min(2, "Full name must be at least 2 characters")

@@ -4,7 +4,7 @@ import type { User } from "./users.types";
 
 export const MOCK_USER: User = {
   id: DEMO_STAFF.admin.id,
-  fullName: DEMO_STAFF.admin.fullName,
+  name: DEMO_STAFF.admin.name,
   email: DEMO_STAFF.admin.email,
   phone: DEMO_STAFF.admin.phone,
   role: "ADMIN",

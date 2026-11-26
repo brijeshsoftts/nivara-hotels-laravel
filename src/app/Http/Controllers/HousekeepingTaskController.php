@@ -65,7 +65,7 @@ class HousekeepingTaskController extends Controller
             'completedAt' => $task->completed_at?->toIso8601String(),
             'assignee' => [
                 'id' => $task->assignedTo?->id ?? '',
-                'fullName' => $task->assignedTo?->name ?? 'Unassigned',
+                'name' => $task->assignedTo?->name ?? 'Unassigned',
             ],
         ]);
 
@@ -82,7 +82,7 @@ class HousekeepingTaskController extends Controller
             ->get()
             ->map(fn($housekeeper) => [
                 'id' => $housekeeper->user_id,
-                'fullName' => $housekeeper->user?->name ?? 'Housekeeper',
+                'name' => $housekeeper->user?->name ?? 'Housekeeper',
                 'phone' => $housekeeper->user?->phone ?? '',
             ]);
 

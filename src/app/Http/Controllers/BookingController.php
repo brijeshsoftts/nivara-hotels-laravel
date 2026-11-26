@@ -95,7 +95,7 @@ class BookingController extends Controller
                 'bookedAt' => $booking->booked_at?->toIso8601String(),
                 'customer' => [
                     'id' => $booking->customer?->id ?? $booking->id,
-                    'fullName' => $booking->customer?->name ?? $booking->guest_name ?? 'Guest',
+                    'name' => $booking->customer?->name ?? $booking->guest_name ?? 'Guest',
                     'email' => $booking->customer?->email ?? $booking->guest_email ?? '',
                     'phone' => $booking->customer?->phone ?? $booking->guest_phone ?? '',
                 ],
@@ -236,7 +236,7 @@ class BookingController extends Controller
             'updatedAt' => $booking->updated_at?->toIso8601String(),
             'customer' => [
                 'id' => $customer?->id ?? $booking->id,
-                'fullName' => $customer?->name ?? $booking->guest_name ?? 'Guest',
+                'name' => $customer?->name ?? $booking->guest_name ?? 'Guest',
                 'email' => $customer?->email ?? $booking->guest_email ?? '',
                 'phone' => $customer?->phone ?? $booking->guest_phone ?? '',
                 'profileImage' => $customer?->avatar ? [
@@ -250,7 +250,7 @@ class BookingController extends Controller
             ],
             'creator' => [
                 'id' => $creator?->id ?? '',
-                'fullName' => $creator?->name ?? 'Guest checkout',
+                'name' => $creator?->name ?? 'Guest checkout',
                 'email' => $creator?->email ?? '',
                 'phone' => $creator?->phone ?? '',
                 'profileImage' => $creator?->avatar ? [
@@ -271,7 +271,7 @@ class BookingController extends Controller
                         ->filter()
                         ->map(fn($housekeeper) => [
                             'id' => $housekeeper->id,
-                            'fullName' => $housekeeper->name,
+                            'name' => $housekeeper->name,
                             'email' => $housekeeper->email ?? '',
                             'phone' => $housekeeper->phone ?? '',
                         ])->values(),
@@ -290,7 +290,7 @@ class BookingController extends Controller
             ] : null,
             'bookingGuests' => $booking->bookingGuests->map(fn($guest) => [
                 'id' => $guest->id,
-                'fullName' => $guest->full_name,
+                'name' => $guest->full_name,
                 'age' => $guest->age,
                 'gender' => $enumValue($guest->gender),
                 'idProofNumber' => $guest->id_proof_number,
@@ -316,7 +316,7 @@ class BookingController extends Controller
                     'createdAt' => $payment->created_at?->toIso8601String(),
                     'recordedBy' => $payment->receivedBy ? [
                         'id' => $payment->receivedBy->id,
-                        'fullName' => $payment->receivedBy->name,
+                        'name' => $payment->receivedBy->name,
                     ] : null,
                 ])->values(),
             ] : null,
@@ -383,7 +383,7 @@ class BookingController extends Controller
 
         $customers = Customer::with('user')->take(20)->get()->map(fn($c) => [
             'id' => $c->id,
-            'fullName' => $c->user?->name ?? 'Guest',
+            'name' => $c->user?->name ?? 'Guest',
             'email' => $c->user?->email,
             'phone' => $c->user?->phone,
             'idProofType' => $c->id_proof_type,
@@ -530,7 +530,7 @@ class BookingController extends Controller
             'children' => ['required', 'integer', 'min:0', 'max:20'],
             'roomId' => ['required', 'string', 'exists:rooms,id'],
             'guests' => ['sometimes', 'array'],
-            'guests.*.fullName' => ['required', 'string', 'max:255'],
+            'guests.*.name' => ['required', 'string', 'max:255'],
             'guests.*.age' => ['required', 'integer', 'min:1', 'max:120'],
             'guests.*.gender' => ['required', Rule::in(['MALE', 'FEMALE', 'OTHER'])],
             'guests.*.idProofNumber' => ['nullable', 'string', 'max:255'],
@@ -560,8 +560,7 @@ class BookingController extends Controller
                 $customerUser = User::firstOrCreate(
                     ['email' => $customerData['email']],
                     [
-                        'name' => $customerData['fullName'] ?? 'Guest',
-                        'full_name' => $customerData['fullName'] ?? 'Guest',
+                        'name' => $customerData['name'] ?? 'Guest',
                         'phone' => $customerData['phone'] ?? null,
                         'role' => UserRole::CUSTOMER->value,
                         'password' => Hash::make(Str::random(16)),
@@ -596,7 +595,7 @@ class BookingController extends Controller
             $booking = Booking::create([
                 'booking_reference' => $ref,
                 'customer_id' => $customer?->user_id,
-                'guest_name' => $guestDetails[0]['fullName'] ?? $customer?->user?->name ?? $request->input('customer.fullName', 'Walk-in Guest'),
+                'guest_name' => $guestDetails[0]['name'] ?? $customer?->user?->name ?? $request->input('customer.name', 'Walk-in Guest'),
                 'guest_email' => $customer?->user?->email ?? $request->input('customer.email'),
                 'guest_phone' => $customer?->user?->phone ?? $request->input('customer.phone'),
                 'check_in_date' => $checkIn,
@@ -622,7 +621,7 @@ class BookingController extends Controller
             foreach ($guestDetails as $guest) {
                 BookingGuest::create([
                     'booking_id' => $booking->id,
-                    'full_name' => $guest['fullName'],
+                    'full_name' => $guest['name'],
                     'age' => $guest['age'],
                     'gender' => $guest['gender'],
                     'id_proof_number' => $guest['idProofNumber'] ?? null,

@@ -39,7 +39,6 @@ class UserController extends Controller
         $users = $query->skip(($page - 1) * $limit)->take($limit)->get()->map(fn($u) => [
             'id' => $u->id,
             'name' => $u->name,
-            'fullName' => $u->name,
             'email' => $u->email,
             'phone' => $u->phone,
             'role' => $u->role instanceof \BackedEnum ? $u->role->value : (string) $u->role,
@@ -136,7 +135,6 @@ class UserController extends Controller
     {
         $validated = $request->validate([
             'name' => ['nullable', 'string', 'max:255'],
-            'fullName' => ['nullable', 'string', 'max:255'],
             'email' => ['required', 'email', 'unique:users,email'],
             'phone' => ['nullable', 'string'],
             'role' => ['nullable', 'string'],
@@ -144,7 +142,7 @@ class UserController extends Controller
             'isActive' => ['nullable', 'boolean'],
         ]);
 
-        $name = $validated['fullName'] ?? $validated['name'] ?? explode('@', $validated['email'])[0];
+        $name = $validated['name'] ?? explode('@', $validated['email'])[0];
 
         $user = User::create([
             'name' => $name,
@@ -170,7 +168,6 @@ class UserController extends Controller
             'data' => [
                 'id' => $u->id,
                 'name' => $u->name,
-                'fullName' => $u->name,
                 'email' => $u->email,
                 'phone' => $u->phone,
                 'role' => $u->role instanceof \BackedEnum ? $u->role->value : (string) $u->role,
@@ -185,16 +182,13 @@ class UserController extends Controller
         $user = User::findOrFail($id);
         $validated = $request->validate([
             'name' => ['nullable', 'string', 'max:255'],
-            'fullName' => ['nullable', 'string', 'max:255'],
             'phone' => ['nullable', 'string'],
             'role' => ['nullable', 'string'],
             'isActive' => ['nullable', 'boolean'],
         ]);
 
         $updates = [];
-        if (isset($validated['fullName'])) {
-            $updates['name'] = $validated['fullName'];
-        } elseif (isset($validated['name'])) {
+        if (isset($validated['name'])) {
             $updates['name'] = $validated['name'];
         }
         if (isset($validated['phone'])) {

@@ -126,7 +126,7 @@ export default function ProfilePage() {
 
   const profileForm = useForm<UpdateProfile>({
     resolver: zodResolver(UpdateProfileSchema),
-    defaultValues: { fullName: "", email: "", phone: "" },
+    defaultValues: { name: "", email: "", phone: "" },
   });
   const { reset, register, handleSubmit, formState } = profileForm;
 
@@ -135,7 +135,7 @@ export default function ProfilePage() {
     if (!user) return;
 
     reset({
-      fullName: user.fullName,
+      name: user.name,
       email: user.email,
       phone: user.phone,
     });
@@ -176,7 +176,7 @@ export default function ProfilePage() {
   }
 
   const user = profileQuery.data;
-  const initials = user.fullName
+  const initials = user.name
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2)
@@ -214,7 +214,7 @@ export default function ProfilePage() {
               {user.avatar?.url ? (
                 <AvatarImage
                   src={user.avatar.url}
-                  alt={`${user.fullName} profile`}
+                  alt={`${user.name} profile`}
                   className="object-cover"
                 />
               ) : null}
@@ -244,7 +244,7 @@ export default function ProfilePage() {
           <div className="min-w-0 space-y-1">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="truncate text-lg font-semibold text-foreground">
-                {user.fullName}
+                {user.name}
               </h2>
               <Badge variant="outline">{formatLabel(user.role)}</Badge>
               <Badge variant={user.isActive ? "secondary" : "destructive"}>
@@ -280,7 +280,7 @@ export default function ProfilePage() {
         open={avatarDialogOpen}
         onOpenChange={setAvatarDialogOpen}
         currentAvatarUrl={user.avatar?.url}
-        userName={user.fullName}
+        userName={user.name}
       />
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(18rem,0.8fr)]">
@@ -307,9 +307,9 @@ export default function ProfilePage() {
                   label="Full name"
                   autoComplete="name"
                   required
-                  error={formState.errors.fullName?.message}
+                  error={formState.errors.name?.message}
                   disabled={updateProfile.isPending}
-                  {...register("fullName")}
+                  {...register("name")}
                 />
                 <InputField
                   label="Phone number"

@@ -33,7 +33,7 @@ export const TASK_DETAILS: TaskDetails = {
 
   assignee: {
     id: DEMO_STAFF.housekeeper.id,
-    fullName: DEMO_STAFF.housekeeper.fullName,
+    name: DEMO_STAFF.housekeeper.name,
     email: DEMO_STAFF.housekeeper.email,
     phone: DEMO_STAFF.housekeeper.phone,
   },
@@ -46,12 +46,12 @@ export const TASK_DETAILS: TaskDetails = {
 
     housekeeper: {
       id: DEMO_STAFF.housekeeper.id,
-      fullName: DEMO_STAFF.housekeeper.fullName,
+      name: DEMO_STAFF.housekeeper.name,
     },
 
     assignedBy: {
       id: DEMO_STAFF.receptionist.id,
-      fullName: DEMO_STAFF.receptionist.fullName,
+      name: DEMO_STAFF.receptionist.name,
     },
   },
 };

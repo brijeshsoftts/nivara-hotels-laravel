@@ -66,11 +66,11 @@ class IssueController extends Controller
             ] : null,
             'reporter' => $i->reportedBy ? [
                 'id' => $i->reportedBy->id,
-                'fullName' => $i->reportedBy->name,
+                'name' => $i->reportedBy->name,
             ] : null,
             'assignee' => $i->assignedTo ? [
                 'id' => $i->assignedTo->id,
-                'fullName' => $i->assignedTo->name,
+                'name' => $i->assignedTo->name,
             ] : null,
             'reportedAt' => $i->reported_at?->toIso8601String(),
         ]);
@@ -147,11 +147,11 @@ class IssueController extends Controller
             ],
             'reporter' => [
                 'id' => $issue->reportedBy->id,
-                'fullName' => $issue->reportedBy->name,
+                'name' => $issue->reportedBy->name,
             ],
             'assignee' => $issue->assignedTo ? [
                 'id' => $issue->assignedTo->id,
-                'fullName' => $issue->assignedTo->name,
+                'name' => $issue->assignedTo->name,
             ] : null,
             'image' => $issue->image ? [
                 'id' => $issue->image->id,
@@ -292,7 +292,7 @@ class IssueController extends Controller
                     'priority' => $issue->priority->value,
                     'status' => $issue->status->value,
                     'room' => ['id' => $issue->room->id, 'roomNumber' => $issue->room->room_number],
-                    'reporter' => ['id' => $issue->reportedBy->id, 'fullName' => $issue->reportedBy->name],
+                    'reporter' => ['id' => $issue->reportedBy->id, 'name' => $issue->reportedBy->name],
                     'reportedAt' => $issue->reported_at?->toIso8601String(),
                 ],
                 'message' => 'Issue reported successfully',

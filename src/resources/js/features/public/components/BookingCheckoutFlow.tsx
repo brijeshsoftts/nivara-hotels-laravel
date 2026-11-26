@@ -443,12 +443,12 @@ export default function BookingCheckoutFlow() {
     const form = useForm<CheckoutFormInput, unknown, CheckoutFormData>({
         resolver: zodResolver(schema),
         defaultValues: {
-            fullName: "",
+            name: "",
             email: "",
             phone: "",
             companions: Array.from(
                 { length: Math.max(adults + children - 1, 0) },
-                () => ({ fullName: "" }),
+                () => ({ name: "" }),
             ),
         },
     });
@@ -521,7 +521,7 @@ export default function BookingCheckoutFlow() {
         try {
             const createdBooking = await createBooking.mutateAsync({
                 checkoutToken,
-                guestName: values.fullName,
+                guestName: values.name,
                 guestEmail: values.email,
                 guestPhone: values.phone,
                 roomId: availableRoom.id,
@@ -530,9 +530,9 @@ export default function BookingCheckoutFlow() {
                 adults,
                 children,
                 guests: [
-                    { fullName: values.fullName },
+                    { name: values.name },
                     ...values.companions.map((guest) => ({
-                        fullName: guest.fullName,
+                        name: guest.name,
                     })),
                 ],
                 ...(specialRequest.trim() && {
@@ -671,11 +671,11 @@ export default function BookingCheckoutFlow() {
                                         disabled={Boolean(booking)}
                                         id="guest-full-name"
                                         placeholder="Your full name"
-                                        {...form.register("fullName")}
+                                        {...form.register("name")}
                                     />
                                     <FieldError>
                                         {
-                                            form.formState.errors.fullName
+                                            form.formState.errors.name
                                                 ?.message
                                         }
                                     </FieldError>
@@ -740,7 +740,7 @@ export default function BookingCheckoutFlow() {
                                             const error =
                                                 form.formState.errors
                                                     .companions?.[index]
-                                                    ?.fullName?.message;
+                                                    ?.name?.message;
                                             return (
                                                 <div key={field.id}>
                                                     <Label
@@ -758,7 +758,7 @@ export default function BookingCheckoutFlow() {
                                                         id={`companion-${index}`}
                                                         placeholder="Guest full name"
                                                         {...form.register(
-                                                            `companions.${index}.fullName`,
+                                                            `companions.${index}.name`,
                                                         )}
                                                     />
                                                     <FieldError>

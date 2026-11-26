@@ -26,19 +26,19 @@ export function UserTable() {
 
     const columns: ColumnDef<User>[] = [
         {
-            key: "fullName",
+            key: "name",
             header: "User",
             cell: (user) => (
                 <div className="flex items-center gap-3">
                     {user.avatar?.url ? (
                         <img
                             src={user.avatar.url}
-                            alt={user.avatar.altText ?? user.fullName}
+                            alt={user.avatar.altText ?? user.name}
                             className="size-9 rounded-full border border-border object-cover"
                         />
                     ) : (
                         <span className="grid size-9 place-items-center rounded-full bg-muted text-xs font-semibold text-muted-foreground">
-                            {user.fullName
+                            {user.name
                                 .split(" ")
                                 .filter(Boolean)
                                 .slice(0, 2)
@@ -47,7 +47,7 @@ export function UserTable() {
                         </span>
                     )}
                     <span className="font-medium text-foreground">
-                        {user.fullName}
+                        {user.name}
                     </span>
                 </div>
             ),
@@ -156,7 +156,7 @@ function ActionDropdownMenu({ user }: { user: User }) {
                         variant="ghost"
                         size="icon-sm"
                         className=""
-                        aria-label={`Actions for ${user.fullName}`}
+                        aria-label={`Actions for ${user.name}`}
                     >
                         <EllipsisVertical className="size-4" />
                     </Button>

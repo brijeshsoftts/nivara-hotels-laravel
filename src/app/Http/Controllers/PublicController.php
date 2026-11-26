@@ -115,7 +115,6 @@ class PublicController extends Controller
     public function storeContact(Request $request)
     {
         $validated = $request->validate([
-            'fullName' => ['nullable', 'string', 'max:255'],
             'name' => ['nullable', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
             'phone' => ['nullable', 'string', 'max:50'],
@@ -123,7 +122,7 @@ class PublicController extends Controller
             'message' => ['required', 'string'],
         ]);
 
-        $name = $validated['fullName'] ?? $validated['name'] ?? 'Website Visitor';
+        $name = $validated['name'] ?? 'Website Visitor';
 
         Inquiry::create([
             'full_name' => $name,
@@ -360,7 +359,7 @@ class PublicController extends Controller
         $validated = $request->validate([
             'roomTypeId' => ['nullable', 'string'],
             'roomId' => ['nullable', 'string'],
-            'fullName' => ['required', 'string', 'max:255'],
+            'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
             'phone' => ['required', 'string', 'max:50'],
             'checkIn' => ['required', 'date_format:Y-m-d', 'after_or_equal:today'],
@@ -374,7 +373,7 @@ class PublicController extends Controller
             $user = User::firstOrCreate(
                 ['email' => $validated['email']],
                 [
-                    'name' => $validated['fullName'],
+                    'name' => $validated['name'],
                     'phone' => $validated['phone'],
                     'role' => UserRole::CUSTOMER->value,
                     'password' => Hash::make(Str::random(16)),
@@ -438,7 +437,7 @@ class PublicController extends Controller
 
             BookingGuest::create([
                 'booking_id' => $booking->id,
-                'full_name' => $validated['fullName'],
+                'full_name' => $validated['name'],
                 'age' => 30,
                 'gender' => 'OTHER',
             ]);
@@ -500,7 +499,7 @@ class PublicController extends Controller
             'adults' => ['required', 'integer', 'min:1', 'max:20'],
             'children' => ['required', 'integer', 'min:0', 'max:20'],
             'guests' => ['required', 'array', 'min:1'],
-            'guests.*.fullName' => ['required', 'string', 'max:255'],
+            'guests.*.name' => ['required', 'string', 'max:255'],
             'specialRequest' => ['nullable', 'string', 'max:2000'],
             'paymentMethod' => ['required', 'in:ONLINE'],
         ]);
@@ -554,7 +553,6 @@ class PublicController extends Controller
                 ['email' => $validated['guestEmail']],
                 [
                     'name' => $validated['guestName'],
-                    'full_name' => $validated['guestName'],
                     'phone' => $validated['guestPhone'],
                     'role' => UserRole::CUSTOMER->value,
                     'password' => Hash::make(Str::random(32)),
@@ -605,7 +603,7 @@ class PublicController extends Controller
             foreach ($validated['guests'] as $index => $bookingGuest) {
                 BookingGuest::create([
                     'booking_id' => $booking->id,
-                    'full_name' => $bookingGuest['fullName'],
+                    'full_name' => $bookingGuest['name'],
                     'age' => null,
                     'gender' => null,
                     'id_proof_number' => null,

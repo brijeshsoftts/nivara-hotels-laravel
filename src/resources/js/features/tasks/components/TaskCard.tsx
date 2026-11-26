@@ -64,7 +64,7 @@ export function TaskCard({ task }: TaskCardProps) {
 
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <UserRound className="size-4 shrink-0" />
-          <span className="truncate">{task.assignee.fullName}</span>
+          <span className="truncate">{task.assignee.name}</span>
         </div>
 
         <div className="flex flex-col gap-2 border-t pt-3">

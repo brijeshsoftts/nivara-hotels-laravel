@@ -62,7 +62,7 @@ export type AvailableRoomsParams = {
 
 export type Inquiry = {
   id: string;
-  fullName: string;
+  name: string;
   email: string;
   phone: string;
   subject: string;

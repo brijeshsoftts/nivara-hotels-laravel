@@ -3,7 +3,7 @@ import type { Category, TaskStatus, TaskType } from "@/types/enum.types";
 export type StaffItem = {
   id: string;
   staffId: string;
-  fullName: string;
+  name: string;
   email: string;
   phone: string;
   category: Category;
@@ -40,7 +40,7 @@ export type StaffDetails = {
   signatureImage: { url: string; altText: string | null } | null;
   user: {
     id: string;
-    fullName: string;
+    name: string;
     email: string;
     phone: string;
     isActive: boolean;

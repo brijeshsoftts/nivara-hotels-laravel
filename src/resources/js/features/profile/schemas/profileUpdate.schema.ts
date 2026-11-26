@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const UpdateProfileSchema = z
   .object({
-    fullName: z
+    name: z
       .string("Full name must be a string")
       .trim()
       .min(2, "Full name must be at least 2 characters")

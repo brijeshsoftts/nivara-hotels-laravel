@@ -2,7 +2,7 @@ import type { Category, UserRole } from "@/types/enum.types";
 
 export type User = {
   id: string;
-  fullName: string;
+  name: string;
   email: string;
   phone: string;
   role: UserRole;
@@ -15,7 +15,7 @@ export type User = {
 
 export type UserDetails = {
   id: string;
-  fullName: string;
+  name: string;
   email: string;
   phone: string;
   role: UserRole;

@@ -10,7 +10,7 @@ export const contactSubjects = [
 
 export const contactMessageSchema = z
   .object({
-    fullName: z
+    name: z
       .string()
       .trim()
       .min(2, "Enter your full name.")

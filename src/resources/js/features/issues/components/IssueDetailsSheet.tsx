@@ -158,12 +158,12 @@ export function IssueDetailsSheet({
                 />
                 <Detail
                   label="Reported by"
-                  value={issue.reporter.fullName}
+                  value={issue.reporter.name}
                 />
                 <Detail
                   label="Assigned to"
                   value={
-                    issue.assignee?.fullName ?? "Unassigned"
+                    issue.assignee?.name ?? "Unassigned"
                   }
                 />
               </section>

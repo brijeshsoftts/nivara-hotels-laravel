@@ -42,7 +42,7 @@ export function BookingCustomerDialog({
             <div className="min-w-0">
               <dt className="text-xs text-muted-foreground">Name</dt>
               <dd className="text-sm font-medium wrap-break-word">
-                {customer.fullName || "Guest"}
+                {customer.name || "Guest"}
               </dd>
             </div>
           </div>
