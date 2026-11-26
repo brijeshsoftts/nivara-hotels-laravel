@@ -10,7 +10,7 @@
         href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Manrope:wght@400;500;600&display=swap"
         rel="stylesheet" />
     <title>Set New Password — Nivara Hotels</title>
-    @vite(['resources/css/app.css', 'resources/js/app.tsx'])
+    @vite('resources/css/app.css')
 </head>
 
 <body class="bg-background text-foreground antialiased font-sans">
