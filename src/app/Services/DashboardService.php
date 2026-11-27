@@ -229,15 +229,14 @@ class DashboardService
             throw new AuthorizationException('Access denied');
         }
 
-        $today = Carbon::today(config('app.timezone'));
-        $tomorrow = $today->copy()->addDay();
         $tasks = HousekeepingTask::query()
             ->where('assigned_to', $user->id)
-            ->where('scheduled_date', '>=', $today)
-            ->where('scheduled_date', '<', $tomorrow)
+            ->whereIn('status', [TaskStatus::PENDING->value, TaskStatus::IN_PROGRESS->value])
             ->with(['room.issues' => fn($query) => $query
                 ->whereIn('status', [IssueStatus::OPEN->value, IssueStatus::IN_PROGRESS->value])])
             ->orderBy('scheduled_date')
+            ->orderBy('status')
+            ->limit(20)
             ->get();
         $priorityOrder = array_flip(array_map(
             fn(IssuePriority $priority): string => $priority->value,
@@ -260,6 +259,47 @@ class DashboardService
                 'status' => $this->enumValue($task->status),
             ];
         })->all();
+    }
+
+    public function cleaningRooms(User $user): array
+    {
+        if ($user->category !== Category::HOUSEKEEPER->value) {
+            return [];
+        }
+
+        $taskRoomIds = HousekeepingTask::query()
+            ->where('assigned_to', $user->id)
+            ->whereIn('status', [TaskStatus::PENDING->value, TaskStatus::IN_PROGRESS->value])
+            ->pluck('room_id');
+
+        $assignedRoomIds = \App\Models\HousekeeperRoomAssignment::query()
+            ->where('housekeeper_id', $user->id)
+            ->where('is_active', true)
+            ->pluck('room_id');
+
+        $roomIds = $taskRoomIds->merge($assignedRoomIds)->unique()->values();
+        if ($roomIds->isEmpty()) {
+            return [];
+        }
+
+        return Room::query()
+            ->with('roomType')
+            ->whereIn('id', $roomIds)
+            ->where('is_active', true)
+            ->where('housekeeping_status', HousekeepingStatus::DIRTY->value)
+            ->orderBy('room_number')
+            ->get()
+            ->map(fn(Room $room): array => [
+                'id' => $room->id,
+                'roomNumber' => $room->room_number,
+                'floor' => (int) $room->floor,
+                'housekeepingStatus' => $this->enumValue($room->housekeeping_status),
+                'occupancyStatus' => $this->enumValue($room->occupancy_status),
+                'roomType' => [
+                    'name' => $room->roomType?->name ?? 'Room',
+                ],
+            ])
+            ->all();
     }
 
     public function paymentsRequiringAttention(User $user, array $statuses, int $limit = 5): array

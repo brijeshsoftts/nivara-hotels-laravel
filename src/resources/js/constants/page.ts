@@ -203,11 +203,6 @@ export const HOUSEKEEPER_PAGES: NavItem[] = [
     href: "/dashboard/tasks",
   },
   {
-    title: "Rooms",
-    icon: BedDouble,
-    href: "/dashboard/rooms",
-  },
-  {
     title: "Profile",
     icon: UserRound,
     href: "/dashboard/profile",

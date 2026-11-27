@@ -14,6 +14,7 @@ export interface DashboardProps {
   bookingStatus?: any;
   stays?: any;
   tasks?: any[];
+  cleaningRooms?: any[];
   nextBooking?: any;
 }
 
@@ -48,6 +49,7 @@ export default function Dashboard(props: DashboardProps) {
           return (
             <HousekeeperDashboard
               tasks={props.tasks}
+              cleaningRooms={props.cleaningRooms}
               roomStatus={props.roomStatus}
             />
           );

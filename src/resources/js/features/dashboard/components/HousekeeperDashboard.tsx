@@ -110,13 +110,16 @@ function TaskQueueRow({ task }: { task: any }) {
 
 export function HousekeeperDashboard({
   tasks: propTasks,
+  cleaningRooms: propCleaningRooms,
 }: {
   tasks?: any[];
+  cleaningRooms?: any[];
   roomStatus?: any;
 } = {}) {
   const { user } = useAuth();
   const page = usePage<any>();
   const tasks = propTasks ?? page.props?.tasks ?? [];
+  const cleaningRooms = propCleaningRooms ?? page.props?.cleaningRooms ?? [];
 
   return (
     <div className="space-y-6">
@@ -132,7 +135,7 @@ export function HousekeeperDashboard({
             description="Open tasks ordered by due date and status."
           />
           {tasks.length === 0 ? (
-            <div className="rounded-lg border bg-card p-6 text-center text-sm text-muted-foreground">
+            <div className="rounded-lg border border-dashed bg-card p-8 text-center text-sm text-muted-foreground">
               No open tasks are assigned to you.
             </div>
           ) : (
@@ -143,6 +146,50 @@ export function HousekeeperDashboard({
             </ul>
           )}
         </section>
+
+        {user?.category === "HOUSEKEEPER" && (
+          <section
+            className="min-w-0 space-y-3"
+            aria-labelledby="cleaning-rooms-title"
+          >
+            <QueueHeader
+              id="cleaning-rooms-title"
+              title="Rooms requiring cleaning"
+              description="Dirty rooms within your assigned task scope."
+            />
+            {cleaningRooms.length === 0 ? (
+              <div className="rounded-lg border border-dashed bg-card p-8 text-center text-sm text-muted-foreground">
+                No assigned rooms are waiting for cleaning.
+              </div>
+            ) : (
+              <ul className="divide-y rounded-lg border bg-card">
+                {cleaningRooms.map((room: any) => (
+                  <li
+                    key={room.id}
+                    className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium">
+                        Room {room.roomNumber}
+                      </p>
+                      <p className="mt-1 truncate text-xs text-muted-foreground">
+                        {room.roomType?.name} · Floor {room.floor}
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <HousekeepingBadge value={room.housekeepingStatus} />
+                        <OccupancyBadge value={room.occupancyStatus} />
+                      </div>
+                    </div>
+                    <HouseKeeperRoomDetails
+                      roomId={room.id}
+                      buttonLabel="View room"
+                    />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
       </div>
     </div>
   );

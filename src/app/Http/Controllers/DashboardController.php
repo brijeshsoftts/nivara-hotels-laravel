@@ -36,6 +36,7 @@ class DashboardController extends Controller
             ];
         } elseif ($role === UserRole::STAFF->value && $user->category === Category::HOUSEKEEPER->value) {
             $props['tasks'] = $this->dashboardService->tasks($user);
+            $props['cleaningRooms'] = $this->dashboardService->cleaningRooms($user);
         } elseif ($role === UserRole::CUSTOMER->value) {
             $props['nextBooking'] = $this->dashboardService->nextBooking($user);
         }

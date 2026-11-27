@@ -185,11 +185,15 @@ class HousekeepingTaskController extends Controller
             return;
         }
 
+        $userCategory = $user->category instanceof \BackedEnum ? $user->category->value : (string) $user->category;
+        $hasHousekeeperCategory = $userCategory === Category::HOUSEKEEPER->value
+            || Staff::where('user_id', $user->id)
+                ->where('category', Category::HOUSEKEEPER->value)
+                ->exists();
+
         $isHousekeeper = $role === UserRole::STAFF->value
-            && Staff::where('user_id', $user->id)
-            ->where('category', Category::HOUSEKEEPER->value)
-            ->whereHas('user', fn($users) => $users->where('is_active', true)->whereNull('soft_deleted_at'))
-            ->exists();
+            && $user->soft_deleted_at === null
+            && $hasHousekeeperCategory;
 
         abort_if($managementOnly || ! $isHousekeeper, 403);
     }

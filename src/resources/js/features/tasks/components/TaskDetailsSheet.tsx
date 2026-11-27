@@ -54,7 +54,6 @@ export function TaskDetailsSheet({
               Assignment
             </h3>
             <Detail label="Housekeeper" value={task.assignee.name} />
-            <Detail label="Assignee ID" value={task.assignee.id} />
           </section>
           <Separator />
           <section aria-label="Room" className="space-y-3">
@@ -63,7 +62,6 @@ export function TaskDetailsSheet({
               Room
             </h3>
             <Detail label="Room number" value={task.room.roomNumber} />
-            <Detail label="Room ID" value={task.room.id} />
           </section>
           <Separator />
           <section aria-label="Schedule" className="space-y-3">

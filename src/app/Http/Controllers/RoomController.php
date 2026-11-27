@@ -285,6 +285,7 @@ class RoomController extends Controller
                 'id' => $r->id,
                 'roomNumber' => $r->room_number,
                 'name' => $r->name,
+                'roomName' => $r->name,
                 'floor' => $r->floor,
                 'roomTypeId' => $r->room_type_id,
                 'description' => $r->description,
@@ -297,8 +298,15 @@ class RoomController extends Controller
                     'id' => $roomType->id,
                     'name' => $roomType->name,
                     'slug' => $roomType->slug,
+                    'description' => $roomType->description,
+                    'roomSize' => $roomType->size_sq_ft,
+                    'maxGuests' => (int) $roomType->max_guests,
                     'basePrice' => $roomType->base_price,
                     'currency' => $roomType->currency ?? 'INR',
+                    'bed' => [
+                        'count' => (int) $roomType->bed_count,
+                        'type' => $roomType->bed_type instanceof \BackedEnum ? $roomType->bed_type->value : (string) $roomType->bed_type,
+                    ],
                     'isActive' => (bool) $roomType->is_active,
                     'image' => $primaryImage ? [
                         'id' => $primaryImage->id,

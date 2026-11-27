@@ -1,4 +1,5 @@
 import { usePage } from "@inertiajs/react";
+import { useEffect, useState } from "react";
 import type { DashboardStat } from "@/components/common/Stat";
 import type { BrowseRoom } from "./components/BrowseRoomCard";
 import type { HousekeeperRoom, HousekeeperRoomDetails } from "./room.types";
@@ -28,15 +29,62 @@ export function useRoomsStats() {
 }
 
 export function useHousekeeperRoomDetails(roomId?: string) {
-  const page = usePage<any>();
-  const rooms = page.props?.rooms?.data ?? [];
-  const found = rooms.find((r: any) => String(r.id) === String(roomId)) ?? null;
+  const [data, setData] = useState<HousekeeperRoomDetails | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isError, setIsError] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+
+  useEffect(() => {
+    if (!roomId) {
+      setData(null);
+      setIsLoading(false);
+      setIsError(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    setData(null);
+    setIsLoading(true);
+    setIsError(false);
+
+    void (async () => {
+      try {
+        const response = await fetch(`/rooms/${encodeURIComponent(roomId)}`, {
+          headers: {
+            Accept: "application/json",
+            "X-Requested-With": "XMLHttpRequest",
+          },
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error("Unable to load room details.");
+        }
+
+        const result = (await response.json()) as {
+          data: HousekeeperRoomDetails;
+        };
+        setData(result.data ?? null);
+      } catch {
+        if (!controller.signal.aborted) {
+          setData(null);
+          setIsError(true);
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsLoading(false);
+        }
+      }
+    })();
+
+    return () => controller.abort();
+  }, [roomId, attempt]);
 
   return {
-    data: found as HousekeeperRoomDetails | null,
-    isLoading: false,
-    isError: false,
-    refetch: () => {},
+    data,
+    isLoading,
+    isError,
+    refetch: () => setAttempt((current) => current + 1),
   };
 }
 
