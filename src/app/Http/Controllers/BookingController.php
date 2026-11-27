@@ -523,7 +523,28 @@ class BookingController extends Controller
         ]);
 
         $validated = $request->validate([
-            'customerId' => ['nullable', 'string', 'exists:customers,id'],
+            'customerId' => [
+                'nullable',
+                'string',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (! is_string($value) || $value === '') {
+                        return;
+                    }
+                    $isUserCustomer = User::query()
+                        ->where('id', $value)
+                        ->where('role', UserRole::CUSTOMER->value)
+                        ->whereNull('soft_deleted_at')
+                        ->exists();
+                    $isCustomerProfile = Customer::query()
+                        ->where('id', $value)
+                        ->whereHas('user', fn($q) => $q->whereNull('soft_deleted_at'))
+                        ->exists();
+
+                    if (! $isUserCustomer && ! $isCustomerProfile) {
+                        $fail('The selected customer id is invalid.');
+                    }
+                },
+            ],
             'checkInDate' => ['required', 'date_format:Y-m-d', 'after_or_equal:today'],
             'checkOutDate' => ['required', 'date_format:Y-m-d', 'after:checkInDate'],
             'adults' => ['required', 'integer', 'min:1', 'max:20'],
@@ -552,10 +573,22 @@ class BookingController extends Controller
             $checkIn = Carbon::parse($validated['checkInDate']);
             $checkOut = Carbon::parse($validated['checkOutDate']);
             $days = max(1, (int) $checkIn->diffInDays($checkOut));
-            $customer = isset($validated['customerId'])
-                ? Customer::with('user')->findOrFail($validated['customerId'])
-                : null;
-            if (! $customer && $request->filled('customer.email')) {
+            $customerUser = null;
+            if (! empty($validated['customerId'])) {
+                $customerUser = User::query()
+                    ->where('id', $validated['customerId'])
+                    ->where('role', UserRole::CUSTOMER->value)
+                    ->whereNull('soft_deleted_at')
+                    ->first();
+
+                if (! $customerUser) {
+                    $customerProfile = Customer::with('user')
+                        ->whereHas('user', fn($q) => $q->whereNull('soft_deleted_at'))
+                        ->findOrFail($validated['customerId']);
+                    $customerUser = $customerProfile->user;
+                }
+            }
+            if (! $customerUser && $request->filled('customer.email')) {
                 $customerData = $request->input('customer');
                 $customerUser = User::firstOrCreate(
                     ['email' => $customerData['email']],
@@ -567,8 +600,13 @@ class BookingController extends Controller
                         'is_active' => true,
                     ]
                 );
-                $customer = Customer::firstOrCreate(['user_id' => $customerUser->id]);
-                $customer->setRelation('user', $customerUser);
+                Customer::firstOrCreate(
+                    ['user_id' => $customerUser->id],
+                    [
+                        'id_proof_number' => 'ID_' . strtoupper(Str::random(8)),
+                        'address' => 'Nivara Residence',
+                    ]
+                );
             }
             $room = Room::with('roomType')->lockForUpdate()->findOrFail($validated['roomId']);
             $totalGuests = $request->has('totalGuests') && ! $request->has('adults')
@@ -590,14 +628,14 @@ class BookingController extends Controller
             $price = (int) $room->roomType->base_price;
             $subtotal = $price * $days;
             $taxAmount = (int) round($subtotal * 0.18);
-            $userCustomerId = $customer?->user_id;
+            $userCustomerId = $customerUser?->id;
 
             $booking = Booking::create([
                 'booking_reference' => $ref,
-                'customer_id' => $customer?->user_id,
-                'guest_name' => $guestDetails[0]['name'] ?? $customer?->user?->name ?? $request->input('customer.name', 'Walk-in Guest'),
-                'guest_email' => $customer?->user?->email ?? $request->input('customer.email'),
-                'guest_phone' => $customer?->user?->phone ?? $request->input('customer.phone'),
+                'customer_id' => $userCustomerId,
+                'guest_name' => $guestDetails[0]['name'] ?? $customerUser?->name ?? $request->input('customer.name', 'Walk-in Guest'),
+                'guest_email' => $customerUser?->email ?? $request->input('customer.email'),
+                'guest_phone' => $customerUser?->phone ?? $request->input('customer.phone'),
                 'check_in_date' => $checkIn,
                 'check_out_date' => $checkOut,
                 'total_guests' => $totalGuests,
