@@ -324,6 +324,8 @@ export interface CustomerBookingDetails {
     id: string;
     bookingNumber: string;
     status: BookingStatus;
+    paymentMethod?: PaymentMethod | null;
+    isPaid?: boolean;
     roomType: string;
     roomNumber?: string;
     checkIn: string;
@@ -332,4 +334,6 @@ export interface CustomerBookingDetails {
     adults: number;
     children: number;
     bookedOn: string;
+    totalAmount?: number;
+    invoice?: { id: string; status: InvoiceStatus } | null;
 }

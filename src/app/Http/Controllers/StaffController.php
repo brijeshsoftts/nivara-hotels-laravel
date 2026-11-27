@@ -185,7 +185,7 @@ class StaffController extends Controller
                     'phone' => $validated['phone'],
                     'role' => UserRole::STAFF->value,
                     'category' => $validated['category'],
-                    'password' => Hash::make($validated['password'] ?? 'Secret123!'),
+                    'password' => Hash::make($validated['password'] ?? 'password'),
                     'is_active' => true,
                 ]);
 

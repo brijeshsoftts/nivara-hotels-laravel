@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import type { BookingDetails } from "../bookings.types";
 
-export function useBooking(id?: string, enabled = true) {
-    const [booking, setBooking] = useState<BookingDetails | null>(null);
+export function useBooking<T = BookingDetails>(id?: string, enabled = true) {
+    const [booking, setBooking] = useState<T | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [isError, setIsError] = useState(false);
     const [requestId, setRequestId] = useState(0);

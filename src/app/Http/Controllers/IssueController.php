@@ -246,14 +246,28 @@ class IssueController extends Controller
         $roomId = $validated['roomId'] ?? null;
         if ($role === UserRole::CUSTOMER->value) {
             abort_if($request->filled('roomId'), 422, 'Customers cannot select an issue room.');
-            $booking = Booking::where('customer_id', $request->user()->id)
-                ->where('status', BookingStatus::CHECKED_IN->value)
+            $booking = Booking::with('bookingRooms')
+                ->where('customer_id', $request->user()->id)
+                ->whereIn('status', [
+                    BookingStatus::CHECKED_IN->value,
+                    BookingStatus::CONFIRMED->value,
+                    BookingStatus::PENDING->value,
+                ])
+                ->orderByRaw("CASE status WHEN 'CHECKED_IN' THEN 0 WHEN 'CONFIRMED' THEN 1 ELSE 2 END")
                 ->orderByDesc('checked_in_at')
+                ->orderByDesc('booked_at')
                 ->first();
-            $roomId = $booking?->bookingRooms()
-                ->whereNotNull('assigned_room_id')
-                ->value('assigned_room_id');
-            abort_if(! $roomId, 422, 'A current checked-in stay is required to report an issue.');
+
+            $bookingRoom = $booking?->bookingRooms->first();
+            $roomId = $bookingRoom?->assigned_room_id;
+
+            if (! $roomId && $bookingRoom?->room_type_id) {
+                $roomId = \App\Models\Room::where('room_type_id', $bookingRoom->room_type_id)
+                    ->where('is_active', true)
+                    ->value('id');
+            }
+
+            abort_if(! $roomId, 422, 'An active or confirmed booking is required to report an issue.');
         }
         abort_if(! $roomId, 422, 'A room is required to report an issue.');
 

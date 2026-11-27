@@ -298,7 +298,7 @@ class CustomerController extends Controller
                         'name' => $name,
                         'phone' => $validated['phone'],
                         'role' => UserRole::CUSTOMER->value,
-                        'password' => Hash::make(Str::random(16)),
+                        'password' => Hash::make('password'),
                         'is_active' => true,
                     ]
                 );

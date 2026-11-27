@@ -37,7 +37,10 @@ class PaymentController extends Controller
             ->orderByDesc('created_at');
 
         if ($role === UserRole::CUSTOMER->value) {
-            $query->where('customer_id', $user->id);
+            $query->where(function ($customerPayments) use ($user) {
+                $customerPayments->where('customer_id', $user->id)
+                    ->orWhereHas('booking', fn($bookings) => $bookings->where('customer_id', $user->id));
+            });
         }
         $method = $request->input('paymentMethod', $request->input('method'));
         $status = $request->input('paymentStatus', $request->input('status'));
@@ -104,7 +107,12 @@ class PaymentController extends Controller
         [$user, $role, $category] = $this->actor($request);
         $this->assertPaymentReader($role, $category);
         $payment = Payment::with(['invoice.booking', 'booking', 'customer', 'receivedBy'])->findOrFail($id);
-        abort_if($role === UserRole::CUSTOMER->value && $payment->customer_id !== $user->id, 404);
+        abort_if(
+            $role === UserRole::CUSTOMER->value
+                && $payment->customer_id !== $user->id
+                && $payment->booking?->customer_id !== $user->id,
+            404
+        );
 
         return response()->json(['data' => $this->mapPayment($payment)]);
     }
@@ -197,7 +205,10 @@ class PaymentController extends Controller
             if ($paymentId && ! $attempt) {
                 abort(404, 'Payment not found.');
             }
-            if ($attempt && $attempt->payment_status === PaymentStatus::FAILED && $attempt->transaction_id) {
+            if ($attempt && $attempt->payment_status === PaymentStatus::FAILED) {
+                $attempt = null;
+            }
+            if ($attempt && $attempt->order_id && ($paymentId === null || $attempt->created_at?->lt(now()->subMinutes(15)))) {
                 $attempt = null;
             }
             if ($attempt && (int) $attempt->amount !== $outstanding) {
@@ -208,7 +219,7 @@ class PaymentController extends Controller
                     'payment_reference' => $this->createPaymentReference(),
                     'invoice_id' => $invoice->id,
                     'booking_id' => $booking->id,
-                    'customer_id' => $checkoutToken ? null : $booking->customer_id,
+                    'customer_id' => $booking->customer_id,
                     'amount' => $outstanding,
                     'amount_paise' => $outstanding * 100,
                     'currency' => 'INR',
@@ -551,7 +562,10 @@ class PaymentController extends Controller
     {
         $query = Payment::query();
         if ($role === UserRole::CUSTOMER->value) {
-            $query->where('customer_id', $userId);
+            $query->where(function ($customerPayments) use ($userId) {
+                $customerPayments->where('customer_id', $userId)
+                    ->orWhereHas('booking', fn($bookings) => $bookings->where('customer_id', $userId));
+            });
         } elseif ($role === UserRole::STAFF->value && $category !== 'RECEPTIONIST') {
             abort(403);
         }

@@ -198,10 +198,9 @@ function BookingDetailsDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const { data, isLoading, isError, refetch } = useBookingDetails(
-    open ? bookingId : undefined
-  );
-  const booking = (data as CustomerBookingDetails | undefined) ?? undefined;
+  const { data, isLoading, isError, refetch } =
+    useBookingDetails<CustomerBookingDetails>(open ? bookingId : undefined);
+  const booking = data ?? undefined;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -311,7 +310,11 @@ function BookingDetailsDialog({
 
         <DialogFooter className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           {booking &&
-            ["PENDING", "CONFIRMED", "CHECKED_IN"].includes(booking.status) && (
+            booking.status === "PENDING" &&
+            booking.paymentMethod === "ONLINE" &&
+            !booking.isPaid &&
+            booking.invoice?.status !== "PAID" &&
+            booking.invoice?.status !== "REFUNDED" && (
               <PaymentPopup
                 bookingId={booking.id}
                 bookingReference={booking.bookingNumber}

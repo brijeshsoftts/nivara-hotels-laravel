@@ -244,11 +244,19 @@ class BookingController extends Controller
             $nights = $booking->check_in_date && $booking->check_out_date
                 ? max(1, (int) $booking->check_in_date->diffInDays($booking->check_out_date))
                 : 1;
+            $invoiceStatus = $invoice?->status ? $enumValue($invoice->status) : null;
+            $completedPaid = (int) ($invoice?->payments
+                ->filter(fn($p) => $enumValue($p->payment_status) === PaymentStatus::COMPLETED->value)
+                ->sum('amount') ?? 0);
+            $isPaid = $invoiceStatus === InvoiceStatus::PAID->value
+                || ($invoice !== null && (int) $invoice->total_amount > 0 && $completedPaid >= (int) $invoice->total_amount);
 
             return response()->json(['data' => [
                 'id' => $booking->id,
                 'bookingNumber' => $booking->booking_reference,
                 'status' => $enumValue($booking->status),
+                'paymentMethod' => $enumValue($booking->payment_method),
+                'isPaid' => $isPaid,
                 'roomType' => $roomType?->name ?? 'Unassigned',
                 'roomNumber' => $room?->room_number,
                 'checkIn' => $booking->check_in_date?->toIso8601String(),
@@ -260,7 +268,7 @@ class BookingController extends Controller
                 'totalAmount' => (int) $booking->total_amount,
                 'invoice' => $invoice ? [
                     'id' => $invoice->id,
-                    'status' => $enumValue($invoice->status),
+                    'status' => $invoiceStatus,
                 ] : null,
             ]]);
         }
