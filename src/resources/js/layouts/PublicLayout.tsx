@@ -85,7 +85,7 @@ export function Logo({
                             ? "text-lg text-sidebar-foreground"
                             : "text-[26px]",
                         !compact &&
-                            (inverse ? "text-background" : "text-primary"),
+                        (inverse ? "text-background" : "text-primary"),
                     )}
                 >
                     Nivara
@@ -344,7 +344,7 @@ function Footer() {
     };
 
     return (
-        <footer className="w-full bg-secondary pt-16 pb-8 font-sans">
+        <footer className="w-full bg-background pt-16 pb-8 font-sans border-t">
             <div className="container mx-auto px-6 md:px-12 lg:px-16">
                 {/* Main Grid: Responsive column mapping */}
                 <div className="grid grid-cols-1 gap-12 pb-14 md:grid-cols-2 lg:grid-cols-4 lg:gap-8">

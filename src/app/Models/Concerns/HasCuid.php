@@ -7,9 +7,15 @@ use Illuminate\Database\Eloquent\Model as EloquentModel;
 
 trait HasCuid
 {
-    public $incrementing = false;
+    public function getIncrementing(): bool
+    {
+        return false;
+    }
 
-    protected $keyType = 'string';
+    public function getKeyType(): string
+    {
+        return 'string';
+    }
 
     protected static function bootHasCuid(): void
     {
