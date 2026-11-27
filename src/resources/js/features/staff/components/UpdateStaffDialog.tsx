@@ -35,6 +35,7 @@ export function UpdateStaffDialog({
   onOpenChange: (open: boolean) => void;
   id: string;
 }) {
+  const { data: staff, isLoading, isError, refetch } = useStaffDetails(id);
   const {
     handleSubmit,
     submit,
@@ -44,8 +45,7 @@ export function UpdateStaffDialog({
     isPending,
     isSuccess,
     reset,
-  } = useUpdateStaffFacade(id);
-  const { data: staff, isLoading, isError, refetch } = useStaffDetails(id);
+  } = useUpdateStaffFacade(id, staff);
 
   useEffect(() => {
     if (isSuccess && open) {
@@ -60,7 +60,7 @@ export function UpdateStaffDialog({
     return <FullScreenLoader />;
   }
 
-  if (isError) {
+  if (isError || !staff) {
     return <ErrorModal open onOpenChange={onOpenChange} onRefetch={refetch} />;
   }
 
@@ -68,9 +68,9 @@ export function UpdateStaffDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[92dvh] gap-0 overflow-hidden px-0 sm:max-w-2xl">
         <DialogHeader className="border-b px-5 py-4 sm:px-6">
-          <DialogTitle className="text-lg">Add staff member</DialogTitle>
+          <DialogTitle className="text-lg">Update staff member</DialogTitle>
           <DialogDescription>
-            Create the employee profile and linked staff account.
+            Update the employee profile and linked staff account.
           </DialogDescription>
         </DialogHeader>
 
@@ -97,30 +97,27 @@ export function UpdateStaffDialog({
                   label="Full name"
                   placeholder="Enter full name"
                   autoComplete="name"
-
                   error={errors.name?.message}
                   disabled={isPending}
-                  {...register("name", { value: staff?.user.name })}
+                  {...register("name")}
                 />
                 <InputField
                   label="Email"
                   type="email"
                   placeholder="name@example.com"
                   autoComplete="email"
-
                   error={errors.email?.message}
                   disabled={isPending}
-                  {...register("email", { value: staff?.user.email })}
+                  {...register("email")}
                 />
                 <InputField
                   label="Phone"
                   type="tel"
                   placeholder="Enter phone number"
                   autoComplete="tel"
-
                   error={errors.phone?.message}
                   disabled={isPending}
-                  {...register("phone", { value: staff?.user.phone })}
+                  {...register("phone")}
                 />
                 <SelectField
                   name="category"
@@ -154,28 +151,23 @@ export function UpdateStaffDialog({
                 <InputField
                   label="Father name"
                   placeholder="Enter father name"
-
                   error={errors.fatherName?.message}
                   disabled={isPending}
-                  {...register("fatherName", { value: staff?.fatherName })}
+                  {...register("fatherName")}
                 />
                 <InputField
                   label="Mother name"
                   placeholder="Enter mother name"
-
                   error={errors.motherName?.message}
                   disabled={isPending}
-                  {...register("motherName", { value: staff?.motherName })}
+                  {...register("motherName")}
                 />
                 <InputField
                   label="ID proof number"
                   placeholder="Enter ID proof number"
-
                   error={errors.idProofNumber?.message}
                   disabled={isPending}
-                  {...register("idProofNumber", {
-                    value: staff?.idProofNumber,
-                  })}
+                  {...register("idProofNumber")}
                 />
                 <CustomerDocumentField
                   control={control}
@@ -194,41 +186,33 @@ export function UpdateStaffDialog({
                 <InputField
                   label="Qualification"
                   placeholder="Enter qualification"
-
                   error={errors.qualification?.message}
                   disabled={isPending}
-                  {...register("qualification", {
-                    value: staff?.qualification,
-                  })}
+                  {...register("qualification")}
                 />
                 <InputField
                   label="Experience"
                   placeholder="e.g. 2 years"
-
                   error={errors.experience?.message}
                   disabled={isPending}
-                  {...register("experience", { value: staff?.experience })}
+                  {...register("experience")}
                 />
                 <InputField
                   label="Emergency contact"
                   type="tel"
                   placeholder="Enter emergency phone"
-
                   error={errors.emergencyContact?.message}
                   disabled={isPending}
-                  {...register("emergencyContact", {
-                    value: staff?.emergencyContact,
-                  })}
+                  {...register("emergencyContact")}
                 />
                 <div className="sm:col-span-2">
                   <TextareaField
                     label="Address"
                     placeholder="Enter home address"
-
                     className="min-h-24"
                     error={errors.address?.message}
                     disabled={isPending}
-                    {...register("address", { value: staff?.address })}
+                    {...register("address")}
                   />
                 </div>
               </div>

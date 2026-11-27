@@ -9,8 +9,13 @@ import {
   type UpdateStaff,
   UpdateStaffSchema,
 } from "../schemas/updateStaff.schema";
+import type { StaffDetails } from "../staff.types";
 
-export function useUpdateStaffFacade(id: string, onSuccess?: () => void) {
+export function useUpdateStaffFacade(
+  id: string,
+  staff?: StaffDetails | null,
+  onSuccess?: () => void
+) {
   const [isPending, setIsPending] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
@@ -22,21 +27,45 @@ export function useUpdateStaffFacade(id: string, onSuccess?: () => void) {
     formState: { errors },
   } = useForm<UpdateStaff>({
     resolver: zodResolver(UpdateStaffSchema),
+    values: staff
+      ? {
+          name: staff.user.name,
+          email: staff.user.email,
+          phone: staff.user.phone,
+          category:
+            staff.category === "RECEPTIONIST" ||
+            staff.category === "HOUSEKEEPER"
+              ? staff.category
+              : undefined,
+          fatherName: staff.fatherName,
+          motherName: staff.motherName,
+          idProofNumber: staff.idProofNumber,
+          qualification: staff.qualification,
+          experience: staff.experience,
+          emergencyContact: staff.emergencyContact,
+          address: staff.address,
+        }
+      : undefined,
   });
 
   const submit = (data: UpdateStaff) => {
     setIsPending(true);
-    router.put(`/dashboard/staff/${id}`, data as any, {
-      onSuccess: () => {
-        setIsSuccess(true);
-        toast.success("Staff member updated successfully.");
-        onSuccess?.();
-      },
-      onError: (err) => {
-        notifyError(err);
-      },
-      onFinish: () => setIsPending(false),
-    });
+    router.post(
+      `/dashboard/staff/${id}`,
+      { ...data, _method: "put" } as any,
+      {
+        forceFormData: true,
+        onSuccess: () => {
+          setIsSuccess(true);
+          toast.success("Staff member updated successfully.");
+          onSuccess?.();
+        },
+        onError: (err) => {
+          notifyError(err);
+        },
+        onFinish: () => setIsPending(false),
+      }
+    );
   };
 
   return {

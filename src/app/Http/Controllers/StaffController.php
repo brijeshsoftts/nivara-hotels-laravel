@@ -4,12 +4,16 @@ namespace App\Http\Controllers;
 
 use App\Enums\Category;
 use App\Enums\UserRole;
+use App\Models\Image;
 use App\Models\Staff;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class StaffController extends Controller
@@ -155,45 +159,83 @@ class StaffController extends Controller
         $validated = $request->validate([
             'name' => ['nullable', 'string', 'max:255'],
             'email' => ['required', 'email', 'unique:users,email'],
-            'phone' => ['required', 'string'],
-            'category' => ['required', 'string'],
+            'phone' => ['required', 'string', 'max:20'],
+            'category' => ['required', 'string', Rule::enum(Category::class)],
             'password' => ['nullable', 'string', 'min:6'],
             'salary' => ['nullable', 'numeric'],
-            'fatherName' => ['nullable', 'string'],
-            'motherName' => ['nullable', 'string'],
+            'fatherName' => ['nullable', 'string', 'max:100'],
+            'motherName' => ['nullable', 'string', 'max:100'],
+            'idProofNumber' => ['nullable', 'string', 'max:100'],
+            'qualification' => ['nullable', 'string', 'max:200'],
+            'experience' => ['nullable', 'string', 'max:100'],
+            'emergencyContact' => ['nullable', 'string', 'max:20'],
+            'address' => ['nullable', 'string', 'max:500'],
+            'idProofImage' => ['nullable', 'image', 'mimes:jpg,jpeg,png', 'max:5120'],
+            'signatureImage' => ['nullable', 'image', 'mimes:jpg,jpeg,png', 'max:5120'],
         ]);
 
         $name = $validated['name'] ?? 'Staff Member';
+        $storedPaths = [];
 
-        return DB::transaction(function () use ($validated, $name, $request) {
-            $user = User::create([
-                'name' => $name,
-                'email' => $validated['email'],
-                'phone' => $validated['phone'],
-                'role' => UserRole::STAFF->value,
-                'category' => $validated['category'],
-                'password' => Hash::make($validated['password'] ?? 'Secret123!'),
-                'is_active' => true,
-            ]);
+        try {
+            return DB::transaction(function () use ($validated, $name, $request, &$storedPaths) {
+                $user = User::create([
+                    'name' => $name,
+                    'email' => $validated['email'],
+                    'phone' => $validated['phone'],
+                    'role' => UserRole::STAFF->value,
+                    'category' => $validated['category'],
+                    'password' => Hash::make($validated['password'] ?? 'Secret123!'),
+                    'is_active' => true,
+                ]);
 
-            $staff = Staff::create([
-                'user_id' => $user->id,
-                'category' => $validated['category'],
-                'father_name' => $validated['fatherName'] ?? 'N/A',
-                'mother_name' => $validated['motherName'] ?? 'N/A',
-                'id_proof_number' => $validated['idProofNumber'] ?? ('ID_' . strtoupper(Str::random(8))),
-                'qualification' => $validated['qualification'] ?? 'Graduate',
-                'experience' => $validated['experience'] ?? '1 year',
-                'emergency_contact' => $validated['emergencyContact'] ?? $validated['phone'],
-                'address' => $validated['address'] ?? 'Staff Quarters',
-            ]);
+                $idProofImageId = null;
+                if ($request->hasFile('idProofImage')) {
+                    [$idProofImageId, $path] = $this->storeUploadedImage(
+                        $request->file('idProofImage'),
+                        'staff/id-proofs',
+                        "{$name} ID proof"
+                    );
+                    $storedPaths[] = $path;
+                }
 
-            if ($request->wantsJson() && ! $request->header('X-Inertia')) {
-                return response()->json(['data' => ['id' => $staff->id], 'message' => 'Staff created successfully.'], 200);
+                $signatureImageId = null;
+                if ($request->hasFile('signatureImage')) {
+                    [$signatureImageId, $path] = $this->storeUploadedImage(
+                        $request->file('signatureImage'),
+                        'staff/signatures',
+                        "{$name} signature"
+                    );
+                    $storedPaths[] = $path;
+                }
+
+                $staff = Staff::create([
+                    'user_id' => $user->id,
+                    'category' => $validated['category'],
+                    'father_name' => $validated['fatherName'] ?? 'N/A',
+                    'mother_name' => $validated['motherName'] ?? 'N/A',
+                    'id_proof_number' => $validated['idProofNumber'] ?? ('ID_' . strtoupper(Str::random(8))),
+                    'id_proof_image_id' => $idProofImageId,
+                    'signature_image_id' => $signatureImageId,
+                    'qualification' => $validated['qualification'] ?? 'Graduate',
+                    'experience' => $validated['experience'] ?? '1 year',
+                    'emergency_contact' => $validated['emergencyContact'] ?? $validated['phone'],
+                    'address' => $validated['address'] ?? 'Staff Quarters',
+                ]);
+
+                if ($request->wantsJson() && ! $request->header('X-Inertia')) {
+                    return response()->json(['data' => ['id' => $staff->id], 'message' => 'Staff created successfully.'], 200);
+                }
+
+                return redirect()->back()->with('success', 'Staff member created successfully.');
+            });
+        } catch (\Throwable $exception) {
+            foreach ($storedPaths as $path) {
+                Storage::disk('public')->delete($path);
             }
 
-            return redirect()->back()->with('success', 'Staff member created successfully.');
-        });
+            throw $exception;
+        }
     }
 
     public function show(string $id)
@@ -259,37 +301,105 @@ class StaffController extends Controller
 
     public function update(Request $request, string $id)
     {
-        $staff = Staff::findOrFail($id);
+        $staff = Staff::with(['user', 'idProofImage', 'signatureImage'])
+            ->whereHas('user', fn($query) => $query->whereNull('soft_deleted_at'))
+            ->findOrFail($id);
+
         $validated = $request->validate([
-            'category' => ['nullable', 'string'],
+            'category' => ['nullable', 'string', Rule::enum(Category::class)],
             'salary' => ['nullable', 'numeric'],
             'employmentStatus' => ['nullable', 'string'],
             'name' => ['nullable', 'string', 'max:255'],
-            'phone' => ['nullable', 'string'],
+            'email' => ['nullable', 'email', Rule::unique('users', 'email')->ignore($staff->user_id)],
+            'phone' => ['nullable', 'string', 'max:20'],
+            'fatherName' => ['nullable', 'string', 'max:100'],
+            'motherName' => ['nullable', 'string', 'max:100'],
+            'idProofNumber' => ['nullable', 'string', 'max:100'],
+            'qualification' => ['nullable', 'string', 'max:200'],
+            'experience' => ['nullable', 'string', 'max:100'],
+            'emergencyContact' => ['nullable', 'string', 'max:20'],
+            'address' => ['nullable', 'string', 'max:500'],
+            'idProofImage' => ['nullable', 'image', 'mimes:jpg,jpeg,png', 'max:5120'],
+            'signatureImage' => ['nullable', 'image', 'mimes:jpg,jpeg,png', 'max:5120'],
         ]);
 
-        if (isset($validated['category'])) {
-            $staff->category = $validated['category'];
-        }
-        if (isset($validated['salary'])) {
-            $staff->salary = $validated['salary'];
-        }
-        if (isset($validated['employmentStatus'])) {
-            $staff->employment_status = $validated['employmentStatus'];
-        }
-        $staff->save();
+        $storedPaths = [];
+        $oldImages = [];
 
-        if ($staff->user) {
-            if (isset($validated['category'])) {
-                $staff->user->category = $validated['category'];
+        try {
+            DB::transaction(function () use ($staff, $validated, $request, &$storedPaths, &$oldImages): void {
+                $staffFieldMap = [
+                    'category' => 'category',
+                    'salary' => 'salary',
+                    'employmentStatus' => 'employment_status',
+                    'fatherName' => 'father_name',
+                    'motherName' => 'mother_name',
+                    'idProofNumber' => 'id_proof_number',
+                    'qualification' => 'qualification',
+                    'experience' => 'experience',
+                    'emergencyContact' => 'emergency_contact',
+                    'address' => 'address',
+                ];
+
+                foreach ($staffFieldMap as $inputKey => $column) {
+                    if (array_key_exists($inputKey, $validated) && $validated[$inputKey] !== null) {
+                        $staff->{$column} = $validated[$inputKey];
+                    }
+                }
+
+                $displayName = $validated['name'] ?? $staff->user?->name ?? 'Staff Member';
+
+                if ($request->hasFile('idProofImage')) {
+                    if ($staff->idProofImage) {
+                        $oldImages[] = $staff->idProofImage;
+                    }
+                    [$idProofImageId, $path] = $this->storeUploadedImage(
+                        $request->file('idProofImage'),
+                        'staff/id-proofs',
+                        "{$displayName} ID proof"
+                    );
+                    $storedPaths[] = $path;
+                    $staff->id_proof_image_id = $idProofImageId;
+                }
+
+                if ($request->hasFile('signatureImage')) {
+                    if ($staff->signatureImage) {
+                        $oldImages[] = $staff->signatureImage;
+                    }
+                    [$signatureImageId, $path] = $this->storeUploadedImage(
+                        $request->file('signatureImage'),
+                        'staff/signatures',
+                        "{$displayName} signature"
+                    );
+                    $storedPaths[] = $path;
+                    $staff->signature_image_id = $signatureImageId;
+                }
+
+                $staff->save();
+
+                if ($staff->user) {
+                    foreach (['category', 'name', 'email', 'phone'] as $userField) {
+                        if (array_key_exists($userField, $validated) && $validated[$userField] !== null) {
+                            $staff->user->{$userField} = $validated[$userField];
+                        }
+                    }
+                    $staff->user->save();
+                }
+
+                foreach ($oldImages as $oldImage) {
+                    $oldImage->delete();
+                }
+            });
+        } catch (\Throwable $exception) {
+            foreach ($storedPaths as $path) {
+                Storage::disk('public')->delete($path);
             }
-            if (isset($validated['name'])) {
-                $staff->user->name = $validated['name'];
-            }
-            if (isset($validated['phone'])) {
-                $staff->user->phone = $validated['phone'];
-            }
-            $staff->user->save();
+
+            throw $exception;
+        }
+
+        foreach ($oldImages as $oldImage) {
+            $this->deleteStoredImage($oldImage);
         }
 
         if ($request->wantsJson() && ! $request->header('X-Inertia')) {
@@ -315,15 +425,52 @@ class StaffController extends Controller
 
     public function destroy(Request $request, string $id)
     {
-        $staff = Staff::findOrFail($id);
-        $user = $staff->user;
-        $staff->delete();
-        $user?->delete();
+        $staff = Staff::with('user')
+            ->whereHas('user', fn($query) => $query->whereNull('soft_deleted_at'))
+            ->findOrFail($id);
+
+        DB::transaction(function () use ($staff): void {
+            $user = $staff->user;
+            $staff->delete();
+
+            if ($user) {
+                $user->update([
+                    'is_active' => false,
+                    'soft_deleted_at' => now(),
+                ]);
+            }
+        });
 
         if ($request->wantsJson() && ! $request->header('X-Inertia')) {
             return response()->json(['message' => 'Staff deleted successfully']);
         }
 
         return redirect()->back()->with('success', 'Staff member deleted successfully.');
+    }
+
+    /**
+     * Store an uploaded staff document image and create its Image record.
+     *
+     * @return array{0: string, 1: string}
+     */
+    private function storeUploadedImage(UploadedFile $file, string $directory, string $altText): array
+    {
+        /** @var \Illuminate\Filesystem\FilesystemAdapter $publicDisk */
+        $publicDisk = Storage::disk('public');
+        $path = $file->storePublicly($directory, 'public');
+        $image = Image::create([
+            'url' => $publicDisk->url($path),
+            'alt_text' => $altText,
+        ]);
+
+        return [$image->id, $path];
+    }
+
+    private function deleteStoredImage(Image $image): void
+    {
+        $path = parse_url($image->url, PHP_URL_PATH);
+        if (is_string($path) && str_starts_with($path, '/storage/')) {
+            Storage::disk('public')->delete(substr($path, strlen('/storage/')));
+        }
     }
 }
