@@ -9,7 +9,7 @@ export const CreateRoomSchema = z
     roomNumber: z.coerce
       .number("Please enter a room number.")
       .min(1, "Room number must be at least 1.")
-      .max(1000, "Room number cannot be greater than 50."),
+      .max(1000, "Room number cannot be greater than 1000."),
     roomTypeId: z.string().cuid("Please select a valid room type."),
     floor: z.coerce
       .number("Please enter a floor number.")

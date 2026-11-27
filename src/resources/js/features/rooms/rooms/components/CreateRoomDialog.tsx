@@ -1,6 +1,6 @@
 import { Check, Sparkles } from "lucide-react";
 import type { ReactNode } from "react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { InputField } from "@/components/common/InputField";
 import { SelectField } from "@/components/common/SelectField";
@@ -22,6 +22,7 @@ import { useRoomTypes } from "../../roomTypes/hooks/useRoomTypes";
 import { useCreateRoomFacade } from "../hooks/useCreateRoom";
 
 export function CreateRoomDialog({ children }: { children: ReactNode }) {
+  const [open, setOpen] = useState(false);
   const {
     handleSubmit,
     submit,
@@ -39,11 +40,14 @@ export function CreateRoomDialog({ children }: { children: ReactNode }) {
   }));
 
   useEffect(() => {
-    if (isSuccess) reset();
-  }, [isSuccess, reset]);
+    if (isSuccess && open) {
+      reset();
+      setOpen(false);
+    }
+  }, [isSuccess, open, reset]);
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger>{children}</DialogTrigger>
       <DialogContent className="max-h-[90vh] gap-6 overflow-y-auto sm:min-w-100">
         {/* Header */}

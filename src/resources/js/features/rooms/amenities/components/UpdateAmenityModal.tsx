@@ -1,4 +1,5 @@
 import { Check, Sparkles } from "lucide-react";
+import { useEffect } from "react";
 
 import { InputField } from "@/components/common/InputField";
 import { SelectField } from "@/components/common/SelectField";
@@ -23,16 +24,26 @@ import { useUpdateAmenityFacade } from "../hooks/useUpdateAmenity";
 export function UpdateAmenityModal({
   children,
   amenity,
+  open,
+  onOpenChange,
 }: {
   children?: React.ReactNode;
   amenity: Amenity;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
-  const { handleSubmit, submit, isPending, errors, register, control } =
+  const { handleSubmit, submit, isPending, isSuccess, errors, register, control } =
     useUpdateAmenityFacade(amenity.id);
 
+  useEffect(() => {
+    if (isSuccess && open && onOpenChange) {
+      onOpenChange(false);
+    }
+  }, [isSuccess, open, onOpenChange]);
+
   return (
-    <Dialog>
-      <DialogTrigger>{children}</DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      {children ? <DialogTrigger>{children}</DialogTrigger> : null}
       <DialogContent className="max-h-[90vh] gap-6 overflow-y-auto sm:min-w-100">
         {/* Header */}
         <DialogHeader>

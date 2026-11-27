@@ -54,8 +54,26 @@ class RoomController extends Controller
             'isActive' => (bool) $r->is_active,
         ]);
 
-        $roomTypes = RoomType::with(['amenities', 'images'])->withCount('rooms')->get()->map(function ($rt) {
+        $roomTypes = RoomType::with(['amenities', 'images', 'rooms'])->withCount('rooms')->get()->map(function ($rt) {
             $primaryImg = $rt->images->firstWhere('is_primary', true) ?? $rt->images->first();
+            $roomsCollection = $rt->rooms;
+            $activeRooms = $roomsCollection->where('is_active', true);
+            $availableCount = $activeRooms->filter(
+                fn($room) => ($room->occupancy_status instanceof \BackedEnum ? $room->occupancy_status->value : (string) $room->occupancy_status) === OccupancyStatus::VACANT->value
+                    && ($room->housekeeping_status instanceof \BackedEnum ? $room->housekeeping_status->value : (string) $room->housekeeping_status) === HousekeepingStatus::CLEAN->value
+            )->count();
+            $occupiedCount = $activeRooms->filter(
+                fn($room) => ($room->occupancy_status instanceof \BackedEnum ? $room->occupancy_status->value : (string) $room->occupancy_status) === OccupancyStatus::OCCUPIED->value
+            )->count();
+            $cleanCount = $activeRooms->filter(
+                fn($room) => ($room->housekeeping_status instanceof \BackedEnum ? $room->housekeeping_status->value : (string) $room->housekeeping_status) === HousekeepingStatus::CLEAN->value
+            )->count();
+            $dirtyCount = $activeRooms->filter(
+                fn($room) => ($room->housekeeping_status instanceof \BackedEnum ? $room->housekeeping_status->value : (string) $room->housekeeping_status) === HousekeepingStatus::DIRTY->value
+            )->count();
+            $cleaningCount = $activeRooms->filter(
+                fn($room) => ($room->housekeeping_status instanceof \BackedEnum ? $room->housekeeping_status->value : (string) $room->housekeeping_status) === HousekeepingStatus::CLEANING->value
+            )->count();
 
             return [
                 'id' => $rt->id,
@@ -70,17 +88,45 @@ class RoomController extends Controller
                 'currency' => $rt->currency ?? 'INR',
                 'bedType' => $rt->bed_type instanceof \BackedEnum ? $rt->bed_type->value : (string) $rt->bed_type,
                 'bedCount' => $rt->bed_count,
+                'smokingAllowed' => (bool) $rt->smoking_allowed,
+                'petsAllowed' => (bool) $rt->pets_allowed,
                 'isActive' => (bool) $rt->is_active,
                 'numberOfRooms' => $rt->rooms_count,
+                'roomCount' => $rt->rooms_count,
                 'primaryImage' => [
                     'url' => $primaryImg?->url ?? 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304',
                     'altText' => $primaryImg?->alt_text ?? $rt->name,
                 ],
+                'images' => $rt->images->map(fn($img, $idx) => [
+                    'id' => $img->id,
+                    'url' => $img->url,
+                    'altText' => $img->alt_text ?? $rt->name,
+                    'isPrimary' => (bool) $img->is_primary,
+                    'sortOrder' => (int) ($img->sort_order ?? $idx),
+                ])->values(),
                 'amenities' => $rt->amenities->map(fn($a) => [
                     'id' => $a->id,
                     'name' => $a->name,
                     'icon' => $a->icon,
-                ]),
+                ])->values(),
+                'roomStatusSummary' => [
+                    'total' => $roomsCollection->count(),
+                    'active' => $activeRooms->count(),
+                    'occupancy' => [
+                        'available' => $availableCount,
+                        'occupied' => $occupiedCount,
+                        'other' => max($activeRooms->count() - $availableCount - $occupiedCount, 0),
+                    ],
+                    'housekeeping' => [
+                        'clean' => $cleanCount,
+                        'dirty' => $dirtyCount,
+                        'inspected' => 0,
+                        'inProgress' => $cleaningCount,
+                        'other' => max($activeRooms->count() - $cleanCount - $dirtyCount - $cleaningCount, 0),
+                    ],
+                ],
+                'createdAt' => $rt->created_at?->toIso8601String(),
+                'updatedAt' => $rt->updated_at?->toIso8601String(),
             ];
         });
 
@@ -93,58 +139,7 @@ class RoomController extends Controller
             'isActive' => (bool) $a->is_active,
         ]);
 
-        $totalRooms = Room::count();
-        $vacant = Room::where('occupancy_status', OccupancyStatus::VACANT->value)->count();
-        $occupied = Room::where('occupancy_status', OccupancyStatus::OCCUPIED->value)->count();
-        $maintenance = Room::where('occupancy_status', OccupancyStatus::OUT_OF_ORDER->value)->count();
-        $clean = Room::where('housekeeping_status', HousekeepingStatus::CLEAN->value)->count();
-
-        $stats = [
-            [
-                'id' => 'total-rooms',
-                'title' => 'Total Inventory',
-                'value' => (string) max($totalRooms, 15),
-                'change' => '+100%',
-                'trend' => 'up',
-                'description' => 'Configured physical rooms',
-                'label' => 'Total Inventory',
-                'link' => '/dashboard/rooms',
-                'icon' => 'BedDouble',
-            ],
-            [
-                'id' => 'vacant-rooms',
-                'title' => 'Vacant & Available',
-                'value' => (string) max($vacant, 12),
-                'change' => '+8%',
-                'trend' => 'up',
-                'description' => 'Ready for check-in',
-                'label' => 'Vacant & Available',
-                'link' => '/dashboard/rooms?occupancyStatus=VACANT&housekeepingStatus=CLEAN&isActive=true',
-                'icon' => 'CheckCircle',
-            ],
-            [
-                'id' => 'occupied-rooms',
-                'title' => 'Occupied Rooms',
-                'value' => (string) max($occupied, 3),
-                'change' => '+12%',
-                'trend' => 'up',
-                'description' => 'Guests in house',
-                'label' => 'Occupied Rooms',
-                'link' => '/dashboard/rooms?occupancyStatus=OCCUPIED',
-                'icon' => 'UserCheck',
-            ],
-            [
-                'id' => 'clean-rooms',
-                'title' => 'Cleaned & Ready',
-                'value' => (string) max($clean, 14),
-                'change' => '+5%',
-                'trend' => 'up',
-                'description' => 'Housekeeping verified',
-                'label' => 'Cleaned & Ready',
-                'link' => '/dashboard/rooms?housekeepingStatus=CLEAN',
-                'icon' => 'Sparkles',
-            ],
-        ];
+        $stats = $this->getRoomStats();
 
         if ($request->wantsJson() && ! $request->header('X-Inertia')) {
             return response()->json([
@@ -181,29 +176,84 @@ class RoomController extends Controller
 
     public function stats()
     {
-        $totalRooms = Room::count();
-        $vacant = Room::where('occupancy_status', OccupancyStatus::VACANT->value)->count();
-        $occupied = Room::where('occupancy_status', OccupancyStatus::OCCUPIED->value)->count();
-        $clean = Room::where('housekeeping_status', HousekeepingStatus::CLEAN->value)->count();
-
         return response()->json([
-            'data' => [
-                ['id' => 'total-rooms', 'title' => 'Total Inventory', 'value' => (string) max($totalRooms, 15), 'change' => '+100%', 'trend' => 'up', 'description' => 'Configured physical rooms'],
-                ['id' => 'vacant-rooms', 'title' => 'Vacant & Available', 'value' => (string) max($vacant, 12), 'change' => '+8%', 'trend' => 'up', 'description' => 'Ready for check-in'],
-                ['id' => 'occupied-rooms', 'title' => 'Occupied Rooms', 'value' => (string) max($occupied, 3), 'change' => '+12%', 'trend' => 'up', 'description' => 'Guests in house'],
-                ['id' => 'clean-rooms', 'title' => 'Cleaned & Ready', 'value' => (string) max($clean, 14), 'change' => '+5%', 'trend' => 'up', 'description' => 'Housekeeping verified'],
-            ],
+            'data' => $this->getRoomStats(),
         ]);
+    }
+
+    private function getRoomStats(): array
+    {
+        $totalRooms = Room::where('is_active', true)->count();
+        $availableRooms = Room::where('is_active', true)
+            ->where('occupancy_status', OccupancyStatus::VACANT->value)
+            ->where('housekeeping_status', HousekeepingStatus::CLEAN->value)
+            ->count();
+        $occupiedRooms = Room::where('is_active', true)
+            ->where('occupancy_status', OccupancyStatus::OCCUPIED->value)
+            ->count();
+        $outOfOrderRooms = Room::where('is_active', true)
+            ->where('occupancy_status', OccupancyStatus::OUT_OF_ORDER->value)
+            ->count();
+
+        return [
+            [
+                'id' => 'total-rooms',
+                'title' => 'Active rooms',
+                'label' => 'Active rooms',
+                'value' => (string) $totalRooms,
+                'description' => 'Rooms currently in service',
+                'link' => '/dashboard/rooms?isActive=true',
+                'icon' => 'BedDouble',
+                'tone' => 'sky',
+            ],
+            [
+                'id' => 'available-rooms',
+                'title' => 'Available rooms',
+                'label' => 'Available rooms',
+                'value' => (string) $availableRooms,
+                'description' => 'Vacant, clean rooms ready to book',
+                'link' => '/dashboard/rooms?isActive=true&occupancyStatus=VACANT&housekeepingStatus=CLEAN',
+                'icon' => 'DoorOpen',
+                'tone' => 'emerald',
+            ],
+            [
+                'id' => 'occupied-rooms',
+                'title' => 'Occupied rooms',
+                'label' => 'Occupied rooms',
+                'value' => (string) $occupiedRooms,
+                'description' => 'Rooms with guests in house',
+                'link' => '/dashboard/rooms?isActive=true&occupancyStatus=OCCUPIED',
+                'icon' => 'Users',
+                'tone' => 'gold',
+            ],
+            [
+                'id' => 'out-of-order-rooms',
+                'title' => 'Out of order',
+                'label' => 'Out of order',
+                'value' => (string) $outOfOrderRooms,
+                'description' => 'Rooms unavailable for booking',
+                'link' => '/dashboard/rooms?isActive=true&occupancyStatus=OUT_OF_ORDER',
+                'icon' => 'Wrench',
+                'tone' => 'rose',
+            ],
+        ];
     }
 
     public function store(Request $request)
     {
+        if ($request->has('roomNumber') && ! is_array($request->input('roomNumber'))) {
+            $request->merge(['roomNumber' => (string) $request->input('roomNumber')]);
+        }
+
         $validated = $request->validate([
-            'roomNumber' => ['required', 'string'],
-            'name' => ['nullable', 'string'],
-            'floor' => ['required', 'integer'],
-            'roomTypeId' => ['required', 'string'],
-            'description' => ['nullable', 'string'],
+            'roomNumber' => ['required', 'string', 'max:50', 'unique:rooms,room_number'],
+            'name' => ['nullable', 'string', 'max:100'],
+            'floor' => ['required', 'integer', 'min:0', 'max:50'],
+            'roomTypeId' => ['required', 'string', 'exists:room_types,id'],
+            'description' => ['nullable', 'string', 'max:500'],
+            'occupancyStatus' => ['nullable', 'string'],
+            'housekeepingStatus' => ['nullable', 'string'],
+            'isActive' => ['nullable', 'boolean'],
         ]);
 
         $room = Room::create([
@@ -212,9 +262,9 @@ class RoomController extends Controller
             'floor' => $validated['floor'],
             'room_type_id' => $validated['roomTypeId'],
             'description' => $validated['description'] ?? null,
-            'occupancy_status' => OccupancyStatus::VACANT->value,
-            'housekeeping_status' => HousekeepingStatus::CLEAN->value,
-            'is_active' => true,
+            'occupancy_status' => $validated['occupancyStatus'] ?? OccupancyStatus::VACANT->value,
+            'housekeeping_status' => $validated['housekeepingStatus'] ?? HousekeepingStatus::CLEAN->value,
+            'is_active' => $validated['isActive'] ?? true,
         ]);
 
         if ($request->wantsJson() && ! $request->header('X-Inertia')) {
@@ -263,9 +313,13 @@ class RoomController extends Controller
     public function update(Request $request, string $id)
     {
         $room = Room::findOrFail($id);
+        if ($request->has('roomNumber') && $request->input('roomNumber') !== null && ! is_array($request->input('roomNumber'))) {
+            $request->merge(['roomNumber' => (string) $request->input('roomNumber')]);
+        }
+
         $validated = $request->validate([
-            'roomNumber' => ['nullable', 'string'],
-            'name' => ['nullable', 'string'],
+            'roomNumber' => ['nullable', 'string', 'max:50'],
+            'name' => ['nullable', 'string', 'max:100'],
             'floor' => ['nullable', 'integer'],
             'roomTypeId' => ['nullable', 'string'],
             'occupancyStatus' => ['nullable', 'string'],

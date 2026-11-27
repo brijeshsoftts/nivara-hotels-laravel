@@ -95,14 +95,18 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/dashboard/room-types', [RoomTypeController::class, 'store'])->name('dashboard.room-types.store');
     Route::put('/dashboard/room-types/{id}', [RoomTypeController::class, 'update'])->name('dashboard.room-types.update');
     Route::patch('/dashboard/room-types/{id}', [RoomTypeController::class, 'update'])->name('dashboard.room-types.patch');
+    Route::patch('/dashboard/room-types/{id}/status', [RoomTypeController::class, 'toggleStatus'])->name('dashboard.room-types.status');
     Route::delete('/dashboard/room-types/{id}', [RoomTypeController::class, 'destroy'])->name('dashboard.room-types.destroy');
+    Route::patch('/room-types/{id}/status', [RoomTypeController::class, 'toggleStatus'])->name('room-types.status');
     Route::resource('room-types', RoomTypeController::class);
 
     Route::get('/dashboard/amenities', [RoomController::class, 'index'])->name('dashboard.amenities');
     Route::post('/dashboard/amenities', [AmenityController::class, 'store'])->name('dashboard.amenities.store');
     Route::put('/dashboard/amenities/{id}', [AmenityController::class, 'update'])->name('dashboard.amenities.update');
     Route::patch('/dashboard/amenities/{id}', [AmenityController::class, 'update'])->name('dashboard.amenities.patch');
+    Route::patch('/dashboard/amenities/{id}/status', [AmenityController::class, 'toggleStatus'])->name('dashboard.amenities.status');
     Route::delete('/dashboard/amenities/{id}', [AmenityController::class, 'destroy'])->name('dashboard.amenities.destroy');
+    Route::patch('/amenities/{id}/status', [AmenityController::class, 'toggleStatus'])->name('amenities.status');
     Route::resource('amenities', AmenityController::class);
 
     // 7. Bookings

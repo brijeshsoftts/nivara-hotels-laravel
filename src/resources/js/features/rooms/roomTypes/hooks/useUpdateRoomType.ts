@@ -10,21 +10,54 @@ export function useUpdateRoomType(id: string) {
 
   const mutate = (data: UpdateRoomTypePayload, options?: { onSuccess?: () => void; onError?: (err: any) => void }) => {
     setIsPending(true);
-    router.put(`/dashboard/room-types/${id}`, data as any, {
-      onSuccess: () => {
-        toast.success("Room type updated successfully.");
-        options?.onSuccess?.();
-      },
-      onError: (err) => {
-        notifyError(err);
-        options?.onError?.(err);
-      },
-      onFinish: () => setIsPending(false),
-    });
+    router.post(
+      `/dashboard/room-types/${id}`,
+      { ...data, _method: "put" } as any,
+      {
+        forceFormData: true,
+        onSuccess: () => {
+          toast.success("Room type updated successfully.");
+          options?.onSuccess?.();
+        },
+        onError: (err) => {
+          notifyError(err);
+          options?.onError?.(err);
+        },
+        onFinish: () => setIsPending(false),
+      }
+    );
   };
 
   return {
     mutate,
     isPending,
+  };
+}
+
+export function useToggleRoomTypeStatus(id: string, isActive: boolean) {
+  const [isPending, setIsPending] = useState(false);
+
+  const handleToggleStatus = () => {
+    setIsPending(true);
+    router.patch(
+      `/dashboard/room-types/${id}/status`,
+      { isActive: !isActive },
+      {
+        onSuccess: () => {
+          toast.success(
+            `Room type ${isActive ? "deactivated" : "activated"} successfully.`
+          );
+        },
+        onError: (err) => {
+          notifyError(err);
+        },
+        onFinish: () => setIsPending(false),
+      }
+    );
+  };
+
+  return {
+    isPending,
+    handleToggleStatus,
   };
 }

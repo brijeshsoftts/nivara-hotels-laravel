@@ -3,8 +3,10 @@ import {
   BedDouble,
   CheckCircle2,
   DoorOpen,
+  EllipsisVertical,
   Eye,
   Pencil,
+  Power,
   Trash2,
   UserRound,
   Users,
@@ -12,13 +14,21 @@ import {
 import { motion } from "motion/react";
 import { useState } from "react";
 
+import { IconBtn } from "@/components/common/IconBtn";
 import { RoomTypeDetailsDialog } from "@/components/common/RoomTypeDetailsDialog";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 
 import type { RoomType } from "../roomTypes.types";
+import { useDeleteRoomType } from "../hooks/useDeleteRoomType";
+import { useToggleRoomTypeStatus } from "../hooks/useUpdateRoomType";
 
 import { UpdateRoomTypeDialog } from "./UpdateRoomTypeDialog";
 
@@ -32,6 +42,12 @@ export function RoomTypeCard({ roomType }: RoomTypeCardProps) {
   const visibleAmenities = roomType.amenities.slice(0, MAX_VISIBLE_AMENITIES);
   const [open, setOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const { handleDelete, isPending: isDeleting } = useDeleteRoomType(roomType.id);
+  const { handleToggleStatus, isPending: isToggling } = useToggleRoomTypeStatus(
+    roomType.id,
+    roomType.isActive
+  );
+  const isBusy = isDeleting || isToggling;
 
   const remainingAmenities =
     roomType.amenities.length - visibleAmenities.length;
@@ -87,6 +103,55 @@ export function RoomTypeCard({ roomType }: RoomTypeCardProps) {
                   "Inactive"
                 )}
               </Badge>
+            </div>
+
+            {/* Actions */}
+            <div className="absolute top-4 right-4">
+              <DropdownMenu>
+                <DropdownMenuTrigger>
+                  <IconBtn
+                    size="sm"
+                    variant="secondary"
+                    className="rounded-full border border-white/20 bg-background/85 shadow-sm backdrop-blur-md hover:bg-background"
+                    aria-label={`Actions for ${roomType.name}`}
+                    disabled={isBusy}
+                  >
+                    <EllipsisVertical />
+                  </IconBtn>
+                </DropdownMenuTrigger>
+
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={() => setEditOpen(true)}
+                    disabled={isBusy}
+                  >
+                    <Pencil className="mr-2 size-4" />
+                    Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setOpen(true)}
+                    disabled={isBusy}
+                  >
+                    <Eye className="mr-2 size-4" />
+                    View
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={handleToggleStatus}
+                    disabled={isBusy}
+                  >
+                    <Power className="mr-2 size-4" />
+                    {roomType.isActive ? "Deactivate" : "Activate"}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-destructive"
+                    onClick={() => handleDelete()}
+                    disabled={isBusy}
+                  >
+                    <Trash2 className="mr-2 size-4" />
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
 
             {/* Rooms available */}
@@ -209,38 +274,6 @@ export function RoomTypeCard({ roomType }: RoomTypeCardProps) {
               </>
             )}
           </CardContent>
-
-          {/* ───────────────── Actions ───────────────── */}
-          <CardFooter className="grid grid-cols-2 gap-2 border-t border-border/60 bg-muted/10 p-4">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="gap-2"
-              onClick={() => setEditOpen(true)}
-            >
-              <Pencil className="size-3.5" />
-              Edit
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="gap-2"
-              onClick={() => setOpen(true)}
-            >
-              <Eye className="size-3.5" />
-              View
-            </Button>
-            <Button type="button" variant="outline" size="sm" className="gap-2">
-              Book Now
-            </Button>
-
-            <Button type="button" variant="outline" size="sm" className="gap-2">
-              <Trash2 className="size-3.5" />
-              Delete
-            </Button>
-          </CardFooter>
         </Card>
       </motion.div>
       {open && (

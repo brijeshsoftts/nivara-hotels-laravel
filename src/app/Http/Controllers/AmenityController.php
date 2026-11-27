@@ -53,12 +53,16 @@ class AmenityController extends Controller
             'description' => ['nullable', 'string'],
             'icon' => ['nullable', 'string'],
             'category' => ['nullable', 'string'],
+            'isActive' => ['nullable', 'boolean'],
         ]);
 
         if (isset($validated['name'])) $amenity->name = $validated['name'];
-        if (isset($validated['description'])) $amenity->description = $validated['description'];
+        if (array_key_exists('description', $validated)) $amenity->description = $validated['description'];
         if (isset($validated['icon'])) $amenity->icon = $validated['icon'];
         if (isset($validated['category'])) $amenity->category = $validated['category'];
+        if (array_key_exists('isActive', $validated) && $validated['isActive'] !== null) {
+            $amenity->is_active = (bool) $validated['isActive'];
+        }
         $amenity->save();
 
         if ($request->wantsJson() && !$request->header('X-Inertia')) {
@@ -66,6 +70,24 @@ class AmenityController extends Controller
         }
 
         return redirect()->back()->with('success', 'Amenity updated successfully.');
+    }
+
+    public function toggleStatus(Request $request, string $id)
+    {
+        $amenity = Amenity::findOrFail($id);
+        $amenity->update(['is_active' => ! $amenity->is_active]);
+
+        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+            return response()->json([
+                'data' => [
+                    'id' => $amenity->id,
+                    'isActive' => (bool) $amenity->is_active,
+                ],
+                'message' => 'Amenity status updated successfully',
+            ]);
+        }
+
+        return redirect()->back()->with('success', 'Amenity status updated successfully.');
     }
 
     public function destroy(Request $request, string $id)

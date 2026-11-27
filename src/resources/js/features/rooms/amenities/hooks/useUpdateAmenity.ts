@@ -49,3 +49,31 @@ export function useUpdateAmenityFacade(id: string) {
     control,
   };
 }
+
+export function useToggleAmenityStatus(id: string, isActive: boolean) {
+  const [isPending, setIsPending] = useState(false);
+
+  const handleToggleStatus = () => {
+    setIsPending(true);
+    router.patch(
+      `/dashboard/amenities/${id}/status`,
+      { isActive: !isActive },
+      {
+        onSuccess: () => {
+          toast.success(
+            `Amenity ${isActive ? "deactivated" : "activated"} successfully.`
+          );
+        },
+        onError: (err) => {
+          notifyError(err);
+        },
+        onFinish: () => setIsPending(false),
+      }
+    );
+  };
+
+  return {
+    isPending,
+    handleToggleStatus,
+  };
+}

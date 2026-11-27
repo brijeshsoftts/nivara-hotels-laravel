@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRoomType } from "@/features/rooms/roomTypes/hooks/useRoomType";
+import { useDeleteRoomType } from "@/features/rooms/roomTypes/hooks/useDeleteRoomType";
 // import { roomTypeDetails } from "@/features/rooms/roomTypes/roomTypes.mock";
 import type { RoomTypeDetails } from "@/features/rooms/roomTypes/roomTypes.types";
 import { useAuth } from "@/hooks/useAuth";
@@ -293,6 +294,7 @@ function BookingBar({
   onClose: () => void;
 }) {
   const { user } = useAuth();
+  const { handleDelete, isPending: isDeleting } = useDeleteRoomType(room.id);
 
   return (
     <div className="flex items-center justify-between gap-4 border-t bg-card/95 px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur sm:px-8">
@@ -328,7 +330,9 @@ function BookingBar({
           <Button
             variant="outline"
             size="lg"
-            className="hidden rounded-lg sm:inline-flex"
+            className="hidden rounded-lg text-destructive hover:bg-destructive/10 hover:text-destructive sm:inline-flex"
+            onClick={() => handleDelete(onClose)}
+            disabled={isDeleting}
           >
             Delete
           </Button>
