@@ -509,7 +509,27 @@ class PublicController extends Controller
             'Guest count must match the requested adults and children count.'
         );
 
-        $bookingResult = DB::transaction(function () use ($validated) {
+        $tokenHash = hash('sha256', $validated['checkoutToken']);
+        $existingBooking = Booking::where('public_checkout_token_hash', $tokenHash)->first();
+        if ($existingBooking) {
+            $bookingResult = [
+                'id' => $existingBooking->id,
+                'bookingReference' => $existingBooking->booking_reference,
+                'totalAmount' => (int) $existingBooking->total_amount,
+                'checkoutExpiresAt' => $existingBooking->checkout_expires_at?->toIso8601String(),
+                'checkoutToken' => $validated['checkoutToken'],
+            ];
+
+            if ($request->wantsJson() && ! $request->header('X-Inertia')) {
+                return response()->json(['data' => $bookingResult], 201);
+            }
+
+            return redirect()->back()
+                ->with('booking', $bookingResult)
+                ->with('success', 'Reservation created. Complete payment to confirm your booking.');
+        }
+
+        $bookingResult = DB::transaction(function () use ($validated, $tokenHash) {
             $checkIn = Carbon::parse($validated['checkInDate'])->startOfDay();
             $checkOut = Carbon::parse($validated['checkOutDate'])->startOfDay();
             $room = Room::query()
@@ -549,25 +569,11 @@ class PublicController extends Controller
                 ->exists();
             abort_unless(! $hasOverlappingBooking, 422, 'The selected room is no longer available for these dates.');
 
-            $guest = User::firstOrCreate(
-                ['email' => $validated['guestEmail']],
-                [
-                    'name' => $validated['guestName'],
-                    'phone' => $validated['guestPhone'],
-                    'role' => UserRole::CUSTOMER->value,
-                    'password' => Hash::make(Str::random(32)),
-                    'is_active' => true,
-                ]
-            );
-            abort_unless($guest->role === UserRole::CUSTOMER->value, 422, 'This email address cannot be used for a guest booking.');
-
-            Customer::firstOrCreate(
-                ['user_id' => $guest->id],
-                [
-                    'id_proof_number' => 'ONLINE_' . strtoupper(Str::random(8)),
-                    'address' => '',
-                ]
-            );
+            $customer = User::query()
+                ->whereRaw('LOWER(email) = ?', [strtolower($validated['guestEmail'])])
+                ->where('role', UserRole::CUSTOMER->value)
+                ->whereNull('soft_deleted_at')
+                ->first();
 
             $nights = max(1, $checkIn->diffInDays($checkOut));
             $subtotal = (int) $roomType->base_price * $nights;
@@ -577,7 +583,7 @@ class PublicController extends Controller
 
             $booking = Booking::create([
                 'booking_reference' => 'BK-' . strtoupper(Str::random(8)),
-                'customer_id' => $guest->id,
+                'customer_id' => $customer?->id,
                 'guest_name' => $validated['guestName'],
                 'guest_email' => $validated['guestEmail'],
                 'guest_phone' => $validated['guestPhone'],
@@ -589,7 +595,7 @@ class PublicController extends Controller
                 'special_request' => $validated['specialRequest'] ?? null,
                 'status' => BookingStatus::PENDING->value,
                 'booked_at' => now(),
-                'public_checkout_token_hash' => hash('sha256', $validated['checkoutToken']),
+                'public_checkout_token_hash' => $tokenHash,
                 'checkout_expires_at' => $checkoutExpiresAt,
             ]);
 
@@ -613,7 +619,7 @@ class PublicController extends Controller
             Invoice::create([
                 'invoice_number' => 'INV-' . strtoupper(Str::random(8)),
                 'booking_id' => $booking->id,
-                'customer_id' => $guest->id,
+                'customer_id' => $customer?->id,
                 'subtotal' => $subtotal,
                 'tax_amount' => $tax,
                 'discount_amount' => 0,
