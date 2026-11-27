@@ -36,7 +36,7 @@ class PaymentController extends Controller
         $query = Payment::with(['invoice.booking', 'booking', 'customer', 'receivedBy'])
             ->orderByDesc('created_at');
 
-        if ($role === UserRole::CUSTOMER) {
+        if ($role === UserRole::CUSTOMER->value) {
             $query->where('customer_id', $user->id);
         }
         $method = $request->input('paymentMethod', $request->input('method'));
@@ -58,12 +58,12 @@ class PaymentController extends Controller
 
         $total = (clone $query)->count();
         $payments = $query->skip(($page - 1) * $limit)->take($limit)->get()
-            ->map(fn(Payment $payment) => $role === UserRole::CUSTOMER
+            ->map(fn(Payment $payment) => $role === UserRole::CUSTOMER->value
                 ? $this->mapCustomerPayment($payment)
                 : $this->mapPayment($payment));
 
         $invoices = Invoice::whereNotIn('status', [InvoiceStatus::PAID->value, InvoiceStatus::REFUNDED->value])
-            ->when($role === UserRole::CUSTOMER, fn($invoices) => $invoices->where('customer_id', $user->id))
+            ->when($role === UserRole::CUSTOMER->value, fn($invoices) => $invoices->where('customer_id', $user->id))
             ->get()->map(fn($i) => [
                 'id' => $i->id,
                 'invoiceNumber' => $i->invoice_number,
@@ -104,7 +104,7 @@ class PaymentController extends Controller
         [$user, $role, $category] = $this->actor($request);
         $this->assertPaymentReader($role, $category);
         $payment = Payment::with(['invoice.booking', 'booking', 'customer', 'receivedBy'])->findOrFail($id);
-        abort_if($role === UserRole::CUSTOMER && $payment->customer_id !== $user->id, 404);
+        abort_if($role === UserRole::CUSTOMER->value && $payment->customer_id !== $user->id, 404);
 
         return response()->json(['data' => $this->mapPayment($payment)]);
     }

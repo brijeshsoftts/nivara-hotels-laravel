@@ -36,6 +36,8 @@ class BookingController extends Controller
 
     public function index(Request $request)
     {
+        $user = $request->user();
+        $isCustomer = $user?->role === UserRole::CUSTOMER->value;
         $page = (int) $request->input('page', 1);
         $limit = (int) $request->input('limit', 10);
         $query = Booking::with([
@@ -44,6 +46,10 @@ class BookingController extends Controller
             'bookingRooms.roomType',
             'invoices.payments' => fn($query) => $query->where('payment_status', PaymentStatus::COMPLETED->value),
         ])->orderByDesc('booked_at');
+
+        if ($isCustomer) {
+            $query->where('customer_id', $user->id);
+        }
 
         if ($request->filled('status')) {
             if ($request->input('status') === 'NON_CANCELLED') {
@@ -75,12 +81,30 @@ class BookingController extends Controller
 
         $total = $query->count();
         $today = Carbon::today(config('app.timezone'))->toDateString();
-        $bookings = $query->skip(($page - 1) * $limit)->take($limit)->get()->map(function ($booking) use ($today) {
+        $bookings = $query->skip(($page - 1) * $limit)->take($limit)->get()->map(function ($booking) use ($today, $isCustomer) {
             $bookingRoom = $booking->bookingRooms->first();
             $room = $bookingRoom?->room;
             $invoice = $booking->invoices->first();
             $status = $booking->status instanceof \BackedEnum ? $booking->status->value : (string) $booking->status;
             $invoiceStatus = $invoice?->status instanceof \BackedEnum ? $invoice->status->value : $invoice?->status;
+
+            if ($isCustomer) {
+                return [
+                    'id' => $booking->id,
+                    'bookingNumber' => $booking->booking_reference,
+                    'roomType' => $bookingRoom?->roomType?->name ?? 'Unassigned',
+                    'roomNumber' => $room?->room_number,
+                    'checkIn' => $booking->check_in_date?->toIso8601String(),
+                    'checkOut' => $booking->check_out_date?->toIso8601String(),
+                    'totalAmount' => (int) $booking->total_amount,
+                    'status' => $status,
+                    'invoice' => $invoice ? [
+                        'id' => $invoice->id,
+                        'status' => $invoiceStatus,
+                    ] : null,
+                ];
+            }
+
             $canCheckIn = $this->canCheckIn($booking, $today);
 
             return [
@@ -114,7 +138,7 @@ class BookingController extends Controller
             ];
         });
 
-        $stats = $this->getStats();
+        $stats = $this->getStats($user);
 
         if ($request->wantsJson() && ! $request->header('X-Inertia')) {
             return response()->json([
@@ -215,6 +239,31 @@ class BookingController extends Controller
         $creator = $booking->createdBy;
         $invoice = $booking->invoices->first();
         $enumValue = fn($value) => $value instanceof \BackedEnum ? $value->value : $value;
+
+        if ($user->role === UserRole::CUSTOMER->value) {
+            $nights = $booking->check_in_date && $booking->check_out_date
+                ? max(1, (int) $booking->check_in_date->diffInDays($booking->check_out_date))
+                : 1;
+
+            return response()->json(['data' => [
+                'id' => $booking->id,
+                'bookingNumber' => $booking->booking_reference,
+                'status' => $enumValue($booking->status),
+                'roomType' => $roomType?->name ?? 'Unassigned',
+                'roomNumber' => $room?->room_number,
+                'checkIn' => $booking->check_in_date?->toIso8601String(),
+                'checkOut' => $booking->check_out_date?->toIso8601String(),
+                'adults' => max(1, (int) $booking->total_guests),
+                'children' => 0,
+                'duration' => $nights,
+                'bookedOn' => ($booking->booked_at ?? $booking->created_at)?->toIso8601String(),
+                'totalAmount' => (int) $booking->total_amount,
+                'invoice' => $invoice ? [
+                    'id' => $invoice->id,
+                    'status' => $enumValue($invoice->status),
+                ] : null,
+            ]]);
+        }
 
         return response()->json(['data' => [
             'id' => $booking->id,
@@ -323,12 +372,18 @@ class BookingController extends Controller
         ]]);
     }
 
-    private function getStats(): array
+    private function getStats(?User $user = null): array
     {
-        $total = Booking::count();
-        $confirmed = Booking::where('status', BookingStatus::CONFIRMED->value)->count();
-        $pending = Booking::where('status', BookingStatus::PENDING->value)->count();
-        $revenue = Booking::where('status', '!=', BookingStatus::CANCELLED->value)->sum('total_amount');
+        $isCustomer = $user?->role === UserRole::CUSTOMER->value;
+        $baseQuery = Booking::query();
+        if ($isCustomer) {
+            $baseQuery->where('customer_id', $user->id);
+        }
+
+        $total = (clone $baseQuery)->count();
+        $confirmed = (clone $baseQuery)->where('status', BookingStatus::CONFIRMED->value)->count();
+        $pending = (clone $baseQuery)->where('status', BookingStatus::PENDING->value)->count();
+        $revenue = (clone $baseQuery)->where('status', '!=', BookingStatus::CANCELLED->value)->sum('total_amount');
 
         return [
             [
@@ -336,7 +391,7 @@ class BookingController extends Controller
                 'title' => 'Total Bookings',
                 'label' => 'Total Bookings',
                 'value' => number_format($total),
-                'description' => 'All-time reservations',
+                'description' => $isCustomer ? 'Your reservations' : 'All-time reservations',
                 'icon' => 'CalendarCheck',
                 'link' => '/dashboard/bookings',
                 'tone' => 'sky',
@@ -363,8 +418,8 @@ class BookingController extends Controller
             ],
             [
                 'id' => 'booking-revenue',
-                'title' => 'Booking Revenue',
-                'label' => 'Booking Revenue',
+                'title' => $isCustomer ? 'Total Spent' : 'Booking Revenue',
+                'label' => $isCustomer ? 'Total Spent' : 'Booking Revenue',
                 'value' => '₹' . number_format($revenue),
                 'description' => 'Confirmed & active bookings',
                 'icon' => 'IndianRupee',
@@ -397,9 +452,9 @@ class BookingController extends Controller
         ]);
     }
 
-    public function stats()
+    public function stats(Request $request)
     {
-        return response()->json(['data' => $this->getStats()]);
+        return response()->json(['data' => $this->getStats($request->user())]);
     }
 
     public function availableRooms(Request $request)
