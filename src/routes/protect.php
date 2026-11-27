@@ -75,7 +75,9 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/dashboard/customers', [CustomerController::class, 'store'])->name('dashboard.customers.store');
     Route::put('/dashboard/customers/{id}', [CustomerController::class, 'update'])->name('dashboard.customers.update');
     Route::patch('/dashboard/customers/{id}', [CustomerController::class, 'update'])->name('dashboard.customers.patch');
+    Route::patch('/dashboard/customers/{id}/status', [CustomerController::class, 'toggleStatus'])->name('dashboard.customers.status');
     Route::delete('/dashboard/customers/{id}', [CustomerController::class, 'destroy'])->name('dashboard.customers.destroy');
+    Route::patch('/customers/{id}/status', [CustomerController::class, 'toggleStatus'])->name('customers.status');
     Route::resource('customers', CustomerController::class);
 
     // 6. Rooms & Catalog

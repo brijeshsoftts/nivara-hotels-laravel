@@ -5,12 +5,17 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 import { notifyError } from "@/lib/notification";
+import type { CustomerDetails } from "../customers.types";
 import {
   type UpdateCustomer,
   UpdateCustomerSchema,
 } from "../schema/updateCustomer.schema";
 
-export function useUpdateCustomerFacade(id: string, onSuccess?: () => void) {
+export function useUpdateCustomerFacade(
+  id: string,
+  customer?: CustomerDetails | null,
+  onSuccess?: () => void
+) {
   const [isPending, setIsPending] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
@@ -18,24 +23,39 @@ export function useUpdateCustomerFacade(id: string, onSuccess?: () => void) {
     handleSubmit,
     register,
     control,
+    reset,
     formState: { errors },
   } = useForm<UpdateCustomer>({
     resolver: zodResolver(UpdateCustomerSchema),
+    values: customer
+      ? {
+          name: customer.name,
+          phone: customer.phone,
+          email: customer.email,
+          address: customer.address ?? "",
+          idProofNumber: customer.idProofNumber ?? "",
+        }
+      : undefined,
   });
 
   const submit = (data: UpdateCustomer) => {
     setIsPending(true);
-    router.put(`/dashboard/customers/${id}`, data as any, {
-      onSuccess: () => {
-        setIsSuccess(true);
-        toast.success("Customer updated successfully");
-        onSuccess?.();
-      },
-      onError: (err) => {
-        notifyError(err);
-      },
-      onFinish: () => setIsPending(false),
-    });
+    router.post(
+      `/dashboard/customers/${id}`,
+      { ...data, _method: "put" } as any,
+      {
+        forceFormData: true,
+        onSuccess: () => {
+          setIsSuccess(true);
+          toast.success("Customer updated successfully");
+          onSuccess?.();
+        },
+        onError: (err) => {
+          notifyError(err);
+        },
+        onFinish: () => setIsPending(false),
+      }
+    );
   };
 
   return {
@@ -46,6 +66,7 @@ export function useUpdateCustomerFacade(id: string, onSuccess?: () => void) {
     control,
     handleSubmit,
     errors,
+    reset,
   };
 }
 

@@ -1,4 +1,5 @@
 import { Check } from "lucide-react";
+import { useEffect } from "react";
 
 import { ErrorModal } from "@/components/common/ErrorModal";
 import { InputField } from "@/components/common/InputField";
@@ -31,8 +32,23 @@ export function UpdateCustomerDialog({
   onOpenChange,
 }: UpdateCustomerDialogProps) {
   const { data, isError, isLoading, refetch } = useCustomer(id);
-  const { handleSubmit, submit, register, control, errors, isPending } =
-    useUpdateCustomerFacade(id);
+  const {
+    handleSubmit,
+    submit,
+    register,
+    control,
+    errors,
+    isPending,
+    isSuccess,
+    reset,
+  } = useUpdateCustomerFacade(id, data);
+
+  useEffect(() => {
+    if (isSuccess && open) {
+      reset();
+      onOpenChange(false);
+    }
+  }, [isSuccess, open, reset, onOpenChange]);
 
   if (isLoading) {
     return <FullScreenLoader />;
@@ -66,7 +82,7 @@ export function UpdateCustomerDialog({
               placeholder="Enter full name"
               autoComplete="name"
               error={errors.name?.message}
-              {...register("name", { value: data?.name })}
+              {...register("name")}
               disabled={isPending}
             />
 
@@ -77,7 +93,7 @@ export function UpdateCustomerDialog({
               placeholder="Enter phone number"
               autoComplete="tel"
               error={errors.phone?.message}
-              {...register("phone", { value: data?.phone })}
+              {...register("phone")}
               disabled={isPending}
             />
 
@@ -88,7 +104,7 @@ export function UpdateCustomerDialog({
               placeholder="Enter email address"
               autoComplete="email"
               error={errors.email?.message}
-              {...register("email", { value: data?.email })}
+              {...register("email")}
               disabled={isPending}
             />
 
@@ -98,7 +114,7 @@ export function UpdateCustomerDialog({
               placeholder="Enter address"
               autoComplete="street-address"
               error={errors.address?.message}
-              {...register("address", { value: data?.address })}
+              {...register("address")}
               disabled={isPending}
             />
 
@@ -107,7 +123,7 @@ export function UpdateCustomerDialog({
               required
               placeholder="Enter ID proof number"
               error={errors.idProofNumber?.message}
-              {...register("idProofNumber", { value: data.idProofNumber })}
+              {...register("idProofNumber")}
               disabled={isPending}
             />
 
