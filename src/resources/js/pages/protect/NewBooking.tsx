@@ -18,7 +18,9 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
+import { parseISO } from "date-fns";
 import { NoAccess } from "@/components/common/NoAccess";
+import { DatePicker } from "@/components/common/DatePicker";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -406,38 +408,41 @@ export default function NewBookingPage() {
                 <h3 className="font-semibold">Stay details</h3>
               </div>
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                <label className="space-y-2">
+                <div className="space-y-2">
                   <FieldLabel>Check-in date</FieldLabel>
-                  <Input
-                    type="date"
+                  <DatePicker
                     value={booking.checkInDate}
-                    onChange={(event) => {
+                    placeholder="Select check-in date"
+                    onChange={(value) => {
                       setRoomSearch(null);
                       setBooking((current) => ({
                         ...current,
-                        checkInDate: event.target.value,
+                        checkInDate: value,
                         roomId: "",
                       }));
                     }}
                   />
-                </label>
-                <label className="space-y-2">
+                </div>
+                <div className="space-y-2">
                   <FieldLabel>Check-out date</FieldLabel>
-                  <Input
-                    type="date"
-                    min={booking.checkInDate || undefined}
+                  <DatePicker
+                    minDate={
+                      booking.checkInDate
+                        ? parseISO(booking.checkInDate)
+                        : undefined
+                    }
                     value={booking.checkOutDate}
-                    onChange={(event) => {
+                    placeholder="Select check-out date"
+                    onChange={(value) => {
                       setRoomSearch(null);
                       setBooking((current) => ({
                         ...current,
-                        checkOutDate:
-                          event.target.value,
+                        checkOutDate: value,
                         roomId: "",
                       }));
                     }}
                   />
-                </label>
+                </div>
                 <label className="space-y-2">
                   <FieldLabel>Adults</FieldLabel>
                   <Input
@@ -1454,9 +1459,9 @@ export default function NewBookingPage() {
                   </div>
                   <div className="rounded-xl bg-muted/40 p-3 text-xs leading-5 text-muted-foreground">
                     <MapPin className="mr-1 inline h-3.5 w-3.5" />
-                    Cash bookings are confirmed, but payment
-                    must be recorded before check-in. Online
-                    payments remain pending until verified.
+                    Cash bookings are confirmed with the invoice and
+                    payment marked as paid. Online payments remain
+                    pending until verified.
                   </div>
                 </div>
               </aside>

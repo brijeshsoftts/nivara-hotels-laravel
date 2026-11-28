@@ -18,6 +18,7 @@ use App\Models\BookingRoom;
 use App\Models\Customer;
 use App\Models\HousekeepingTask;
 use App\Models\Invoice;
+use App\Models\Payment;
 use App\Models\Room;
 use App\Models\RoomType;
 use App\Models\User;
@@ -734,6 +735,8 @@ class BookingController extends Controller
                 : OccupancyStatus::OCCUPIED->value;
             $room->save();
 
+            $isCashPayment = $paymentMethod === PaymentMethod::CASH->value;
+
             $inv = Invoice::create([
                 'invoice_number' => 'INV-' . strtoupper(Str::random(8)),
                 'booking_id' => $booking->id,
@@ -742,9 +745,26 @@ class BookingController extends Controller
                 'tax_amount' => $taxAmount,
                 'discount_amount' => 0,
                 'total_amount' => $subtotal + $taxAmount,
-                'status' => InvoiceStatus::UNPAID->value,
+                'status' => $isCashPayment
+                    ? InvoiceStatus::PAID->value
+                    : InvoiceStatus::UNPAID->value,
                 'issued_at' => Carbon::now(),
             ]);
+
+            if ($isCashPayment) {
+                Payment::create([
+                    'payment_reference' => 'PAY-' . strtoupper(Str::random(10)),
+                    'invoice_id' => $inv->id,
+                    'booking_id' => $booking->id,
+                    'customer_id' => $userCustomerId,
+                    'amount' => $inv->total_amount,
+                    'currency' => 'INR',
+                    'payment_method' => PaymentMethod::CASH->value,
+                    'payment_status' => PaymentStatus::COMPLETED->value,
+                    'paid_at' => Carbon::now(),
+                    'recorded_by' => $request->user()?->id,
+                ]);
+            }
 
             if ($booking->status === BookingStatus::CONFIRMED && $userCustomerId) {
                 $this->notificationService->createForUsers(

@@ -2,7 +2,7 @@ import { formatDate } from "date-fns";
 import { Check } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
-import { InputField } from "@/components/common/InputField";
+import { DatePicker } from "@/components/common/DatePicker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -187,18 +187,35 @@ export function TaskDialog({
                 activeForm.form.setValue("taskType", e);
               }}
             />
-            <InputField
-              label="Scheduled date"
-              type="date"
-              {...activeForm.form.register("scheduledDate", {
-                value:
-                  task?.scheduledDate &&
-                  formatDate(task.scheduledDate, "yyyy-MM-dd"),
-              })}
-              error={activeForm.form.formState.errors.scheduledDate?.message?.toString()}
-              disabled={fieldsDisabled}
-              className="mt-1 h-10"
-            />
+            <div className="space-y-2">
+              <Label htmlFor="task-scheduled-date">Scheduled date</Label>
+              <DatePicker
+                id="task-scheduled-date"
+                value={
+                  activeForm.form.watch("scheduledDate") ||
+                  (task?.scheduledDate
+                    ? formatDate(task.scheduledDate, "yyyy-MM-dd")
+                    : "")
+                }
+                onChange={(value) => {
+                  activeForm.form.setValue("scheduledDate", value, {
+                    shouldValidate: true,
+                    shouldDirty: true,
+                  });
+                }}
+                placeholder="Select scheduled date"
+                disabled={fieldsDisabled}
+                aria-invalid={Boolean(
+                  activeForm.form.formState.errors.scheduledDate
+                )}
+                className="mt-1 h-10"
+              />
+              {activeForm.form.formState.errors.scheduledDate?.message && (
+                <p className="text-xs text-destructive">
+                  {activeForm.form.formState.errors.scheduledDate.message.toString()}
+                </p>
+              )}
+            </div>
           </div>
 
           {task && mode !== "create" && (

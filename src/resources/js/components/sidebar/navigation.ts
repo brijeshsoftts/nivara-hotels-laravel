@@ -12,8 +12,8 @@ export const NAV_GROUPS: NavigationGroup[] = [
       "Staff",
       "Customers",
       "Rooms",
-      "New Booking",
       "Bookings",
+      "Add Booking",
       "Tasks",
       "Browse Rooms",
       "My Bookings",
@@ -21,7 +21,7 @@ export const NAV_GROUPS: NavigationGroup[] = [
     ],
   },
   { label: "Operations", titles: ["Issues", "Inquiries", "Audit Logs"] },
-  { label: "Reports", titles: ["Payments", "Invoices"] },
+  { label: "Finance", titles: ["Payments", "Invoices"] },
   { label: "Settings", titles: ["Profile"] },
 ];
 

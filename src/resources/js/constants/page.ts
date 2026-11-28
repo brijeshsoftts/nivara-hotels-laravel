@@ -44,7 +44,7 @@ export const ADMIN_PAGES: NavItem[] = [
     href: "/dashboard/rooms",
   },
   {
-    title: "New Booking",
+    title: "Add Booking",
     icon: CalendarPlus,
     href: "/dashboard/bookings/new",
   },
@@ -112,7 +112,7 @@ export const MANAGER_PAGES: NavItem[] = [
     href: "/dashboard/rooms",
   },
   {
-    title: "New Booking",
+    title: "Add Booking",
     icon: CalendarPlus,
     href: "/dashboard/bookings/new",
   },
@@ -165,7 +165,7 @@ export const RECEPTIONIST_PAGES: NavItem[] = [
     href: "/dashboard/customers",
   },
   {
-    title: "New Booking",
+    title: "Add Booking",
     icon: CalendarPlus,
     href: "/dashboard/bookings/new",
   },
