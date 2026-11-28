@@ -212,11 +212,19 @@ export function CreateRoomTypeDialog({ children }: CreateRoomTypeDialogProps) {
         reset();
     };
 
+    const [open, setOpen] = React.useState(false);
+
     const handleOpenChange = (nextOpen: boolean) => {
+        setOpen(nextOpen);
         if (!nextOpen) resetCreateForm();
     };
 
-    const handleCreate = handleSubmit((data) => submit(data, resetCreateForm));
+    const handleCreate = handleSubmit((data) =>
+        submit(data, () => {
+            resetCreateForm();
+            setOpen(false);
+        }),
+    );
 
     React.useEffect(() => {
         imagePreviewsRef.current = imagePreviews;
@@ -232,7 +240,7 @@ export function CreateRoomTypeDialog({ children }: CreateRoomTypeDialogProps) {
     );
 
     return (
-        <Dialog onOpenChange={handleOpenChange}>
+        <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogTrigger>{children}</DialogTrigger>
             <DialogContent className="flex max-h-[92vh] max-w-4xl flex-col gap-0 overflow-hidden rounded-xl border bg-background p-0 shadow-2xl sm:w-full md:min-w-150">
                 {/* Header */}

@@ -1,6 +1,5 @@
 import { Check } from "lucide-react";
-import type { ReactNode } from "react";
-import { useEffect } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 
 import { InputField } from "@/components/common/InputField";
 import { Button } from "@/components/ui/button";
@@ -19,6 +18,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { useCreateUserFacade } from "../hooks/useCreateUser";
 
 export function CreateUserDialog({ children }: { children: ReactNode }) {
+  const [open, setOpen] = useState(false);
   const {
     handleSubmit,
     submit,
@@ -27,14 +27,14 @@ export function CreateUserDialog({ children }: { children: ReactNode }) {
     isPending,
     isSuccess,
     reset,
-  } = useCreateUserFacade();
+  } = useCreateUserFacade(() => setOpen(false));
 
   useEffect(() => {
     if (isSuccess) reset();
   }, [isSuccess, reset]);
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>

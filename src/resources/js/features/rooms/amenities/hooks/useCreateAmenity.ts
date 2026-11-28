@@ -10,7 +10,7 @@ import {
   CreateAmenitySchema,
 } from "../schemas/createAmenity.schema";
 
-export function useCreateAmenityFacade() {
+export function useCreateAmenityFacade(onSuccess?: () => void) {
   const [isPending, setIsPending] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
@@ -31,6 +31,7 @@ export function useCreateAmenityFacade() {
         setIsSuccess(true);
         toast.success("Amenity created successfully.");
         reset();
+        onSuccess?.();
       },
       onError: (err) => {
         notifyError(err);
