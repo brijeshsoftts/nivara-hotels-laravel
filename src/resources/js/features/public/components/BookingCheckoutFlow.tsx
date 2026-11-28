@@ -871,32 +871,6 @@ export default function BookingCheckoutFlow() {
                                 </div>
                             </div>
                         </section>
-
-                        <div className="flex items-start gap-3 px-1">
-                            <Checkbox
-                                checked={acceptedTerms}
-                                disabled={Boolean(booking)}
-                                id="accept-terms"
-                                onCheckedChange={(checked) => {
-                                    setAcceptedTerms(checked === true);
-                                    setTermsAttempted(false);
-                                }}
-                            />
-                            <div>
-                                <Label
-                                    className="cursor-pointer text-sm leading-5 font-normal"
-                                    htmlFor="accept-terms"
-                                >
-                                    I agree to the booking and cancellation
-                                    terms. *
-                                </Label>
-                                {termsAttempted && !acceptedTerms && (
-                                    <FieldError>
-                                        Please accept the terms to continue.
-                                    </FieldError>
-                                )}
-                            </div>
-                        </div>
                     </div>
 
                     <aside className="min-w-0 lg:sticky lg:top-5">
@@ -1066,8 +1040,35 @@ export default function BookingCheckoutFlow() {
                                     </p>
                                 )}
 
+                                <div className="mt-5 flex items-start gap-3">
+                                    <Checkbox
+                                        checked={acceptedTerms}
+                                        disabled={Boolean(booking)}
+                                        id="accept-terms"
+                                        onCheckedChange={(checked) => {
+                                            setAcceptedTerms(checked === true);
+                                            setTermsAttempted(false);
+                                        }}
+                                    />
+                                    <div>
+                                        <Label
+                                            className="cursor-pointer text-sm leading-5 font-normal"
+                                            htmlFor="accept-terms"
+                                        >
+                                            I agree to the booking and
+                                            cancellation terms. *
+                                        </Label>
+                                        {termsAttempted && !acceptedTerms && (
+                                            <FieldError>
+                                                Please accept the terms to
+                                                continue.
+                                            </FieldError>
+                                        )}
+                                    </div>
+                                </div>
+
                                 <Button
-                                    className="mt-5 h-11 w-full"
+                                    className="mt-4 h-11 w-full"
                                     disabled={submitDisabled}
                                     form={CHECKOUT_FORM_ID}
                                     type="submit"

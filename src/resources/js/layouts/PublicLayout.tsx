@@ -1,5 +1,4 @@
 import {
-    ArrowRight,
     ArrowUpRight,
     Calendar,
     LayoutDashboard,
@@ -11,12 +10,11 @@ import {
     X,
 } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { type FormEvent, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, usePage } from "@inertiajs/react";
 
 // import { PageTransition } from "@/components/common/PageTransition";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { HOTEL_DETAILS } from "@/constants/hotel";
 import {
@@ -85,7 +83,7 @@ export function Logo({
                             ? "text-lg text-sidebar-foreground"
                             : "text-[26px]",
                         !compact &&
-                        (inverse ? "text-background" : "text-primary"),
+                        (inverse ? "dark:text-primary  text-background" : "text-primary"),
                     )}
                 >
                     Nivara
@@ -94,7 +92,7 @@ export function Logo({
                     <span
                         className={cn(
                             "mt-1 font-sans text-[9px] font-medium tracking-[0.25em] uppercase",
-                            inverse ? "text-background/80" : "text-primary/80",
+                            inverse ? "dark:text-primary  text-background" : "text-primary/80",
                         )}
                     >
                         Hotel &amp; Resort
@@ -329,51 +327,108 @@ function Navbar() {
 
 function Footer() {
     const currentYear = new Date().getFullYear();
-
-    const handleNewsletterSubmit = (event: FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        if (!HOTEL_DETAILS.email) return;
-        const email = new FormData(event.currentTarget).get("email");
-        if (typeof email !== "string") return;
-
-        const params = new URLSearchParams({
-            subject: `${HOTEL_DETAILS.name} newsletter request`,
-            body: `Please add ${email} to the ${HOTEL_DETAILS.name} newsletter.`,
-        });
-        window.location.href = `mailto:${HOTEL_DETAILS.email}?${params.toString()}`;
+    const scrollToTop = () => {
+        if (typeof window !== "undefined") {
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        }
     };
 
+    const exploreLinks = [
+        { name: "Home", href: "/" },
+        { name: "Rooms & Suites", href: "/rooms" },
+        { name: "About Nivara", href: "/about" },
+        { name: "Amenities", href: "/#amenities" },
+    ];
+
+    const guestServiceLinks = [
+        { name: "Book a Stay", href: "/checkout", external: false },
+        { name: "Contact Concierge", href: "/contact", external: false },
+        { name: "Guest Sign In", href: "/login", external: true },
+        { name: "Create Account", href: "/register", external: true },
+    ];
+
+    const linkClass =
+        "inline-flex items-center gap-1.5 text-sm text-[#F5EDE4]/75 transition-colors duration-200 hover:text-[#D7B995] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#D7B995]";
+
     return (
-        <footer className="w-full bg-background pt-16 pb-8 font-sans border-t">
-            <div className="container mx-auto px-6 md:px-12 lg:px-16">
-                {/* Main Grid: Responsive column mapping */}
-                <div className="grid grid-cols-1 gap-12 pb-14 md:grid-cols-2 lg:grid-cols-4 lg:gap-8">
-                    {/* Column 1: Brand Identifier & Intro */}
-                    <div className="flex flex-col space-y-5">
-                        <Logo />
-                        <p className="max-w-70 text-[14px] leading-relaxed text-foreground/70">
-                            A comfortable hotel stay in Lucknow, with helpful
-                            service for business and leisure guests.
+        <footer className="w-full overflow-x-clip border-t border-[#D7B995]/20 bg-[#282522] pt-12 pb-7 font-sans text-[#F5EDE4]">
+            <div className="mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
+                <div className="grid grid-cols-1 gap-10 pb-10 md:grid-cols-2 lg:grid-cols-[1.35fr_0.85fr_0.85fr_1.15fr] lg:gap-10">
+                    {/* Column 1: Brand, Description, Socials & Explore CTA */}
+                    <div className="flex min-w-0 flex-col items-start space-y-4">
+                        <Logo inverse />
+                        <p className="max-w-xs text-sm leading-relaxed text-[#F5EDE4]/75">
+                            A serene boutique retreat in{" "}
+                            {HOTEL_DETAILS.location}, blending warm hospitality
+                            with refined comfort for business and leisure stays.
                         </p>
+
+                        <div className="flex items-center gap-2.5 pt-1">
+                            <a
+                                href="#instagram"
+                                aria-label="Nivara on Instagram"
+                                className="inline-flex size-8 items-center justify-center rounded-full border border-[#F5EDE4]/15 text-[#F5EDE4]/75 transition-colors duration-200 hover:border-[#D7B995] hover:text-[#D7B995]"
+                            >
+                                <svg
+                                    aria-hidden="true"
+                                    className="size-4"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="1.75"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                >
+                                    <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
+                                    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+                                    <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
+                                </svg>
+                            </a>
+                            <a
+                                href="#facebook"
+                                aria-label="Nivara on Facebook"
+                                className="inline-flex size-8 items-center justify-center rounded-full border border-[#F5EDE4]/15 text-[#F5EDE4]/75 transition-colors duration-200 hover:border-[#D7B995] hover:text-[#D7B995]"
+                            >
+                                <svg
+                                    aria-hidden="true"
+                                    className="size-4"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="1.75"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                >
+                                    <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
+                                </svg>
+                            </a>
+                        </div>
+
+                        <Link
+                            href={publicPageUrl("/rooms")}
+                            onClick={scrollToTop}
+                            className="inline-flex items-center gap-1.5 pt-1 text-xs font-semibold tracking-[0.16em] text-[#D7B995] uppercase transition-colors duration-200 hover:text-[#F5EDE4]"
+                        >
+                            <span>Explore Rooms</span>
+                            <ArrowUpRight
+                                aria-hidden="true"
+                                className="size-3.5"
+                            />
+                        </Link>
                     </div>
 
-                    {/* Column 2: Quick Navigation */}
-                    <div className="flex flex-col">
-                        <h4 className="mb-5 text-[15px] font-bold tracking-wider text-foreground uppercase">
-                            Quick Links
+                    {/* Column 2: Explore */}
+                    <div className="flex min-w-0 flex-col">
+                        <h4 className="mb-4 text-xs font-semibold tracking-[0.2em] dark:text-primary text-white  uppercase">
+                            Explore
                         </h4>
-                        <ul className="space-y-3.5">
-                            {navLinks.map((link) => (
+                        <ul className="space-y-3">
+                            {exploreLinks.map((link) => (
                                 <li key={link.href}>
                                     <Link
                                         href={publicPageUrl(link.href)}
-                                        onClick={() =>
-                                            window.scrollTo({
-                                                top: 0,
-                                                behavior: "smooth",
-                                            })
-                                        }
-                                        className="text-[14px] font-medium text-foreground/70 transition-colors hover:text-primary"
+                                        onClick={scrollToTop}
+                                        className={linkClass}
                                     >
                                         {link.name}
                                     </Link>
@@ -382,30 +437,61 @@ function Footer() {
                         </ul>
                     </div>
 
-                    {/* Column 3: Contact Channels */}
-                    <div className="flex flex-col">
-                        <h4 className="mb-5 text-[15px] font-bold tracking-wider text-foreground uppercase">
-                            Contact Us
+                    {/* Column 3: Guest Services */}
+                    <div className="flex min-w-0 flex-col">
+                        <h4 className="mb-4 text-xs font-semibold tracking-[0.2em] dark:text-primary text-white  uppercase">
+                            Guest Services
                         </h4>
-                        <ul className="space-y-4">
-                            <li className="flex items-start gap-3 text-foreground/70">
-                                <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                                    <MapPin className="h-3.5 w-3.5" />
-                                </div>
-                                <span className="text-[14px] leading-relaxed">
+                        <ul className="space-y-3">
+                            {guestServiceLinks.map((link) => (
+                                <li key={link.href}>
+                                    {link.external ? (
+                                        <a
+                                            href={link.href}
+                                            className={linkClass}
+                                        >
+                                            {link.name}
+                                        </a>
+                                    ) : (
+                                        <Link
+                                            href={publicPageUrl(link.href)}
+                                            onClick={scrollToTop}
+                                            className={linkClass}
+                                        >
+                                            {link.name}
+                                        </Link>
+                                    )}
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+
+                    {/* Column 4: Contact & Reservations */}
+                    <div className="flex min-w-0 flex-col">
+                        <h4 className="mb-4 text-xs font-semibold tracking-[0.2em] dark:text-primary text-white  uppercase">
+                            Contact
+                        </h4>
+                        <ul className="space-y-3 text-sm text-[#F5EDE4]/75">
+                            <li className="flex items-start gap-2.5">
+                                <MapPin
+                                    aria-hidden="true"
+                                    className="mt-0.5 size-4 shrink-0 text-[#D7B995]"
+                                />
+                                <span className="leading-relaxed">
                                     {HOTEL_DETAILS.address ??
                                         HOTEL_DETAILS.location}
                                 </span>
                             </li>
 
                             {HOTEL_DETAILS.phone && (
-                                <li className="flex items-center gap-3 text-foreground/70">
-                                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                                        <Phone className="h-3.5 w-3.5" />
-                                    </div>
+                                <li className="flex items-center gap-2.5">
+                                    <Phone
+                                        aria-hidden="true"
+                                        className="size-4 shrink-0 text-[#D7B995]"
+                                    />
                                     <a
                                         href={`tel:${HOTEL_DETAILS.phone}`}
-                                        className="text-[14px] transition-colors hover:text-primary"
+                                        className="transition-colors duration-200 hover:text-[#D7B995]"
                                     >
                                         {HOTEL_DETAILS.phone}
                                     </a>
@@ -413,81 +499,35 @@ function Footer() {
                             )}
 
                             {HOTEL_DETAILS.email && (
-                                <li className="flex items-center gap-3 text-foreground/70">
-                                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                                        <Mail className="h-3.5 w-3.5" />
-                                    </div>
+                                <li className="flex items-center gap-2.5">
+                                    <Mail
+                                        aria-hidden="true"
+                                        className="size-4 shrink-0 text-[#D7B995]"
+                                    />
                                     <a
                                         href={`mailto:${HOTEL_DETAILS.email}`}
-                                        className="text-[14px] break-all transition-colors hover:text-primary"
+                                        className="break-all transition-colors duration-200 hover:text-[#D7B995]"
                                     >
                                         {HOTEL_DETAILS.email}
                                     </a>
                                 </li>
                             )}
                         </ul>
-                    </div>
 
-                    {/* Column 4: Newsletter */}
-                    <div className="flex flex-col space-y-4">
-                        <h4 className="text-[15px] font-bold tracking-wider text-foreground uppercase">
-                            Newsletter
-                        </h4>
-                        <form
-                            onSubmit={handleNewsletterSubmit}
-                            className="flex w-full max-w-[320px] flex-col gap-2"
-                        >
-                            <label
-                                htmlFor="newsletter-email"
-                                className="text-[13px] font-semibold text-foreground"
-                            >
-                                Subscribe to our newsletter
-                            </label>
-                            <div className="relative flex w-full items-center rounded-2xl border border-border bg-accent p-1">
-                                <Input
-                                    id="newsletter-email"
-                                    name="email"
-                                    type="email"
-                                    required
-                                    disabled={!HOTEL_DETAILS.email}
-                                    autoComplete="email"
-                                    placeholder="Your email address"
-                                    aria-describedby="newsletter-help"
-                                    className="h-10 w-full rounded-xl border-0 bg-transparent pr-12 pl-3 text-sm text-foreground placeholder:text-foreground/50 focus-visible:ring-0 focus-visible:ring-offset-0"
-                                />
-                                <Button
-                                    type="submit"
-                                    disabled={!HOTEL_DETAILS.email}
-                                    size="icon"
-                                    aria-label="Send newsletter request"
-                                    className="absolute right-1 h-10 w-10 shrink-0 rounded-lg bg-primary text-primary-foreground shadow-sm hover:bg-primary/90"
-                                >
-                                    <ArrowRight
-                                        aria-hidden="true"
-                                        className="h-4 w-4"
-                                    />
-                                </Button>
-                            </div>
-                            <p
-                                id="newsletter-help"
-                                className="text-xs text-muted-foreground"
-                            >
-                                {HOTEL_DETAILS.email
-                                    ? "Submitting opens your email app to send the request."
-                                    : "Newsletter contact details are not configured."}
-                            </p>
-                        </form>
                     </div>
                 </div>
 
-                {/* Separator Section line */}
-                <Separator className="h-px w-full bg-border" />
+                {/* Divider */}
+                <Separator className="h-px w-full bg-[#F5EDE4]/12" />
 
-                {/* Bottom Section: Rights, Legal, Accessibility */}
-                <div className="flex flex-col items-center justify-between gap-4 pt-6 text-[12px] text-foreground/60 sm:flex-row md:text-[13px]">
+                {/* Bottom Copyright & Tagline */}
+                <div className="flex flex-col items-center justify-between gap-2 pt-6 text-xs text-[#F5EDE4]/60 sm:flex-row">
                     <span>
-                        &copy; {currentYear} {HOTEL_DETAILS.name}. All rights
-                        reserved.
+                        &copy; {currentYear} {HOTEL_DETAILS.name} Hotel &amp;
+                        Resort. All rights reserved.
+                    </span>
+                    <span className="text-[#D7B995]/80">
+                        Thoughtful hospitality in {HOTEL_DETAILS.location}
                     </span>
                 </div>
             </div>
