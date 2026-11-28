@@ -87,19 +87,19 @@ export function RoomGallery({ images = [], roomName }: RoomGalleryProps) {
       </div>
 
       {count > 1 && (
-        <div className="flex gap-2 overflow-x-auto px-4 py-4 sm:px-6">
+        <div className="grid grid-cols-3 gap-2 px-4 py-4 sm:grid-cols-4 sm:px-6">
           {sorted.map((image, i) => (
             <button
-              key={image.url}
+              key={image.id ?? `${image.url}-${i}`}
               type="button"
               onClick={() => setIndex(i)}
               aria-label={`Show photo ${i + 1}`}
               aria-current={i === index}
               className={cn(
-                "h-14 w-20 shrink-0 overflow-hidden rounded-lg transition focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                "aspect-4/3 w-full overflow-hidden rounded-lg transition focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
                 i === index
                   ? "ring-2 ring-primary ring-offset-2 ring-offset-background"
-                  : "opacity-60 hover:opacity-100"
+                  : "opacity-70 hover:opacity-100"
               )}
             >
               <img

@@ -153,8 +153,8 @@ function HeroSection() {
                             scale: shouldReduceMotion
                                 ? 1
                                 : activeHeroImage % 2 === 0
-                                  ? 1.1
-                                  : 1,
+                                    ? 1.1
+                                    : 1,
                         }}
                         exit={{ opacity: 0 }}
                         transition={{
@@ -482,15 +482,15 @@ function AmenitiesSection() {
                         return (
                             <div
                                 key={index}
-                                className="flex flex-col items-center"
+                                className="group flex flex-col items-center cursor-pointer"
                             >
                                 {/* Icon Circle */}
-                                <div className="mb-5 flex h-22 w-22 items-center justify-center rounded-full bg-secondary transition-transform duration-300 group-hover:-translate-y-2 group-hover:shadow-sm">
-                                    <Icon className="h-8 w-8 stroke-[1.5] text-foreground" />
+                                <div className="mb-5 flex h-22 w-22 items-center justify-center rounded-full bg-secondary transition-all duration-300 ease-out group-hover:-translate-y-2 group-hover:shadow-lg group-hover:bg-primary">
+                                    <Icon className="h-8 w-8 stroke-[1.5] text-foreground transition-all duration-300 ease-out group-hover:scale-110 group-hover:text-white" />
                                 </div>
 
                                 {/* Label */}
-                                <span className="text-center text-[13px] font-semibold tracking-wide text-foreground">
+                                <span className="text-center text-[13px] font-semibold tracking-wide text-foreground transition-colors duration-300 group-hover:text-primary">
                                     {amenity.name}
                                 </span>
                             </div>
@@ -701,10 +701,10 @@ function TestimonialsSection() {
                                 shouldReduceMotion
                                     ? { duration: 0.15 }
                                     : {
-                                          type: "spring",
-                                          duration: 0.35,
-                                          bounce: 0,
-                                      }
+                                        type: "spring",
+                                        duration: 0.35,
+                                        bounce: 0,
+                                    }
                             }
                             className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3"
                         >
@@ -821,8 +821,8 @@ function CTASection() {
                     src={CTAImage}
                     alt="Luxury resort sunset view from balcony"
                     className="absolute inset-0 h-full w-full object-cover object-center"
-                    // Fallback Unsplash image if the local file isn't linked yet:
-                    // src="https://images.unsplash.com/photo-1571896349842-33c89424de2d?q=80&w=2080&auto=format&fit=crop"
+                // Fallback Unsplash image if the local file isn't linked yet:
+                // src="https://images.unsplash.com/photo-1571896349842-33c89424de2d?q=80&w=2080&auto=format&fit=crop"
                 />
 
                 <div className="absolute inset-0 w-full bg-linear-to-r from-black/50 via-black/80 to-transparent md:w-[75%]" />

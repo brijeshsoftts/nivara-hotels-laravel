@@ -14,10 +14,49 @@ use Illuminate\Support\Str;
 
 class RoomTypeController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $roomTypes = RoomType::with(['amenities', 'images'])->withCount('rooms')->get()->map(function ($rt) {
+        $page = max((int) $request->input('page', 1), 1);
+        $limit = max((int) $request->input('limit', 10), 1);
+
+        $query = RoomType::with(['amenities', 'images', 'rooms'])
+            ->withCount('rooms')
+            ->orderBy('name');
+
+        if ($request->filled('search')) {
+            $s = trim((string) $request->input('search'));
+            $query->where(function ($q) use ($s) {
+                $q->where('name', 'like', "%{$s}%")
+                    ->orWhere('slug', 'like', "%{$s}%")
+                    ->orWhere('description', 'like', "%{$s}%");
+            });
+        }
+
+        $total = $query->count();
+        $totalPages = (int) ceil(max($total, 1) / $limit);
+        $page = min($page, $totalPages);
+
+        $roomTypes = $query->skip(($page - 1) * $limit)->take($limit)->get()->map(function ($rt) {
             $primaryImg = $rt->images->firstWhere('is_primary', true) ?? $rt->images->first();
+            $roomsCollection = $rt->rooms;
+            $activeRooms = $roomsCollection->where('is_active', true);
+            $availableCount = $activeRooms->filter(
+                fn($room) => ($room->occupancy_status instanceof \BackedEnum ? $room->occupancy_status->value : (string) $room->occupancy_status) === OccupancyStatus::VACANT->value
+                    && ($room->housekeeping_status instanceof \BackedEnum ? $room->housekeeping_status->value : (string) $room->housekeeping_status) === HousekeepingStatus::CLEAN->value
+            )->count();
+            $occupiedCount = $activeRooms->filter(
+                fn($room) => ($room->occupancy_status instanceof \BackedEnum ? $room->occupancy_status->value : (string) $room->occupancy_status) === OccupancyStatus::OCCUPIED->value
+            )->count();
+            $cleanCount = $activeRooms->filter(
+                fn($room) => ($room->housekeeping_status instanceof \BackedEnum ? $room->housekeeping_status->value : (string) $room->housekeeping_status) === HousekeepingStatus::CLEAN->value
+            )->count();
+            $dirtyCount = $activeRooms->filter(
+                fn($room) => ($room->housekeeping_status instanceof \BackedEnum ? $room->housekeeping_status->value : (string) $room->housekeeping_status) === HousekeepingStatus::DIRTY->value
+            )->count();
+            $cleaningCount = $activeRooms->filter(
+                fn($room) => ($room->housekeeping_status instanceof \BackedEnum ? $room->housekeeping_status->value : (string) $room->housekeeping_status) === HousekeepingStatus::CLEANING->value
+            )->count();
+
             return [
                 'id' => $rt->id,
                 'name' => $rt->name,
@@ -31,21 +70,62 @@ class RoomTypeController extends Controller
                 'currency' => $rt->currency ?? 'INR',
                 'bedType' => $rt->bed_type instanceof \BackedEnum ? $rt->bed_type->value : (string) $rt->bed_type,
                 'bedCount' => $rt->bed_count,
+                'smokingAllowed' => (bool) $rt->smoking_allowed,
+                'petsAllowed' => (bool) $rt->pets_allowed,
                 'isActive' => (bool) $rt->is_active,
+                'numberOfRooms' => $rt->rooms_count,
                 'roomsCount' => $rt->rooms_count,
+                'roomCount' => $rt->rooms_count,
+                'primaryImage' => [
+                    'url' => $primaryImg?->url ?? 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304',
+                    'altText' => $primaryImg?->alt_text ?? $rt->name,
+                ],
                 'image' => [
                     'url' => $primaryImg?->url ?? 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304',
                     'altText' => $primaryImg?->alt_text ?? $rt->name,
                 ],
+                'images' => $rt->images->map(fn($img, $idx) => [
+                    'id' => $img->id,
+                    'url' => $img->url,
+                    'altText' => $img->alt_text ?? $rt->name,
+                    'isPrimary' => (bool) $img->is_primary,
+                    'sortOrder' => (int) ($img->sort_order ?? $idx),
+                ])->values(),
                 'amenities' => $rt->amenities->map(fn($a) => [
                     'id' => $a->id,
                     'name' => $a->name,
                     'icon' => $a->icon,
-                ]),
+                ])->values(),
+                'roomStatusSummary' => [
+                    'total' => $roomsCollection->count(),
+                    'active' => $activeRooms->count(),
+                    'occupancy' => [
+                        'available' => $availableCount,
+                        'occupied' => $occupiedCount,
+                        'other' => max($activeRooms->count() - $availableCount - $occupiedCount, 0),
+                    ],
+                    'housekeeping' => [
+                        'clean' => $cleanCount,
+                        'dirty' => $dirtyCount,
+                        'inspected' => 0,
+                        'inProgress' => $cleaningCount,
+                        'other' => max($activeRooms->count() - $cleanCount - $dirtyCount - $cleaningCount, 0),
+                    ],
+                ],
+                'createdAt' => $rt->created_at?->toIso8601String(),
+                'updatedAt' => $rt->updated_at?->toIso8601String(),
             ];
         });
 
-        return response()->json(['data' => $roomTypes]);
+        return response()->json([
+            'data' => $roomTypes,
+            'meta' => [
+                'total' => $total,
+                'page' => $page,
+                'limit' => $limit,
+                'totalPages' => $totalPages,
+            ],
+        ]);
     }
 
     public function store(Request $request)

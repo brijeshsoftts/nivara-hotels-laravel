@@ -62,11 +62,17 @@ export function RoomTypeGrid() {
     const { pagination, items } = useRoomTypes({
         search: query,
         page,
+        limit: 10,
     });
+
+    const handleSearchChange = (value: string) => {
+        setSearch(value);
+        setPage(1);
+    };
 
     return (
         <>
-            <RoomTypeSearch value={search} onChange={setSearch} />
+            <RoomTypeSearch value={search} onChange={handleSearchChange} />
             <div className="grid grid-cols-1 gap-6 p-4 sm:grid-cols-2 sm:px-6 xl:grid-cols-3">
                 {items.map((roomType: any) => (
                     <RoomTypeCard key={roomType.id} roomType={roomType} />

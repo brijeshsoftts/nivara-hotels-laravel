@@ -419,7 +419,7 @@ export default function BookingCheckoutFlow() {
         refetch: refetchAvailability,
     } = useAvailableBookingRooms(
         availabilityParams,
-        "/public/bookings/available-rooms",
+        "/available-rooms",
     );
     const createBooking = useCreatePublicBooking();
     const {

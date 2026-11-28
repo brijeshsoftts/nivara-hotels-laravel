@@ -265,7 +265,7 @@ function RoomDetailsContent(props: RoomDetailsProps) {
         refetch: refetchAvailability,
     } = useAvailableBookingRooms(
         availabilityParams,
-        "/public/bookings/available-rooms",
+        "/available-rooms",
     );
     const availableRoomTypeIds = new Set(
         availableRooms.map((availableRoom) => availableRoom.roomType.id),

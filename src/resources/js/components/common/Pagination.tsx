@@ -58,15 +58,48 @@ export function Pagination({ pagination, onPageChange }: PaginationProps) {
         >
           <ChevronLeft className="size-4" /> <span>Previous</span>
         </Button>
-        {/* Page indicator */}
-        <div
-          className="flex h-9 min-w-22.5 items-center justify-center  border border-border bg-muted/30 px-3 text-xs font-medium text-foreground select-none"
-          aria-label={`Page ${currentPage} of ${totalPages}`}
-        >
-          <span>Page {currentPage}</span>
-          <span className="mx-1.5 text-muted-foreground"> of </span>
-          <span>{totalPages}</span>
-        </div>
+        {/* Page numbers */}
+        {totalPages > 0 && (
+          <div className="flex items-center gap-1" aria-label="Page navigation">
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter(
+                (page) =>
+                  page === 1 ||
+                  page === totalPages ||
+                  Math.abs(page - currentPage) <= 1
+              )
+              .reduce<(number | string)[]>((acc, page, index, arr) => {
+                if (index > 0 && page - (arr[index - 1] as number) > 1) {
+                  acc.push("...");
+                }
+                acc.push(page);
+                return acc;
+              }, [])
+              .map((page, idx) =>
+                typeof page === "number" ? (
+                  <Button
+                    key={page}
+                    type="button"
+                    variant={currentPage === page ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => onPageChange(page)}
+                    aria-label={`Go to page ${page}`}
+                    aria-current={currentPage === page ? "page" : undefined}
+                    className="h-9 min-w-9 px-2.5 text-xs transition-all"
+                  >
+                    {page}
+                  </Button>
+                ) : (
+                  <span
+                    key={`ellipsis-${idx}`}
+                    className="px-1 text-xs text-muted-foreground select-none"
+                  >
+                    {page}
+                  </span>
+                )
+              )}
+          </div>
+        )}
         {/* Next */}
         <Button
           type="button"

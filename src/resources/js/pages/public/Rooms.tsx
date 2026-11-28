@@ -74,7 +74,7 @@ function HeroSection() {
                 </div>
             </div>
 
-            <div className="relative z-30 lg:mt-10">
+            <div className="relative z-30 top-14 md:top-10">
                 <BookingBar />
             </div>
         </section>

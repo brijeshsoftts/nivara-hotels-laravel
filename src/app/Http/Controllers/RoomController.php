@@ -54,7 +54,10 @@ class RoomController extends Controller
             'isActive' => (bool) $r->is_active,
         ]);
 
-        $roomTypes = RoomType::with(['amenities', 'images', 'rooms'])->withCount('rooms')->get()->map(function ($rt) {
+        $roomTypesQuery = RoomType::with(['amenities', 'images', 'rooms'])->withCount('rooms')->orderBy('name');
+        $roomTypesTotal = $roomTypesQuery->count();
+        $roomTypesLimit = 10;
+        $roomTypes = $roomTypesQuery->take($roomTypesLimit)->get()->map(function ($rt) {
             $primaryImg = $rt->images->firstWhere('is_primary', true) ?? $rt->images->first();
             $roomsCollection = $rt->rooms;
             $activeRooms = $roomsCollection->where('is_active', true);
@@ -130,7 +133,10 @@ class RoomController extends Controller
             ];
         });
 
-        $amenities = Amenity::all()->map(fn($a) => [
+        $amenitiesQuery = Amenity::query()->orderBy('name');
+        $amenitiesTotal = $amenitiesQuery->count();
+        $amenitiesLimit = 10;
+        $amenities = $amenitiesQuery->take($amenitiesLimit)->get()->map(fn($a) => [
             'id' => $a->id,
             'name' => $a->name,
             'description' => $a->description,
@@ -165,9 +171,21 @@ class RoomController extends Controller
             ],
             'roomTypes' => [
                 'data' => $roomTypes,
+                'meta' => [
+                    'total' => $roomTypesTotal,
+                    'page' => 1,
+                    'limit' => $roomTypesLimit,
+                    'totalPages' => (int) ceil(max($roomTypesTotal, 1) / $roomTypesLimit),
+                ],
             ],
             'amenities' => [
                 'data' => $amenities,
+                'meta' => [
+                    'total' => $amenitiesTotal,
+                    'page' => 1,
+                    'limit' => $amenitiesLimit,
+                    'totalPages' => (int) ceil(max($amenitiesTotal, 1) / $amenitiesLimit),
+                ],
             ],
             'stats' => $stats,
             'filters' => $request->only(['isActive', 'floor', 'occupancyStatus', 'housekeepingStatus', 'roomTypeId', 'search', 'page', 'limit']),

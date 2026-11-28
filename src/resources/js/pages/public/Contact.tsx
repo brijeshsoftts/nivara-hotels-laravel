@@ -49,44 +49,44 @@ const contactDetails: {
     icon: LucideIcon;
     lines: { label: string; href?: string }[];
 }[] = [
-    {
-        title: "Call us",
-        icon: Phone,
-        lines: [
-            {
-                label: HOTEL_DETAILS.phone ?? "Phone details to be confirmed",
-                ...(HOTEL_DETAILS.phone && {
-                    href: `tel:${HOTEL_DETAILS.phone}`,
-                }),
-            },
-        ],
-    },
-    {
-        title: "Email us",
-        icon: Mail,
-        lines: [
-            {
-                label: HOTEL_DETAILS.email ?? "Email details to be confirmed",
-                ...(HOTEL_DETAILS.email && {
-                    href: `mailto:${HOTEL_DETAILS.email}`,
-                }),
-            },
-        ],
-    },
-    {
-        title: "Visit us",
-        icon: MapPin,
-        lines: [{ label: HOTEL_DETAILS.address ?? HOTEL_DETAILS.location }],
-    },
-    {
-        title: "Our hours",
-        icon: Clock3,
+        {
+            title: "Call us",
+            icon: Phone,
+            lines: [
+                {
+                    label: HOTEL_DETAILS.phone ?? "Phone details to be confirmed",
+                    ...(HOTEL_DETAILS.phone && {
+                        href: `tel:${HOTEL_DETAILS.phone}`,
+                    }),
+                },
+            ],
+        },
+        {
+            title: "Email us",
+            icon: Mail,
+            lines: [
+                {
+                    label: HOTEL_DETAILS.email ?? "Email details to be confirmed",
+                    ...(HOTEL_DETAILS.email && {
+                        href: `mailto:${HOTEL_DETAILS.email}`,
+                    }),
+                },
+            ],
+        },
+        {
+            title: "Visit us",
+            icon: MapPin,
+            lines: [{ label: HOTEL_DETAILS.address ?? HOTEL_DETAILS.location }],
+        },
+        {
+            title: "Our hours",
+            icon: Clock3,
 
-        lines: [
-            { label: HOTEL_DETAILS.hours ?? "Hours details to be confirmed" },
-        ],
-    },
-];
+            lines: [
+                { label: HOTEL_DETAILS.hours ?? "Hours details to be confirmed" },
+            ],
+        },
+    ];
 
 const helpOptions: {
     title: string;
@@ -95,35 +95,35 @@ const helpOptions: {
     action: string;
     icon: LucideIcon;
 }[] = [
-    {
-        title: "Room reservations",
-        description: "Room bookings, availability, and special requests.",
-        href: "/rooms",
-        action: "Browse rooms",
-        icon: BedDouble,
-    },
-    {
-        title: "Customer support",
-        description: "General questions and assistance with your stay.",
-        href: "#contact-form",
-        action: "Send an enquiry",
-        icon: Headset,
-    },
-    {
-        title: "Group bookings",
-        description: "Corporate stays, celebrations, and group reservations.",
-        href: "#contact-form",
-        action: "Ask about group stays",
-        icon: Users,
-    },
-    {
-        title: "Feedback",
-        description: "Share a suggestion or tell us about your experience.",
-        href: "#contact-form",
-        action: "Share feedback",
-        icon: MessageCircleHeart,
-    },
-];
+        {
+            title: "Room reservations",
+            description: "Room bookings, availability, and special requests.",
+            href: "/rooms",
+            action: "Browse rooms",
+            icon: BedDouble,
+        },
+        {
+            title: "Customer support",
+            description: "General questions and assistance with your stay.",
+            href: "#contact-form",
+            action: "Send an enquiry",
+            icon: Headset,
+        },
+        {
+            title: "Group bookings",
+            description: "Corporate stays, celebrations, and group reservations.",
+            href: "#contact-form",
+            action: "Ask about group stays",
+            icon: Users,
+        },
+        {
+            title: "Feedback",
+            description: "Share a suggestion or tell us about your experience.",
+            href: "#contact-form",
+            action: "Share feedback",
+            icon: MessageCircleHeart,
+        },
+    ];
 
 function Reveal({
     children,
@@ -193,7 +193,7 @@ function ContactHero() {
 
 function ContactDetailsStrip() {
     return (
-        <section className="relative z-10 px-4 sm:px-6 lg:px-8">
+        <section className="relative z-10 px-4 sm:px-6 lg:px-8 mt-10">
             <div className="mx-auto max-w-7xl">
                 <div className="grid divide-y divide-border rounded-lg border border-border bg-card shadow-sm sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
                     {contactDetails.map(
@@ -385,11 +385,12 @@ export function ContactForm() {
                                     onValueChange={(value) =>
                                         field.onChange(value ?? "")
                                     }
+
                                     value={field.value ?? ""}
                                 >
                                     <SelectTrigger
                                         aria-invalid={Boolean(subjectError)}
-                                        className="h-11 w-full bg-card pl-10"
+                                        className="min-h-11 w-full bg-card pl-10"
                                         id="contact-subject"
                                     >
                                         <SelectValue placeholder="Subject *" />
@@ -572,7 +573,7 @@ function QuickHelp() {
 
 function SupportBanner() {
     return (
-        <Reveal>
+        <Reveal className="mb-10">
             <section className="relative isolate overflow-hidden rounded-lg border border-border bg-foreground text-background">
                 <img
                     alt=""

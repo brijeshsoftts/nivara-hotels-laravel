@@ -147,13 +147,12 @@
                             <label for="register-password" class="text-sm font-medium leading-none text-foreground">
                                 Password <span aria-hidden="true" class="text-destructive">*</span>
                             </label>
-                            <div class="relative">
-                                <svg class="absolute top-1/2 left-3 size-4.5 -translate-y-1/2 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                                    <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
-                                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                                </svg>
-                                <input id="register-password" name="password" type="password" autocomplete="new-password" required placeholder="Create a password" class="h-11 w-full rounded-md border border-input bg-background px-3 pl-10 text-sm text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring">
-                            </div>
+                            <x-password-input
+                                id="register-password"
+                                name="password"
+                                autocomplete="new-password"
+                                placeholder="Create a password"
+                            />
                             @error('password')
                             <p class="text-sm text-destructive" id="register-password-error">{{ $message }}</p>
                             @enderror
@@ -163,13 +162,12 @@
                             <label for="register-password-confirm" class="text-sm font-medium leading-none text-foreground">
                                 Confirm password <span aria-hidden="true" class="text-destructive">*</span>
                             </label>
-                            <div class="relative">
-                                <svg class="absolute top-1/2 left-3 size-4.5 -translate-y-1/2 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                                    <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
-                                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                                </svg>
-                                <input id="register-password-confirm" name="password_confirmation" type="password" autocomplete="new-password" required placeholder="Repeat password" class="h-11 w-full rounded-md border border-input bg-background px-3 pl-10 text-sm text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring">
-                            </div>
+                            <x-password-input
+                                id="register-password-confirm"
+                                name="password_confirmation"
+                                autocomplete="new-password"
+                                placeholder="Repeat password"
+                            />
                         </div>
                     </div>
 

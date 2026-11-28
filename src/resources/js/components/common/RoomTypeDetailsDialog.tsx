@@ -1,11 +1,8 @@
 import {
   Ban,
   BedDouble,
-  CalendarCheck,
   Cigarette,
   CigaretteOff,
-  CircleCheck,
-  CircleX,
   type LucideIcon,
   Maximize2,
   PawPrint,
@@ -13,7 +10,6 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { Link } from "@inertiajs/react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -91,26 +87,6 @@ function Rule({
   );
 }
 
-function AvailabilityPill({ isAvailable }: { isAvailable: boolean }) {
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ring-1",
-        isAvailable
-          ? "bg-primary/10 text-primary ring-primary/30"
-          : "bg-destructive/10 text-destructive ring-destructive/30"
-      )}
-    >
-      {isAvailable ? (
-        <CircleCheck className="size-3.5" />
-      ) : (
-        <CircleX className="size-3.5" />
-      )}
-      {isAvailable ? "Available" : "Not available"}
-    </span>
-  );
-}
-
 function SectionTitle({ children }: { children: string }) {
   return <h3 className="font-display text-2xl font-medium">{children}</h3>;
 }
@@ -171,7 +147,6 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
 /* -------------------------------- Content -------------------------------- */
 
 function RoomContent({ room }: { room: RoomTypeDetails }) {
-  const isAvailable = room?.roomStatusSummary?.occupancy?.available > 0;
   const guestHint =
     room.children > 0
       ? `${room.adults} adults, ${room.children} ${room.children === 1 ? "child" : "children"}`
@@ -180,7 +155,6 @@ function RoomContent({ room }: { room: RoomTypeDetails }) {
   return (
     <div
       className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
-      aria-busy
     >
       <div className="grid lg:grid-cols-[1.05fr_1fr]">
         <div className="lg:sticky lg:top-0 lg:self-start">
@@ -193,7 +167,6 @@ function RoomContent({ room }: { room: RoomTypeDetails }) {
 
         <div className="space-y-9 p-6 sm:p-8 lg:p-10">
           <header className="space-y-4 lg:pr-10">
-            <AvailabilityPill isAvailable={isAvailable} />
             <DialogTitle className="font-display text-4xl leading-tight font-medium text-balance sm:text-5xl">
               {room.name}
             </DialogTitle>
@@ -314,39 +287,20 @@ function BookingBar({
           <Button
             variant="outline"
             size="lg"
-            className="hidden rounded-lg sm:inline-flex"
+            className="rounded-lg"
           >
             Close
           </Button>
         </DialogClose>
-        <Button
-          variant="outline"
-          size="lg"
-          className="hidden rounded-lg sm:inline-flex"
-        >
-          Book Now
-        </Button>
         {user?.role === "ADMIN" && (
           <Button
             variant="outline"
             size="lg"
-            className="hidden rounded-lg text-destructive hover:bg-destructive/10 hover:text-destructive sm:inline-flex"
+            className="rounded-lg text-destructive hover:bg-destructive/10 hover:text-destructive"
             onClick={() => handleDelete(onClose)}
             disabled={isDeleting}
           >
             Delete
-          </Button>
-        )}
-        {room.roomStatusSummary?.occupancy?.available > 0 ? (
-          <Button size="lg" className="rounded-lg px-6 sm:px-8">
-            <Link href={`/rooms/${room.slug}/book`} onClick={onClose}>
-              <CalendarCheck className="size-4" />
-              Book this room
-            </Link>
-          </Button>
-        ) : (
-          <Button size="lg" disabled className="rounded-lg px-6 sm:px-8">
-            Unavailable
           </Button>
         )}
       </div>
@@ -374,7 +328,7 @@ export function RoomTypeDetailsDialog({
       <DialogContent
         // Full screen on phones, large centred modal from sm up.
         // The built-in close button is hidden in favour of the one below (it sits on photos).
-        className="h-svh w-full max-w-none flex-col gap-0 overflow-hidden border-0 p-0 sm:h-auto sm:max-h-153.75 sm:max-w-6xl sm:rounded-xl sm:border [&>button.absolute]:hidden"
+        className="flex h-svh w-full max-w-none flex-col gap-0 overflow-hidden border-0 p-0 sm:h-auto sm:max-h-[90svh] sm:max-w-6xl sm:rounded-xl sm:border [&>button.absolute]:hidden"
       >
         <div className="absolute top-3 right-3 z-20 sm:top-4 sm:right-4">
           <DialogClose>

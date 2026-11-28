@@ -7,9 +7,27 @@ use Illuminate\Http\Request;
 
 class AmenityController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $amenities = Amenity::all()->map(fn($a) => [
+        $page = max((int) $request->input('page', 1), 1);
+        $limit = max((int) $request->input('limit', 10), 1);
+
+        $query = Amenity::query()->orderBy('name');
+
+        if ($request->filled('search')) {
+            $s = trim((string) $request->input('search'));
+            $query->where(function ($q) use ($s) {
+                $q->where('name', 'like', "%{$s}%")
+                    ->orWhere('description', 'like', "%{$s}%")
+                    ->orWhere('category', 'like', "%{$s}%");
+            });
+        }
+
+        $total = $query->count();
+        $totalPages = (int) ceil(max($total, 1) / $limit);
+        $page = min($page, $totalPages);
+
+        $amenities = $query->skip(($page - 1) * $limit)->take($limit)->get()->map(fn($a) => [
             'id' => $a->id,
             'name' => $a->name,
             'description' => $a->description,
@@ -18,7 +36,15 @@ class AmenityController extends Controller
             'isActive' => (bool) $a->is_active,
         ]);
 
-        return response()->json(['data' => $amenities]);
+        return response()->json([
+            'data' => $amenities,
+            'meta' => [
+                'total' => $total,
+                'page' => $page,
+                'limit' => $limit,
+                'totalPages' => $totalPages,
+            ],
+        ]);
     }
 
     public function store(Request $request)

@@ -4,9 +4,19 @@ use App\Http\Controllers\PublicController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\PaymentController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 
+Route::get('/available-rooms', [BookingController::class, 'availableRooms'])
+    ->name('available-rooms');
 Route::get('/public/bookings/available-rooms', [BookingController::class, 'availableRooms'])
     ->name('public.bookings.available-rooms');
+Route::get('/storage/{path}', function (string $path) {
+    abort_if(str_contains($path, '..'), 404);
+    $disk = Storage::disk('public');
+    abort_unless($disk->exists($path), 404);
+
+    return response()->file($disk->path($path));
+})->where('path', '.*')->name('public.storage');
 Route::post('/payments/public/orders', [PaymentController::class, 'createPublicOrder'])->name('payments.public.orders');
 Route::post('/payments/public/verify', [PaymentController::class, 'verifyPublicPayment'])->name('payments.public.verify');
 Route::post('/payments/public/status', [PaymentController::class, 'publicPaymentStatus'])->name('payments.public.status');

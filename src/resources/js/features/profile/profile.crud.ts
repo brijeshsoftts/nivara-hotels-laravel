@@ -78,6 +78,7 @@ export function useUpdateAvatar() {
     formData.append("avatar", file);
 
     router.post("/dashboard/profile/avatar", formData as any, {
+      forceFormData: true,
       onSuccess: () => {
         toast.success("Profile image updated successfully.");
         options?.onSuccess?.();

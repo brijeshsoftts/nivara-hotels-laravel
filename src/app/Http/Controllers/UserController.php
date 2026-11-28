@@ -148,7 +148,7 @@ class UserController extends Controller
             'name' => $name,
             'email' => $validated['email'],
             'phone' => $validated['phone'] ?? null,
-            'role' => $validated['role'] ?? UserRole::STAFF->value,
+            'role' => $validated['role'] ?? UserRole::MANAGER->value,
             'password' => Hash::make($validated['password'] ?? self::DEFAULT_USER_PASSWORD),
             'is_active' => $validated['isActive'] ?? true,
         ]);
