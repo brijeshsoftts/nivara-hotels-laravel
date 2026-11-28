@@ -350,6 +350,7 @@ class RoomController extends Controller
             'roomTypeId' => ['nullable', 'string'],
             'occupancyStatus' => ['nullable', 'string'],
             'housekeepingStatus' => ['nullable', 'string'],
+            'isActive' => ['nullable', 'boolean'],
         ]);
 
         if (isset($validated['roomNumber'])) {
@@ -369,6 +370,9 @@ class RoomController extends Controller
         }
         if (isset($validated['housekeepingStatus'])) {
             $room->housekeeping_status = $validated['housekeepingStatus'];
+        }
+        if (array_key_exists('isActive', $validated) && $validated['isActive'] !== null) {
+            $room->is_active = (bool) $validated['isActive'];
         }
         $room->save();
 
